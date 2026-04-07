@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+@keyframes pty-computing {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.75); }
+}
+.pty-computing {
+  animation: pty-computing 0.9s ease-in-out infinite;
+}
+
+/* Default theme CSS variables (Void) — overridden by ThemeContext at runtime */
+:root {
+  --bg-sidebar: #111111;
+  --bg-main: #0f0f0f;
+  --border: #1e1e1e;
+  --text-primary: #ededef;
+  --text-secondary: #9ca3af;
+  --text-muted: #4b4b4b;
+  --text-very-muted: #2a2a2a;
+  --item-selected: rgba(255, 255, 255, 0.07);
+  --item-hover: rgba(255, 255, 255, 0.04);
+  --accent: #6b7280;
+}
+
+/* Tauri window drag region — use WebKit's native mechanism as the primary driver */
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+  user-select: none;
+}
+[data-tauri-drag-region] button,
+[data-tauri-drag-region] a,
+[data-tauri-drag-region] input {
+  -webkit-app-region: no-drag;
+}
+
+/* cmdk */
+[cmdk-group-heading] {
+  padding: 4px 14px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+[cmdk-item][aria-selected="true"] {
+  background: var(--item-selected) !important;
+  color: var(--text-primary) !important;
+}
+
+[cmdk-item]:hover {
+  background: var(--item-hover);
+}
+
+/* Pointer-event DnD (replaces HTML5 DnD which is broken in WKWebView) */
+.drag-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 10000;
+  background: var(--bg-sidebar);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--text-primary);
+  opacity: 0.85;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-drop].drag-over {
+  background: rgba(var(--accent-rgb, 99, 102, 241), 0.12) !important;
+  outline: 1px dashed var(--accent) !important;
+  outline-offset: -1px;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  body {
+    background: var(--bg-main);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--text-very-muted);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
+}
