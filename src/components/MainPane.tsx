@@ -2,13 +2,11 @@ import { useState, useEffect } from "react";
 import type { ClaudeSession } from "../types";
 import { StatusDot } from "./StatusDot";
 import { TerminalPane } from "./TerminalPane";
-import type { DragPayload } from "../dragState";
 
 interface Props {
   session: ClaudeSession | null;
   gridSlotIdx?: number;
   onGridClose?: () => void;
-  startDrag?: (e: React.PointerEvent, payload: DragPayload, label: string) => void;
 }
 
 function formatCwd(cwd: string): string {
@@ -17,7 +15,7 @@ function formatCwd(cwd: string): string {
 
 type View = "claude" | "terminal" | "split";
 
-export function MainPane({ session, gridSlotIdx, onGridClose, startDrag }: Props) {
+export function MainPane({ session, gridSlotIdx, onGridClose }: Props) {
   const [view, setView] = useState<View>("claude");
 
   useEffect(() => {
@@ -62,13 +60,10 @@ export function MainPane({ session, gridSlotIdx, onGridClose, startDrag }: Props
       {/* Header */}
       <div
         {...(!inGrid ? { "data-tauri-drag-region": true } : {})}
-        onPointerDown={inGrid && startDrag ? (e) => {
-          const label = session.display_name || session.project_name;
-          startDrag(e, { type: "pane", paneIdx: gridSlotIdx! }, label);
-        } : undefined}
+        {...(inGrid ? { "data-drag": "pane", "data-drag-idx": String(gridSlotIdx), "data-drag-label": session.display_name || session.project_name } : {})}
         className="flex items-center gap-2 px-4"
         style={{
-          height: inGrid ? 36 : 52,
+          height: inGrid ? 40 : 56,
           paddingTop: inGrid ? 0 : 28,
           borderBottom: "1px solid var(--border)",
           flexShrink: 0,
@@ -79,17 +74,14 @@ export function MainPane({ session, gridSlotIdx, onGridClose, startDrag }: Props
           <span style={{ fontSize: 10, color: "var(--text-very-muted)", userSelect: "none", marginRight: 2 }}>⠿</span>
         )}
         <StatusDot status={session.status} size={8} />
-        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>
-          {session.display_name || `${session.project_name}-${session.session_id.slice(0, 5)}`}
-        </span>
-        <span style={{ fontSize: 12, color: "var(--text-muted)", marginLeft: 4 }}>
-          {formatCwd(session.cwd)}
-        </span>
-        {session.pid > 0 && (
-          <span style={{ fontSize: 11, color: "var(--text-very-muted)", marginLeft: 4 }}>
-            pid {session.pid}
+        <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {session.display_name || `${session.project_name}-${session.session_id.slice(0, 5)}`}
           </span>
-        )}
+          <span style={{ fontSize: 10, color: "var(--text-very-muted)", lineHeight: 1.2 }}>
+            {formatCwd(session.cwd)}{session.pid > 0 ? ` · pid ${session.pid}` : ""}
+          </span>
+        </div>
 
         {/* View tabs */}
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 4 }}>
@@ -112,7 +104,7 @@ export function MainPane({ session, gridSlotIdx, onGridClose, startDrag }: Props
           </button>
           <span style={{ color: "var(--text-very-muted)", fontSize: 10 }}>|</span>
           <button
-            style={tabStyle(view === "split")}
+            style={{ ...tabStyle(view === "split"), fontSize: 15 }}
             onClick={() => setView((v) => v === "split" ? "claude" : "split")}
             title="Split view"
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}

@@ -1,7 +1,6 @@
 import { useRef } from "react";
 import type { ClaudeSession, PaneGroup } from "../types";
 import { MainPane } from "./MainPane";
-import type { DragPayload } from "../dragState";
 
 const GRID_TEMPLATES: Record<string, React.CSSProperties> = {
   "1x1": { gridTemplateColumns: "1fr", gridTemplateRows: "1fr", gridTemplateAreas: '"a"' },
@@ -17,11 +16,10 @@ interface Props {
   focusedIdx: number;
   onFocus: (idx: number) => void;
   onRemoveFromSlot: (idx: number) => void;
-  startDrag: (e: React.PointerEvent, payload: DragPayload, label: string) => void;
   dndActive: boolean;
 }
 
-export function GridLayout({ group, sessions, focusedIdx, onFocus, onRemoveFromSlot, startDrag, dndActive }: Props) {
+export function GridLayout({ group, sessions, focusedIdx, onFocus, onRemoveFromSlot, dndActive }: Props) {
   const lastKnown = useRef<Map<string, ClaudeSession>>(new Map());
 
   if (!group) {
@@ -44,8 +42,10 @@ export function GridLayout({ group, sessions, focusedIdx, onFocus, onRemoveFromS
         flex: 1,
         display: "grid",
         ...GRID_TEMPLATES[group.layout],
-        gap: 0,
+        gap: 4,
+        padding: 4,
         overflow: "hidden",
+        background: "var(--border)",
       }}
     >
       {group.slots.map((sessionId, idx) => {
@@ -60,14 +60,13 @@ export function GridLayout({ group, sessions, focusedIdx, onFocus, onRemoveFromS
               style={{
                 gridArea: AREA_NAMES[idx],
                 background: "var(--bg-main)",
+                borderRadius: 6,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 6,
                 color: "var(--text-very-muted)",
-                outline: isFocused ? "2px solid var(--accent)" : "1px solid var(--border)",
-                outlineOffset: "-1px",
                 transition: "background 0.1s",
               }}
               onMouseDown={() => onFocus(idx)}
@@ -90,16 +89,17 @@ export function GridLayout({ group, sessions, focusedIdx, onFocus, onRemoveFromS
               position: "relative",
               overflow: "hidden",
               background: "var(--bg-main)",
-              outline: isFocused ? "2px solid var(--accent)" : "1px solid var(--border)",
-              outlineOffset: "-1px",
+              borderRadius: 6,
             }}
             onMouseDown={() => onFocus(idx)}
           >
+            {isFocused && (
+              <div style={{ position: "absolute", inset: 0, border: "2px solid var(--accent)", borderRadius: 6, zIndex: 5, pointerEvents: "none" }} />
+            )}
             <MainPane
               session={session}
               gridSlotIdx={multiPane ? idx : undefined}
               onGridClose={multiPane ? () => onRemoveFromSlot(idx) : undefined}
-              startDrag={startDrag}
             />
             {/* Overlay: sits above xterm canvas so pointer-based DnD can detect grid slots.
                 Only rendered while a drag is in progress to avoid blocking terminal interaction. */}

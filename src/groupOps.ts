@@ -40,7 +40,7 @@ export function dropToSlot(
     const slots = [...g.slots];
     slots[i] = null;
     return { ...g, slots };
-  });
+  }).filter((g) => g.slots.some((s) => s !== null));
 }
 
 /**
@@ -79,7 +79,7 @@ export function dropToGroupSlot(
     const slots = [...g.slots];
     slots[i] = null;
     return { ...g, slots };
-  });
+  }).filter((g) => g.slots.some((s) => s !== null));
 }
 
 /**
@@ -106,7 +106,7 @@ export function removeFromGroup(groups: PaneGroup[], sessionId: string): PaneGro
   return groups.map((g) => ({
     ...g,
     slots: g.slots.map((s) => (s === sessionId ? null : s)),
-  }));
+  })).filter((g) => g.slots.some((s) => s !== null));
 }
 
 /**
@@ -139,5 +139,5 @@ export function removeFromSlot(
     const slots = [...g.slots];
     slots[slotIdx] = null;
     return { ...g, slots };
-  });
+  }).filter((g) => g.slots.some((s) => s !== null));
 }

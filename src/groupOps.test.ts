@@ -46,7 +46,8 @@ describe("dropToSlot", () => {
       makeGroup("B", [null, null]),
     ];
     const result = dropToSlot(groups, "B", 0, "s1");
-    expect(slots(result.find((g) => g.id === "A")!)).toEqual([null, null]);
+    // Source group A had only s1; after removal its slots are all null so the group is pruned
+    expect(result.find((g) => g.id === "A")).toBeUndefined();
     expect(slots(result.find((g) => g.id === "B")!)).toEqual(["s1", null]);
   });
 
@@ -123,8 +124,9 @@ describe("dropToGroupSlot", () => {
       makeGroup("C", [null, null]),
     ];
     const result = dropToGroupSlot(groups, "C", 0, "s1");
-    expect(slots(result.find((g) => g.id === "A")!)).toEqual([null, null]);
-    expect(slots(result.find((g) => g.id === "B")!)).toEqual([null, null]);
+    // A and B become all-null after s1 removed, so they are pruned
+    expect(result.find((g) => g.id === "A")).toBeUndefined();
+    expect(result.find((g) => g.id === "B")).toBeUndefined();
     expect(slots(result.find((g) => g.id === "C")!)).toEqual(["s1", null]);
   });
 
@@ -176,7 +178,8 @@ describe("removeFromGroup", () => {
     ];
     const result = removeFromGroup(groups, "s1");
     expect(slots(result.find((g) => g.id === "A")!)).toEqual([null, "s2"]);
-    expect(slots(result.find((g) => g.id === "B")!)).toEqual([null, null]);
+    // B had only s1, so it's pruned
+    expect(result.find((g) => g.id === "B")).toBeUndefined();
   });
 
   it("leaves groups unchanged if session is not present anywhere", () => {

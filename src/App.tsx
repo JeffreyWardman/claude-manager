@@ -5,6 +5,7 @@ import { usePtyActivity } from "./hooks/usePtyActivity";
 import type { ActivityState } from "./hooks/usePtyActivity";
 import { Sidebar } from "./components/Sidebar";
 import { GridLayout } from "./components/GridLayout";
+import { MainPane } from "./components/MainPane";
 import { CommandPalette } from "./components/CommandPalette";
 import { NewSessionModal } from "./components/NewSessionModal";
 import { Settings } from "./components/Settings";
@@ -45,6 +46,7 @@ function AppInner() {
     () => localStorage.getItem("active-group-id") ?? null
   );
   const [focusedSlotIdx, setFocusedSlotIdx] = useState(0);
+  const [standaloneSelectedId, setStandaloneSelectedId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newSessionOpen, setNewSessionOpen] = useState(false);
@@ -92,11 +94,13 @@ function AppInner() {
     setActiveGroupId(id);
     localStorage.setItem("active-group-id", id);
     setFocusedSlotIdx(0);
+    setStandaloneSelectedId(null);
   }
 
   const handleActivateGroupAtSlot = useCallback((groupId: string, slotIdx: number) => {
     setActiveGroupId(groupId);
     localStorage.setItem("active-group-id", groupId);
+    setStandaloneSelectedId(null);
     setFocusedSlotIdx(slotIdx);
   }, []);
 
@@ -158,16 +162,19 @@ function AppInner() {
     persistGroups(addToGroup(groups, groupId, sessionId));
   }, [groups]);
 
-  const { startDrag, isDragging: dndActive } = useDragDrop({
+  const handleCreateGroupWithSessionRef = useRef<(sid: string) => void>(() => {});
+  const handleCreateGroupFromSessionsRef = useRef<(a: string, b: string) => void>(() => {});
+
+  const { isDragging: dndActive } = useDragDrop({
     onDropToGroupSlot: handleDropToGroupSlot,
     onAddToGroup: handleAddToGroup,
     onRemoveFromGroup: handleRemoveFromGroup,
     onCreateGroupFromSessions: (a, b) => handleCreateGroupFromSessionsRef.current(a, b),
+    onCreateGroupWithSession: (sid) => handleCreateGroupWithSessionRef.current(sid),
     onDropToGridSlot: handleDropToSlot,
     onSwapGridSlots: handleSwapSlots,
+    onActivateGroupAtSlot: handleActivateGroupAtSlot,
   });
-
-  const handleCreateGroupFromSessionsRef = useRef<(a: string, b: string) => void>(() => {});
   const handleCreateGroupFromSessions = useCallback((sessionIdA: string, sessionIdB: string) => {
     const id = genId();
     const group: PaneGroup = {
@@ -181,8 +188,17 @@ function AppInner() {
   }, [groups]);
   handleCreateGroupFromSessionsRef.current = handleCreateGroupFromSessions;
 
+  const handleCreateGroupWithSession = useCallback((sessionId: string) => {
+    const id = genId();
+    const next = removeFromGroup(groups, sessionId);
+    const group: PaneGroup = { id, name: `Group ${next.length + 1}`, layout: "2x1", slots: [sessionId, null] };
+    persistGroups([...next, group]);
+    activateGroup(id);
+  }, [groups]);
+  handleCreateGroupWithSessionRef.current = handleCreateGroupWithSession;
+
   const selectSession = useCallback((s: ClaudeSession) => {
-    // Only focus an existing slot — never auto-assign to a group on click
+    // If session is already in a group, focus that slot
     for (const group of groups) {
       const slotIdx = group.slots.indexOf(s.session_id);
       if (slotIdx >= 0) {
@@ -190,9 +206,14 @@ function AppInner() {
         return;
       }
     }
-  }, [groups, handleActivateGroupAtSlot]);
+    // Session not in any group — just visually select it
+    setActiveGroupId(null);
+    localStorage.removeItem("active-group-id");
+    setFocusedSlotIdx(0);
+    setStandaloneSelectedId(s.session_id);
+  }, [groups, activeGroup, focusedSlotIdx, handleActivateGroupAtSlot]);
 
-  const selectedId = activeGroup?.slots[focusedSlotIdx] ?? null;
+  const selectedId = standaloneSelectedId ?? activeGroup?.slots[focusedSlotIdx] ?? null;
 
   const handleNewSession = useCallback((cwd: string) => {
     const tmpId = `new-${Date.now()}`;
@@ -303,7 +324,6 @@ function AppInner() {
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenNewSession={() => setNewSessionOpen(true)}
           onRefresh={refresh}
-          startDrag={startDrag}
         />
       )}
       {sidebarVisible && (
@@ -313,22 +333,25 @@ function AppInner() {
             width: 4,
             cursor: "col-resize",
             flexShrink: 0,
-            background: "transparent",
+            background: "var(--bg-sidebar)",
             transition: "background 0.1s",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.background = "var(--border)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--bg-sidebar)")}
         />
       )}
-      <GridLayout
-        group={activeGroup}
-        sessions={sessions}
-        focusedIdx={focusedSlotIdx}
-        onFocus={setFocusedSlotIdx}
-        onRemoveFromSlot={handleRemoveFromSlot}
-        startDrag={startDrag}
-        dndActive={dndActive}
-      />
+      {standaloneSelectedId ? (
+        <MainPane session={sessions.find((s) => s.session_id === standaloneSelectedId) ?? null} />
+      ) : (
+        <GridLayout
+          group={activeGroup}
+          sessions={sessions}
+          focusedIdx={focusedSlotIdx}
+          onFocus={setFocusedSlotIdx}
+          onRemoveFromSlot={handleRemoveFromSlot}
+          dndActive={dndActive}
+        />
+      )}
 
       {paletteOpen && (
         <CommandPalette

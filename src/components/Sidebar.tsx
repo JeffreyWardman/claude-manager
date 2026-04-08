@@ -3,7 +3,6 @@ import { invoke } from "@tauri-apps/api/core";
 import type { ClaudeSession, PaneGroup, PaneLayout } from "../types";
 import { StatusDot } from "./StatusDot";
 import type { ActivityState } from "../hooks/usePtyActivity";
-import type { DragPayload } from "../dragState";
 
 const ALL_LAYOUTS: PaneLayout[] = ["1x1", "2x1", "1x2", "2x2"];
 
@@ -26,7 +25,6 @@ interface Props {
   onOpenSettings: () => void;
   onOpenNewSession: () => void;
   onRefresh: () => void;
-  startDrag: (e: React.PointerEvent, payload: DragPayload, label: string) => void;
 }
 
 interface Group {
@@ -113,7 +111,7 @@ export function Sidebar({
   sessions, selectedId, groups, activeGroupId, activityMap, width,
   onSelect, onActivateGroup, onActivateGroupAtSlot, onCreateGroup, onDeleteGroup, onRenameGroup,
   onChangeLayout, onRemoveFromGroup,
-  onOpenPalette, onOpenSettings, onOpenNewSession, onRefresh, startDrag,
+  onOpenPalette, onOpenSettings, onOpenNewSession, onRefresh,
 }: Props) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [groupsCollapsed, setGroupsCollapsed] = useState(false);
@@ -266,7 +264,7 @@ export function Sidebar({
   return (
     <div
       className="flex flex-col h-full overflow-hidden"
-      style={{ background: "var(--bg-sidebar)", borderRight: "1px solid var(--border)", width, flexShrink: 0 }}
+      style={{ background: "var(--bg-sidebar)", width, flexShrink: 0 }}
     >
       {/* Header */}
       <div
@@ -290,7 +288,7 @@ export function Sidebar({
           <button
             onClick={() => setGroupMode((m) => { const next = m === "status" ? "location" : "status"; localStorage.setItem("sidebar-group-mode", next); return next; })}
             title={groupMode === "status" ? "Group by location" : "Group by status"}
-            style={{ ...iconBtn, color: groupMode === "location" ? "var(--text-secondary)" : "var(--text-very-muted)" }}
+            style={{ ...iconBtn, fontSize: 15, color: groupMode === "location" ? "var(--text-secondary)" : "var(--text-very-muted)" }}
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
             onMouseLeave={(e) => (e.currentTarget.style.color = groupMode === "location" ? "var(--text-secondary)" : "var(--text-very-muted)")}
           >
@@ -314,6 +312,7 @@ export function Sidebar({
         {/* ── GROUPS SECTION ── */}
         <div style={{ padding: "0 4px 8px" }}>
           <div
+            data-drop="new-group"
             style={{ display: "flex", alignItems: "center", padding: "2px 8px", gap: 4 }}
           >
             <button
@@ -461,6 +460,7 @@ export function Sidebar({
                   <div style={{ paddingLeft: 16, paddingTop: 2 }}>
                     {group.slots.map((sessionId, slotIdx) => {
                       const session = sessionId ? sessions.find((s) => s.session_id === sessionId) ?? null : null;
+                      const isSlotSelected = sessionId !== null && sessionId === selectedId;
 
                       return (
                         <div
@@ -468,6 +468,7 @@ export function Sidebar({
                           data-drop="group-slot"
                           data-group-id={group.id}
                           data-slot-idx={slotIdx}
+                          {...(session ? { "data-drag": "session", "data-drag-id": session.session_id, "data-drag-label": session.display_name || session.project_name } : {})}
                           style={{
                             display: "flex",
                             alignItems: "center",
@@ -475,23 +476,21 @@ export function Sidebar({
                             borderRadius: 4,
                             padding: "0 8px",
                             gap: 6,
+                            background: isSlotSelected ? "color-mix(in srgb, var(--item-selected) 50%, transparent)" : "none",
                             cursor: session ? "grab" : "default",
                             userSelect: "none",
                             transition: "all 0.1s",
                           }}
-                          onPointerDown={session ? (e) => {
-                            startDrag(e, { type: "session", sessionId: session.session_id }, session.display_name || session.project_name);
-                          } : undefined}
                           onClick={() => { if (session) onActivateGroupAtSlot(group.id, slotIdx); }}
                           onContextMenu={session ? (e) => { e.preventDefault(); e.stopPropagation(); setGroupSlotContextMenu({ sessionId: session.session_id, x: e.clientX, y: e.clientY }); } : undefined}
-                          onMouseEnter={(e) => { if (session) e.currentTarget.style.background = "var(--item-hover)"; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+                          onMouseEnter={(e) => { if (session && !isSlotSelected) e.currentTarget.style.background = "var(--item-hover)"; }}
+                          onMouseLeave={(e) => { if (!isSlotSelected) e.currentTarget.style.background = "none"; }}
                         >
                           <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, flexShrink: 0, pointerEvents: "none" }}>{slotIdx + 1}</span>
                           {session ? (
                             <>
                               <StatusDot status={session.status} activity={activityMap.get(session.session_id)} size={5} />
-                              <span style={{ fontSize: 11, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, pointerEvents: "none" }}>
+                              <span style={{ fontSize: 11, color: isSlotSelected ? "var(--text-primary)" : "var(--text-secondary)", fontWeight: isSlotSelected ? 500 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, pointerEvents: "none" }}>
                                 {session.display_name || `${session.project_name}-${session.session_id.slice(0, 5)}`}
                               </span>
                             </>
@@ -510,7 +509,7 @@ export function Sidebar({
           })}
 
           {groups.length === 0 && !groupsCollapsed && (
-            <div style={{ padding: "4px 12px 4px", fontSize: 11, color: "var(--text-very-muted)", fontStyle: "italic" }}>
+            <div data-drop="new-group" style={{ padding: "4px 12px 4px", fontSize: 11, color: "var(--text-very-muted)", fontStyle: "italic" }}>
               No groups yet — click + to create one
             </div>
           )}
@@ -568,15 +567,13 @@ export function Sidebar({
                     ref={(el) => { if (el) itemRefs.current.set(session.session_id, el); else itemRefs.current.delete(session.session_id); }}
                     data-drop="session"
                     data-session-id={session.session_id}
-                    onPointerDown={!isRenaming ? (e) => {
-                      startDrag(e, { type: "session", sessionId: session.session_id }, name);
-                    } : undefined}
+                    {...(!isRenaming ? { "data-drag": "session", "data-drag-id": session.session_id, "data-drag-label": name } : {})}
                     style={{
                       display: "flex",
                       alignItems: "center",
                       gap: 8,
                       height: 30,
-                      background: isSelected ? "var(--item-selected)" : rowTint ?? "none",
+                      background: isSelected ? "color-mix(in srgb, var(--item-selected) 50%, transparent)" : rowTint ?? "none",
                       borderRadius: 4,
                       margin: "0 4px",
                       padding: "0 12px",
@@ -644,8 +641,6 @@ export function Sidebar({
       {/* Footer */}
       <div style={{ display: "flex", alignItems: "center", padding: "0 12px", gap: 12, height: 28, borderTop: "1px solid var(--border)", color: "var(--text-muted)", fontSize: 11, flexShrink: 0 }}>
         <button onClick={onOpenPalette} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 11, padding: 0, fontFamily: "inherit" }} onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")} onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}>⌘K</button>
-        <span>⌘N new</span>
-        <span>⌘W close</span>
         <button onClick={onOpenSettings} title="Preferences (⌘P)" style={{ marginLeft: "auto", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 11, padding: 0, fontFamily: "inherit" }} onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")} onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}>?</button>
       </div>
 
