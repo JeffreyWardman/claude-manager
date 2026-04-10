@@ -12,7 +12,7 @@ use crate::utils::is_pid_alive;
 const MAX_BUF: usize = 512 * 1024; // 512 KB scrollback
 
 fn locks_dir() -> Option<PathBuf> {
-    dirs_next::home_dir().map(|h| h.join(".claude").join("manager").join("locks"))
+    crate::utils::manager_config_dir().map(|d| d.join("locks"))
 }
 
 fn lock_path(id: &str) -> Option<PathBuf> {

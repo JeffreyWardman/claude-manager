@@ -16,11 +16,27 @@ pub struct SessionMeta {
 pub type MetadataStore = HashMap<String, SessionMeta>;
 
 fn metadata_path() -> Option<PathBuf> {
-    dirs_next::home_dir().map(|h| h.join(".claude").join("manager").join("metadata.json"))
+    crate::utils::manager_config_dir().map(|d| d.join("metadata.json"))
 }
 
 pub fn load() -> MetadataStore {
-    if let Some(path) = metadata_path() {
+    let new_path = metadata_path();
+    if let Some(ref new) = new_path {
+        if !new.exists() {
+            if let Some(old) = dirs_next::home_dir()
+                .map(|h| h.join(".claude").join("manager").join("metadata.json"))
+            {
+                if old.exists() {
+                    if let Some(parent) = new.parent() {
+                        let _ = fs::create_dir_all(parent);
+                    }
+                    let _ = fs::copy(&old, new);
+                }
+            }
+        }
+    }
+
+    if let Some(path) = new_path {
         if let Ok(content) = fs::read_to_string(&path) {
             if let Ok(store) = serde_json::from_str::<MetadataStore>(&content) {
                 return store;
