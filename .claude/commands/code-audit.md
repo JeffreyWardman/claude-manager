@@ -46,7 +46,20 @@ Cross-reference both reports. For each finding:
 - Fix all confirmed issues
 - Run `bun run test` to verify nothing broke
 - Re-run linting to verify fixes compile
-- Append findings to `docs/dev.md` audit log
+- Append findings to `docs/audits/dev.md`
+
+### Step 5: Converge (only if invoked with `converge`)
+
+If the user ran `/code-audit converge`:
+
+Repeat steps 1-4 until a round finds **zero confirmed issues**. Each round:
+1. Re-run both auditor agents (they must re-read the code — previous fixes may have introduced new issues)
+2. Collate and verify as before
+3. Fix confirmed issues
+4. If zero issues found this round → stop, report "Converged after N rounds"
+5. If issues found → fix and loop
+
+Safety: stop after 5 rounds regardless and report remaining issues. Do not loop forever.
 
 ---
 

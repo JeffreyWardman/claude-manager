@@ -29,11 +29,6 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 			)
 		: uniqueCwds;
 
-	// Reset active index when filter changes
-	useEffect(() => {
-		setActiveIdx(0);
-	}, []);
-
 	function confirm(dir: string) {
 		const trimmed = dir.trim();
 		if (!trimmed) {

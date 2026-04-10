@@ -8,6 +8,19 @@ Perform a pedantic UI design and accessibility audit. Act as a senior UI designe
 4. Run `bunx biome check --write` and `bun run test` to verify
 5. Update `docs/audits/ui.md` with findings
 
+### Converge (only if invoked with `converge`)
+
+If the user ran `/ui-audit converge`:
+
+Repeat steps 1-5 until a round finds **zero issues**. Each round:
+1. Re-read all files (previous fixes may have introduced new issues)
+2. Audit against full checklist
+3. Fix issues found
+4. If zero issues → stop, report "Converged after N rounds"
+5. If issues found → fix and loop
+
+Safety: stop after 5 rounds regardless and report remaining issues.
+
 ---
 
 ## Visual Design Checklist

@@ -94,10 +94,7 @@ fn read_jsonl_header(path: &Path) -> Option<JournalFirstLine> {
     let file = fs::File::open(path).ok()?;
     let reader = BufReader::new(file);
     for line in reader.lines().take(10) {
-        let line = match line {
-            Ok(l) => l,
-            Err(_) => continue,
-        };
+        let Ok(line) = line else { continue };
         if let Ok(entry) = serde_json::from_str::<JournalFirstLine>(&line) {
             if entry.cwd.is_some() && entry.session_id.is_some() {
                 return Some(entry);

@@ -4,6 +4,8 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
+use crate::utils::claude_projects_dir;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ConversationEntry {
     pub role: EntryRole,
@@ -91,8 +93,6 @@ fn strip_system_tags(text: &str) -> String {
     }
     result.trim().to_string()
 }
-
-use crate::utils::claude_projects_dir;
 
 fn encode_path_for_claude(path: &str) -> String {
     path.trim_start_matches('/').replace('/', "-")

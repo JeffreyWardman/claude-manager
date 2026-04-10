@@ -51,19 +51,14 @@ function dropSessionToSlot(
 	const targetSlots = [...targetGroup.slots];
 	const existingIdx = targetSlots.indexOf(sessionId);
 
-	let added = false;
 	if (existingIdx >= 0) {
 		[targetSlots[existingIdx], targetSlots[slotIdx]] = [
 			targetSlots[slotIdx],
 			targetSlots[existingIdx],
 		];
-		added = true;
 	} else if (targetSlots[slotIdx] === null) {
 		targetSlots[slotIdx] = sessionId;
-		added = true;
-	}
-
-	if (!added) {
+	} else {
 		return groups;
 	}
 
@@ -87,23 +82,8 @@ function dropSessionToSlot(
 		.filter((g) => g.slots.some((s) => s !== null));
 }
 
-export function dropToSlot(
-	groups: PaneGroup[],
-	activeGroupId: string,
-	slotIdx: number,
-	sessionId: string,
-): PaneGroup[] {
-	return dropSessionToSlot(groups, activeGroupId, slotIdx, sessionId);
-}
-
-export function dropToGroupSlot(
-	groups: PaneGroup[],
-	groupId: string,
-	slotIdx: number,
-	sessionId: string,
-): PaneGroup[] {
-	return dropSessionToSlot(groups, groupId, slotIdx, sessionId);
-}
+export const dropToSlot = dropSessionToSlot;
+export const dropToGroupSlot = dropSessionToSlot;
 
 /**
  * Unconditional swap of two slots within the active group (pane-header drag).

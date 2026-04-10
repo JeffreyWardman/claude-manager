@@ -29,5 +29,5 @@ export function useFocusTrap(
 		};
 		window.addEventListener("keydown", handleKey);
 		return () => window.removeEventListener("keydown", handleKey);
-	}, [onEscape, dialogRef]);
+	}, [onEscape]);
 }

@@ -189,12 +189,9 @@ export function sessionMatchesFolder(session: ClaudeSession, query: string): boo
 
 export function sessionMatchesSearch(session: ClaudeSession, query: string): boolean {
 	const name = session.display_name || session.project_name;
-	if (containsMatch(name, query) || containsMatch(session.session_id, query)) {
-		return true;
-	}
-
-	const cwd = session.cwd;
-	const cwdTilde = cwd.replace(/^\/Users\/[^/]+/, "~");
-
-	return containsMatch(cwd, query) || containsMatch(cwdTilde, query);
+	return (
+		containsMatch(name, query) ||
+		containsMatch(session.session_id, query) ||
+		sessionMatchesFolder(session, query)
+	);
 }
