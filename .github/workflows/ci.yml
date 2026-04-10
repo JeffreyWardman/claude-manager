@@ -10,10 +10,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
       - uses: oven-sh/setup-bun@v2
 
       - run: bun install
 
+      # Frontend
+      - run: bunx biome check
       - run: bun run build
-
       - run: bun run test
+
+      # Backend
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings

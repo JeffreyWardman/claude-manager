@@ -46,8 +46,16 @@ pub fn rename_session(session_id: String, name: String) -> Result<(), String> {
     let mut store = load();
     let entry = store.entry(session_id).or_default();
     let trimmed = name.trim().to_string();
-    entry.display_name = if trimmed.is_empty() { None } else { Some(trimmed.clone()) };
-    entry.pending_rename = if trimmed.is_empty() { None } else { Some(trimmed) };
+    entry.display_name = if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.clone())
+    };
+    entry.pending_rename = if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed)
+    };
     save(&store);
     Ok(())
 }

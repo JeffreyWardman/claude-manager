@@ -22,12 +22,16 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 
 	useEffect(() => {
 		const handleKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") onClose();
+			if (e.key === "Escape") {
+				onClose();
+			}
 			if (e.key === "Tab" && dialogRef.current) {
 				const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
 					'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
 				);
-				if (focusable.length === 0) return;
+				if (focusable.length === 0) {
+					return;
+				}
 				const first = focusable[0];
 				const last = focusable[focusable.length - 1];
 				if (e.shiftKey && document.activeElement === first) {
@@ -59,7 +63,9 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 
 	function confirm(dir: string) {
 		const trimmed = dir.trim();
-		if (!trimmed) return;
+		if (!trimmed) {
+			return;
+		}
 		onConfirm(trimmed);
 		onClose();
 	}
@@ -164,8 +170,7 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 									width: "100%",
 									padding: "7px 14px",
 									cursor: "pointer",
-									background:
-										i === activeIdx ? "rgba(255,255,255,0.07)" : "none",
+									background: i === activeIdx ? "rgba(255,255,255,0.07)" : "none",
 									fontSize: 13,
 									color: i === activeIdx ? "#ededef" : "#9ca3af",
 									border: "none",
@@ -202,14 +207,8 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 						}}
 					>
 						<span>Open in</span>
-						<span style={{ color: "#9ca3af", fontFamily: "monospace" }}>
-							{value.trim()}
-						</span>
-						<span
-							style={{ marginLeft: "auto", fontSize: 11, color: "#8a8a8a" }}
-						>
-							↵ enter
-						</span>
+						<span style={{ color: "#9ca3af", fontFamily: "monospace" }}>{value.trim()}</span>
+						<span style={{ marginLeft: "auto", fontSize: 11, color: "#8a8a8a" }}>↵ enter</span>
 					</div>
 				)}
 			</div>

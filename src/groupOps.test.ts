@@ -15,14 +15,9 @@ function slots(g: PaneGroup): (string | null)[] {
 	return g.slots;
 }
 
-function makeGroup(
-	id: string,
-	slotValues: (string | null)[],
-	layout?: PaneLayout,
-): PaneGroup {
+function makeGroup(id: string, slotValues: (string | null)[], layout?: PaneLayout): PaneGroup {
 	const l: PaneLayout =
-		layout ??
-		(slotValues.length <= 1 ? "1x1" : slotValues.length <= 2 ? "2x1" : "2x2");
+		layout ?? (slotValues.length <= 1 ? "1x1" : slotValues.length <= 2 ? "2x1" : "2x2");
 	return { id, name: id, layout: l, slots: slotValues };
 }
 

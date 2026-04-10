@@ -10,9 +10,7 @@ export function usePtyActivity(
 	onInput?: (sessionId: string) => void,
 	onExit?: (sessionId: string) => void,
 ): Map<string, ActivityState> {
-	const [activityMap, setActivityMap] = useState<Map<string, ActivityState>>(
-		new Map(),
-	);
+	const [activityMap, setActivityMap] = useState<Map<string, ActivityState>>(new Map());
 	// biome-ignore lint/correctness/useExhaustiveDependencies: idsKey is intentionally the only dep to avoid re-subscribing on every render
 	const idsKey = sessionIds.slice().sort().join(",");
 	const onInputRef = { current: onInput };
@@ -21,7 +19,9 @@ export function usePtyActivity(
 	onExitRef.current = onExit;
 
 	useEffect(() => {
-		if (sessionIds.length === 0) return;
+		if (sessionIds.length === 0) {
+			return;
+		}
 
 		const unlisteners: (() => void)[] = [];
 		const timers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -29,7 +29,9 @@ export function usePtyActivity(
 
 		function scheduleIdle(id: string) {
 			const prev = timers.get(id);
-			if (prev) clearTimeout(prev);
+			if (prev) {
+				clearTimeout(prev);
+			}
 			timers.set(
 				id,
 				setTimeout(() => {
@@ -56,7 +58,9 @@ export function usePtyActivity(
 			listen<void>(`pty-exit-${id}`, () => {
 				hasInput.delete(id);
 				const prev = timers.get(id);
-				if (prev) clearTimeout(prev);
+				if (prev) {
+					clearTimeout(prev);
+				}
 				setActivityMap((m) => {
 					const next = new Map(m);
 					next.delete(id);

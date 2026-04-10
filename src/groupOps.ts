@@ -44,7 +44,9 @@ export function dropToSlot(
 	sessionId: string,
 ): PaneGroup[] {
 	const targetGroup = groups.find((g) => g.id === activeGroupId);
-	if (!targetGroup) return groups;
+	if (!targetGroup) {
+		return groups;
+	}
 
 	const targetSlots = [...targetGroup.slots];
 	const existingIdx = targetSlots.indexOf(sessionId);
@@ -61,15 +63,23 @@ export function dropToSlot(
 		added = true;
 	}
 
-	if (!added) return groups;
+	if (!added) {
+		return groups;
+	}
 
 	const wasAlreadyHere = existingIdx >= 0;
 	return groups
 		.map((g) => {
-			if (g.id === activeGroupId) return { ...g, slots: targetSlots };
-			if (wasAlreadyHere) return g;
+			if (g.id === activeGroupId) {
+				return { ...g, slots: targetSlots };
+			}
+			if (wasAlreadyHere) {
+				return g;
+			}
 			const i = g.slots.indexOf(sessionId);
-			if (i < 0) return g;
+			if (i < 0) {
+				return g;
+			}
 			const slots = [...g.slots];
 			slots[i] = null;
 			return { ...g, slots };
@@ -88,7 +98,9 @@ export function dropToGroupSlot(
 	sessionId: string,
 ): PaneGroup[] {
 	const targetGroup = groups.find((g) => g.id === groupId);
-	if (!targetGroup) return groups;
+	if (!targetGroup) {
+		return groups;
+	}
 
 	const targetSlots = [...targetGroup.slots];
 	const existingIdx = targetSlots.indexOf(sessionId);
@@ -105,15 +117,23 @@ export function dropToGroupSlot(
 		added = true;
 	}
 
-	if (!added) return groups;
+	if (!added) {
+		return groups;
+	}
 
 	const wasAlreadyHere = existingIdx >= 0;
 	return groups
 		.map((g) => {
-			if (g.id === groupId) return { ...g, slots: targetSlots };
-			if (wasAlreadyHere) return g;
+			if (g.id === groupId) {
+				return { ...g, slots: targetSlots };
+			}
+			if (wasAlreadyHere) {
+				return g;
+			}
 			const i = g.slots.indexOf(sessionId);
-			if (i < 0) return g;
+			if (i < 0) {
+				return g;
+			}
 			const slots = [...g.slots];
 			slots[i] = null;
 			return { ...g, slots };
@@ -131,7 +151,9 @@ export function swapSlots(
 	toIdx: number,
 ): PaneGroup[] {
 	return groups.map((g) => {
-		if (g.id !== activeGroupId) return g;
+		if (g.id !== activeGroupId) {
+			return g;
+		}
 		const slots = [...g.slots];
 		[slots[fromIdx], slots[toIdx]] = [slots[toIdx], slots[fromIdx]];
 		return { ...g, slots };
@@ -141,10 +163,7 @@ export function swapSlots(
 /**
  * Remove a session from every group slot it occupies.
  */
-export function removeFromGroup(
-	groups: PaneGroup[],
-	sessionId: string,
-): PaneGroup[] {
+export function removeFromGroup(groups: PaneGroup[], sessionId: string): PaneGroup[] {
 	return groups
 		.map((g) => ({
 			...g,
@@ -166,8 +185,12 @@ export function addToGroup(
 	enabledLayouts?: PaneLayout[],
 ): PaneGroup[] {
 	const targetGroup = groups.find((g) => g.id === groupId);
-	if (!targetGroup) return groups;
-	if (targetGroup.slots.includes(sessionId)) return groups;
+	if (!targetGroup) {
+		return groups;
+	}
+	if (targetGroup.slots.includes(sessionId)) {
+		return groups;
+	}
 
 	let firstEmpty = targetGroup.slots.indexOf(null);
 
@@ -178,10 +201,7 @@ export function addToGroup(
 		);
 		if (nextLayout) {
 			const newCount = SLOT_COUNTS[nextLayout];
-			const expanded = Array.from(
-				{ length: newCount },
-				(_, i) => targetGroup.slots[i] ?? null,
-			);
+			const expanded = Array.from({ length: newCount }, (_, i) => targetGroup.slots[i] ?? null);
 			groups = groups.map((g) =>
 				g.id === groupId ? { ...g, layout: nextLayout, slots: expanded } : g,
 			);
@@ -189,7 +209,9 @@ export function addToGroup(
 		}
 	}
 
-	if (firstEmpty < 0) return groups;
+	if (firstEmpty < 0) {
+		return groups;
+	}
 
 	return dropToGroupSlot(groups, groupId, firstEmpty, sessionId);
 }
@@ -204,7 +226,9 @@ export function removeFromSlot(
 ): PaneGroup[] {
 	return groups
 		.map((g) => {
-			if (g.id !== activeGroupId) return g;
+			if (g.id !== activeGroupId) {
+				return g;
+			}
 			const slots = [...g.slots];
 			slots[slotIdx] = null;
 			return { ...g, slots };

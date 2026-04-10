@@ -3,8 +3,8 @@ use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder};
 
 #[tauri::command]
 pub fn get_custom_themes() -> Vec<serde_json::Value> {
-    let Some(dir) = dirs_next::home_dir()
-        .map(|h| h.join(".config").join("claude-manager").join("themes"))
+    let Some(dir) =
+        dirs_next::home_dir().map(|h| h.join(".config").join("claude-manager").join("themes"))
     else {
         return vec![];
     };
@@ -35,18 +35,25 @@ pub fn get_platform() -> String {
 pub fn play_sound(path: String) {
     std::thread::spawn(move || {
         #[cfg(target_os = "macos")]
-        { let _ = std::process::Command::new("afplay").arg(&path).output(); }
+        {
+            let _ = std::process::Command::new("afplay").arg(&path).output();
+        }
         #[cfg(target_os = "linux")]
-        { let _ = std::process::Command::new("paplay").arg(&path).output(); }
+        {
+            let _ = std::process::Command::new("paplay").arg(&path).output();
+        }
     });
 }
 
 #[tauri::command]
 pub fn new_window(app: AppHandle) -> Result<(), String> {
-    let label = format!("main-{}", std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis());
+    let label = format!(
+        "main-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+    );
     WebviewWindowBuilder::new(&app, &label, WebviewUrl::default())
         .title("claude-manager")
         .inner_size(1200.0, 800.0)

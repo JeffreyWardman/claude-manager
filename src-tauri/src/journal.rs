@@ -35,7 +35,11 @@ fn extract_text(content: &serde_json::Value) -> Option<String> {
     match content {
         serde_json::Value::String(s) => {
             let trimmed = s.trim();
-            if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
         }
         serde_json::Value::Array(arr) => {
             let parts: Vec<String> = arr
@@ -44,13 +48,21 @@ fn extract_text(content: &serde_json::Value) -> Option<String> {
                     let obj = item.as_object()?;
                     if obj.get("type")?.as_str()? == "text" {
                         let t = obj.get("text")?.as_str()?.trim();
-                        if t.is_empty() { None } else { Some(t.to_string()) }
+                        if t.is_empty() {
+                            None
+                        } else {
+                            Some(t.to_string())
+                        }
                     } else {
                         None
                     }
                 })
                 .collect();
-            if parts.is_empty() { None } else { Some(parts.join("\n")) }
+            if parts.is_empty() {
+                None
+            } else {
+                Some(parts.join("\n"))
+            }
         }
         _ => None,
     }
@@ -133,7 +145,9 @@ pub fn get_conversation(cwd: String, session_id: String) -> Vec<ConversationEntr
             _ => continue,
         };
         let Some(content) = msg.content else { continue };
-        let Some(text) = extract_text(&content) else { continue };
+        let Some(text) = extract_text(&content) else {
+            continue;
+        };
         let text = strip_system_tags(&text);
         if text.is_empty() {
             continue;

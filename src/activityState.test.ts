@@ -16,17 +16,21 @@ function resolveIndicator(opts: {
 	unread?: boolean;
 	focused?: boolean;
 }): Indicator {
-	if (opts.activity === "computing") return "computing";
-	if (opts.unread) return "unread";
-	if (opts.activity === "waiting" && !opts.focused) return "waiting";
+	if (opts.activity === "computing") {
+		return "computing";
+	}
+	if (opts.unread) {
+		return "unread";
+	}
+	if (opts.activity === "waiting" && !opts.focused) {
+		return "waiting";
+	}
 	return opts.status;
 }
 
 describe("StatusDot indicator resolution", () => {
 	it("shows computing when activity is computing", () => {
-		expect(resolveIndicator({ status: "active", activity: "computing" })).toBe(
-			"computing",
-		);
+		expect(resolveIndicator({ status: "active", activity: "computing" })).toBe("computing");
 	});
 
 	it("computing takes priority over unread", () => {
@@ -40,9 +44,9 @@ describe("StatusDot indicator resolution", () => {
 	});
 
 	it("shows unread when not computing and unread is set", () => {
-		expect(
-			resolveIndicator({ status: "active", activity: "waiting", unread: true }),
-		).toBe("unread");
+		expect(resolveIndicator({ status: "active", activity: "waiting", unread: true })).toBe(
+			"unread",
+		);
 	});
 
 	it("shows waiting for unfocused pane with waiting activity", () => {
@@ -96,11 +100,7 @@ function applyActivityChange(
 ): UnreadState {
 	const unread = new Set(state.unread);
 	for (const [id, activity] of activityMap) {
-		if (
-			activity === "waiting" &&
-			state.prevActivity.get(id) === "computing" &&
-			id !== selectedId
-		) {
+		if (activity === "waiting" && state.prevActivity.get(id) === "computing" && id !== selectedId) {
 			unread.add(id);
 		}
 	}
@@ -108,14 +108,18 @@ function applyActivityChange(
 }
 
 function applySelect(state: UnreadState, selectedId: string): UnreadState {
-	if (!state.unread.has(selectedId)) return state;
+	if (!state.unread.has(selectedId)) {
+		return state;
+	}
 	const unread = new Set(state.unread);
 	unread.delete(selectedId);
 	return { ...state, unread };
 }
 
 function applyInput(state: UnreadState, sessionId: string): UnreadState {
-	if (!state.unread.has(sessionId)) return state;
+	if (!state.unread.has(sessionId)) {
+		return state;
+	}
 	const unread = new Set(state.unread);
 	unread.delete(sessionId);
 	return { ...state, unread };

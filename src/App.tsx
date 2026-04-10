@@ -47,14 +47,13 @@ function genId() {
 function loadGroups(): PaneGroup[] {
 	try {
 		const saved = localStorage.getItem("pane-groups");
-		if (saved) return JSON.parse(saved);
+		if (saved) {
+			return JSON.parse(saved);
+		}
 		// Migrate from old grid-sessions format
-		const old: string[] = JSON.parse(
-			localStorage.getItem("grid-sessions") ?? "[]",
-		);
+		const old: string[] = JSON.parse(localStorage.getItem("grid-sessions") ?? "[]");
 		if (old.length > 0) {
-			const layout: PaneLayout =
-				old.length <= 1 ? "1x1" : old.length <= 2 ? "2x1" : "2x2";
+			const layout: PaneLayout = old.length <= 1 ? "1x1" : old.length <= 2 ? "2x1" : "2x2";
 			const count = SLOT_COUNTS[layout];
 			const slots = Array.from({ length: count }, (_, i) => old[i] ?? null);
 			return [{ id: genId(), name: "Group 1", layout, slots }];
@@ -68,7 +67,9 @@ function AppInner() {
 	const [unreadSessions, setUnreadSessions] = useState<Set<string>>(new Set());
 	const clearUnread = useCallback((id: string) => {
 		setUnreadSessions((s) => {
-			if (!s.has(id)) return s;
+			if (!s.has(id)) {
+				return s;
+			}
 			const next = new Set(s);
 			next.delete(id);
 			return next;
@@ -94,10 +95,7 @@ function AppInner() {
 	const [ignorePatternsRaw, setIgnorePatternsRaw] = useState(
 		() => localStorage.getItem("ignore-patterns") ?? "",
 	);
-	const ignorePatterns = useMemo(
-		() => parseIgnorePatterns(ignorePatternsRaw),
-		[ignorePatternsRaw],
-	);
+	const ignorePatterns = useMemo(() => parseIgnorePatterns(ignorePatternsRaw), [ignorePatternsRaw]);
 
 	// Override session status based on local PTY state and filter ignored sessions.
 	const liveSessions = useMemo(
@@ -118,9 +116,7 @@ function AppInner() {
 	);
 	const [focusedSlotIdx, setFocusedSlotIdx] = useState(0);
 	const [hoveredSlotIdx, setHoveredSlotIdx] = useState<number | null>(null);
-	const [standaloneSelectedId, setStandaloneSelectedId] = useState<
-		string | null
-	>(null);
+	const [standaloneSelectedId, setStandaloneSelectedId] = useState<string | null>(null);
 	const [paletteOpen, setPaletteOpen] = useState(false);
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [newSessionOpen, setNewSessionOpen] = useState(false);
@@ -148,7 +144,9 @@ function AppInner() {
 				const parsed = (JSON.parse(saved) as string[]).filter((l) =>
 					VALID_LAYOUTS.has(l),
 				) as PaneLayout[];
-				if (parsed.length > 0) return parsed;
+				if (parsed.length > 0) {
+					return parsed;
+				}
 			}
 		} catch {}
 		return ["1x1", "2x1", "1x2", "2x2"];
@@ -179,16 +177,18 @@ function AppInner() {
 	// Keep focusedSlotIdx in bounds
 	useEffect(() => {
 		const max = (activeGroup?.slots.length ?? 1) - 1;
-		if (focusedSlotIdx > max) setFocusedSlotIdx(0);
+		if (focusedSlotIdx > max) {
+			setFocusedSlotIdx(0);
+		}
 	}, [activeGroup?.slots.length, focusedSlotIdx]);
 
 	// Remove archived/deleted sessions from all group slots
 	useEffect(() => {
-		if (sessions.length === 0) return;
+		if (sessions.length === 0) {
+			return;
+		}
 		const ids = new Set(sessions.map((s) => s.session_id));
-		const needsUpdate = groups.some((g) =>
-			g.slots.some((s) => s !== null && !ids.has(s)),
-		);
+		const needsUpdate = groups.some((g) => g.slots.some((s) => s !== null && !ids.has(s)));
 		if (needsUpdate) {
 			const next = groups.map((g) => ({
 				...g,
@@ -210,15 +210,12 @@ function AppInner() {
 		setStandaloneSelectedId(null);
 	}
 
-	const handleActivateGroupAtSlot = useCallback(
-		(groupId: string, slotIdx: number) => {
-			setActiveGroupId(groupId);
-			localStorage.setItem("active-group-id", groupId);
-			setStandaloneSelectedId(null);
-			setFocusedSlotIdx(slotIdx);
-		},
-		[],
-	);
+	const handleActivateGroupAtSlot = useCallback((groupId: string, slotIdx: number) => {
+		setActiveGroupId(groupId);
+		localStorage.setItem("active-group-id", groupId);
+		setStandaloneSelectedId(null);
+		setFocusedSlotIdx(slotIdx);
+	}, []);
 
 	const handleCreateGroup = useCallback(() => {
 		const id = genId();
@@ -239,8 +236,11 @@ function AppInner() {
 			if (activeGroupId === id) {
 				const newActive = next[0]?.id ?? null;
 				setActiveGroupId(newActive);
-				if (newActive) localStorage.setItem("active-group-id", newActive);
-				else localStorage.removeItem("active-group-id");
+				if (newActive) {
+					localStorage.setItem("active-group-id", newActive);
+				} else {
+					localStorage.removeItem("active-group-id");
+				}
 			}
 		},
 		[groups, activeGroupId, persistGroups],
@@ -258,11 +258,10 @@ function AppInner() {
 			const count = SLOT_COUNTS[layout];
 			persistGroups(
 				groups.map((g) => {
-					if (g.id !== id) return g;
-					const slots = Array.from(
-						{ length: count },
-						(_, i) => g.slots[i] ?? null,
-					);
+					if (g.id !== id) {
+						return g;
+					}
+					const slots = Array.from({ length: count }, (_, i) => g.slots[i] ?? null);
 					return { ...g, layout, slots };
 				}),
 			);
@@ -273,7 +272,9 @@ function AppInner() {
 
 	const handleDropToSlot = useCallback(
 		(slotIdx: number, sessionId: string) => {
-			if (!activeGroup) return;
+			if (!activeGroup) {
+				return;
+			}
 			persistGroups(dropToSlot(groups, activeGroup.id, slotIdx, sessionId));
 		},
 		[groups, activeGroup, persistGroups],
@@ -288,7 +289,9 @@ function AppInner() {
 
 	const handleSwapSlots = useCallback(
 		(fromIdx: number, toIdx: number) => {
-			if (!activeGroup) return;
+			if (!activeGroup) {
+				return;
+			}
 			persistGroups(swapSlots(groups, activeGroup.id, fromIdx, toIdx));
 		},
 		[groups, activeGroup, persistGroups],
@@ -296,7 +299,9 @@ function AppInner() {
 
 	const handleRemoveFromSlot = useCallback(
 		(slotIdx: number) => {
-			if (!activeGroup) return;
+			if (!activeGroup) {
+				return;
+			}
 			persistGroups(removeFromSlot(groups, activeGroup.id, slotIdx));
 		},
 		[groups, activeGroup, persistGroups],
@@ -316,21 +321,15 @@ function AppInner() {
 		[groups, enabledLayouts, persistGroups],
 	);
 
-	const handleCreateGroupWithSessionRef = useRef<(sid: string) => void>(
-		() => {},
-	);
-	const handleCreateGroupFromSessionsRef = useRef<
-		(a: string, b: string) => void
-	>(() => {});
+	const handleCreateGroupWithSessionRef = useRef<(sid: string) => void>(() => {});
+	const handleCreateGroupFromSessionsRef = useRef<(a: string, b: string) => void>(() => {});
 
 	const { isDragging: dndActive } = useDragDrop({
 		onDropToGroupSlot: handleDropToGroupSlot,
 		onAddToGroup: handleAddToGroup,
 		onRemoveFromGroup: handleRemoveFromGroup,
-		onCreateGroupFromSessions: (a, b) =>
-			handleCreateGroupFromSessionsRef.current(a, b),
-		onCreateGroupWithSession: (sid) =>
-			handleCreateGroupWithSessionRef.current(sid),
+		onCreateGroupFromSessions: (a, b) => handleCreateGroupFromSessionsRef.current(a, b),
+		onCreateGroupWithSession: (sid) => handleCreateGroupWithSessionRef.current(sid),
 		onDropToGridSlot: handleDropToSlot,
 		onSwapGridSlots: handleSwapSlots,
 		onActivateGroupAtSlot: handleActivateGroupAtSlot,
@@ -387,26 +386,20 @@ function AppInner() {
 		[groups, handleActivateGroupAtSlot],
 	);
 
-	const selectedId =
-		standaloneSelectedId ?? activeGroup?.slots[focusedSlotIdx] ?? null;
+	const selectedId = standaloneSelectedId ?? activeGroup?.slots[focusedSlotIdx] ?? null;
 
 	// Mark unread when computing→waiting on a non-focused session
-	const prevActivityForUnreadRef = useRef<Map<string, ActivityState>>(
-		new Map(),
-	);
+	const prevActivityForUnreadRef = useRef<Map<string, ActivityState>>(new Map());
 	useEffect(() => {
 		const prev = prevActivityForUnreadRef.current;
 		for (const [id, state] of activityMap) {
-			if (
-				state === "waiting" &&
-				prev.get(id) === "computing" &&
-				id !== selectedId
-			) {
+			if (state === "waiting" && prev.get(id) === "computing" && id !== selectedId) {
 				setUnreadSessions((s) => new Set(s).add(id));
 				if (localStorage.getItem("notif-sound-enabled") === "true") {
 					const soundPath = localStorage.getItem("notif-sound-path");
-					if (soundPath)
+					if (soundPath) {
 						invoke("play_sound", { path: soundPath }).catch(() => {});
+					}
 				}
 			}
 		}
@@ -415,14 +408,15 @@ function AppInner() {
 
 	// Clear unread when a session is focused (click pane or sidebar)
 	useEffect(() => {
-		if (selectedId) clearUnread(selectedId);
+		if (selectedId) {
+			clearUnread(selectedId);
+		}
 	}, [selectedId, clearUnread]);
 
 	const handleNewSession = useCallback(
 		(cwd: string) => {
 			const tmpId = `new-${Date.now()}`;
-			const skipPermissions =
-				localStorage.getItem("skip-permissions") === "true";
+			const skipPermissions = localStorage.getItem("skip-permissions") === "true";
 			invoke("pty_spawn", {
 				id: tmpId,
 				cwd,
@@ -445,18 +439,10 @@ function AppInner() {
 		for (const session of sessions) {
 			const prevState = prev.get(session.session_id);
 			const currState = activityMap.get(session.session_id);
-			if (
-				currState === "waiting" &&
-				prevState !== "waiting" &&
-				session.pending_rename
-			) {
-				const encoded = Array.from(
-					new TextEncoder().encode(`/rename ${session.pending_rename}\r`),
-				);
+			if (currState === "waiting" && prevState !== "waiting" && session.pending_rename) {
+				const encoded = Array.from(new TextEncoder().encode(`/rename ${session.pending_rename}\r`));
 				invoke("pty_write", { id: session.session_id, data: encoded })
-					.then(() =>
-						invoke("clear_pending_rename", { sessionId: session.session_id }),
-					)
+					.then(() => invoke("clear_pending_rename", { sessionId: session.session_id }))
 					.then(() => refresh())
 					.catch(console.error);
 			}
@@ -533,14 +519,20 @@ function AppInner() {
 				return;
 			}
 
-			if (paletteOpen || settingsOpen) return;
+			if (paletteOpen || settingsOpen) {
+				return;
+			}
 			const tag = (e.target as HTMLElement).tagName;
-			if (tag === "INPUT" || tag === "TEXTAREA") return;
+			if (tag === "INPUT" || tag === "TEXTAREA") {
+				return;
+			}
 
 			if (e.key >= "1" && e.key <= "9" && mod) {
 				e.preventDefault();
 				const target = groups[parseInt(e.key, 10) - 1];
-				if (target) activateGroup(target.id);
+				if (target) {
+					activateGroup(target.id);
+				}
 				return;
 			}
 		};
@@ -660,20 +652,13 @@ function AppInner() {
 						background: "var(--bg-sidebar)",
 						transition: "background 0.1s",
 					}}
-					onMouseEnter={(e) =>
-						(e.currentTarget.style.background = "var(--border)")
-					}
-					onMouseLeave={(e) =>
-						(e.currentTarget.style.background = "var(--bg-sidebar)")
-					}
+					onMouseEnter={(e) => (e.currentTarget.style.background = "var(--border)")}
+					onMouseLeave={(e) => (e.currentTarget.style.background = "var(--bg-sidebar)")}
 				/>
 			)}
 			{standaloneSelectedId ? (
 				<MainPane
-					session={
-						liveSessions.find((s) => s.session_id === standaloneSelectedId) ??
-						null
-					}
+					session={liveSessions.find((s) => s.session_id === standaloneSelectedId) ?? null}
 					activityMap={activityMap}
 					unreadSessions={unreadSessions}
 					focused

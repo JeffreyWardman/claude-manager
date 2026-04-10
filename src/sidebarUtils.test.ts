@@ -14,9 +14,7 @@ import {
 } from "./sidebarUtils";
 import type { ClaudeSession } from "./types";
 
-function makeSession(
-	overrides: Partial<ClaudeSession> & { session_id: string },
-): ClaudeSession {
+function makeSession(overrides: Partial<ClaudeSession> & { session_id: string }): ClaudeSession {
 	return {
 		pid: 0,
 		cwd: "/home/user/project",
@@ -41,12 +39,7 @@ describe("sortActiveFirst", () => {
 			makeSession({ session_id: "act2", status: "active", started_at: 150 }),
 		];
 		const sorted = sortActiveFirst(sessions);
-		expect(sorted.map((s) => s.session_id)).toEqual([
-			"act2",
-			"act1",
-			"off2",
-			"off1",
-		]);
+		expect(sorted.map((s) => s.session_id)).toEqual(["act2", "act1", "off2", "off1"]);
 	});
 
 	it("sorts by started_at descending within the same status", () => {
@@ -66,9 +59,7 @@ describe("sortActiveFirst", () => {
 		];
 		const original = [...sessions];
 		sortActiveFirst(sessions);
-		expect(sessions.map((s) => s.session_id)).toEqual(
-			original.map((s) => s.session_id),
-		);
+		expect(sessions.map((s) => s.session_id)).toEqual(original.map((s) => s.session_id));
 	});
 
 	it("handles empty array", () => {
@@ -148,18 +139,9 @@ describe("sortSessions", () => {
 				display_name: "ZZZ",
 			}),
 		];
-		expect(sortSessions(sessions, "active").map((s) => s.session_id)).toEqual([
-			"act",
-			"off",
-		]);
-		expect(sortSessions(sessions, "date").map((s) => s.session_id)).toEqual([
-			"off",
-			"act",
-		]);
-		expect(sortSessions(sessions, "alpha").map((s) => s.session_id)).toEqual([
-			"off",
-			"act",
-		]);
+		expect(sortSessions(sessions, "active").map((s) => s.session_id)).toEqual(["act", "off"]);
+		expect(sortSessions(sessions, "date").map((s) => s.session_id)).toEqual(["off", "act"]);
+		expect(sortSessions(sessions, "alpha").map((s) => s.session_id)).toEqual(["off", "act"]);
 	});
 });
 
@@ -404,9 +386,7 @@ describe("parseIgnorePatterns", () => {
 	});
 
 	it("parses ! as include (un-ignore)", () => {
-		const { include, exclude } = parseIgnorePatterns(
-			"scratch\n!scratch/important",
-		);
+		const { include, exclude } = parseIgnorePatterns("scratch\n!scratch/important");
 		expect(exclude).toEqual(["scratch"]);
 		expect(include).toEqual(["scratch/important"]);
 	});

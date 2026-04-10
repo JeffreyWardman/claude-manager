@@ -64,10 +64,16 @@ interface ContextMenu {
 function timeAgo(ms: number): string {
 	const diff = Date.now() - ms;
 	const m = Math.floor(diff / 60000);
-	if (m < 1) return "now";
-	if (m < 60) return `${m}m`;
+	if (m < 1) {
+		return "now";
+	}
+	if (m < 60) {
+		return `${m}m`;
+	}
 	const h = Math.floor(m / 60);
-	if (h < 24) return `${h}h`;
+	if (h < 24) {
+		return `${h}h`;
+	}
 	return `${Math.floor(h / 24)}d`;
 }
 
@@ -186,7 +192,9 @@ const LAYOUT_ICON_CELLS: Record<
 
 function LayoutIcon({ layout }: { layout: PaneLayout }) {
 	const entry = LAYOUT_ICON_CELLS[layout];
-	if (!entry) return null;
+	if (!entry) {
+		return null;
+	}
 	const { cols, rows, cells } = entry;
 	return (
 		<div
@@ -243,18 +251,13 @@ export function Sidebar({
 	const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 	const [groupsCollapsed, setGroupsCollapsed] = useState(false);
 	const [groupMode, setGroupMode] = useState<GroupMode>(
-		() =>
-			(localStorage.getItem("sidebar-group-mode") as GroupMode | null) ??
-			"status",
+		() => (localStorage.getItem("sidebar-group-mode") as GroupMode | null) ?? "status",
 	);
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>(
-		() =>
-			(localStorage.getItem("sidebar-status-filter") as StatusFilter | null) ??
-			"all",
+		() => (localStorage.getItem("sidebar-status-filter") as StatusFilter | null) ?? "all",
 	);
 	const [sortMode, setSortMode] = useState<SortMode>(
-		() =>
-			(localStorage.getItem("sidebar-sort-mode") as SortMode | null) ?? "date",
+		() => (localStorage.getItem("sidebar-sort-mode") as SortMode | null) ?? "date",
 	);
 	const [renamingId, setRenamingId] = useState<string | null>(null);
 	const [renameValue, setRenameValue] = useState("");
@@ -262,9 +265,7 @@ export function Sidebar({
 	// Group-level state
 	const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null);
 	const [renameGroupValue, setRenameGroupValue] = useState("");
-	const [layoutPickerGroupId, setLayoutPickerGroupId] = useState<string | null>(
-		null,
-	);
+	const [layoutPickerGroupId, setLayoutPickerGroupId] = useState<string | null>(null);
 	const [groupSlotContextMenu, setGroupSlotContextMenu] = useState<{
 		sessionId: string;
 		x: number;
@@ -291,12 +292,7 @@ export function Sidebar({
 	}, [renamingGroupId]);
 
 	useEffect(() => {
-		if (
-			!contextMenu &&
-			!layoutPickerGroupId &&
-			!groupSlotContextMenu &&
-			!filterDropdownOpen
-		)
+		if (!contextMenu && !layoutPickerGroupId && !groupSlotContextMenu && !filterDropdownOpen)
 			return;
 		const close = () => {
 			setContextMenu(null);
@@ -306,17 +302,10 @@ export function Sidebar({
 		};
 		window.addEventListener("click", close);
 		return () => window.removeEventListener("click", close);
-	}, [
-		contextMenu,
-		layoutPickerGroupId,
-		groupSlotContextMenu,
-		filterDropdownOpen,
-	]);
+	}, [contextMenu, layoutPickerGroupId, groupSlotContextMenu, filterDropdownOpen]);
 
 	const filteredSessions = sortSessions(
-		statusFilter === "all"
-			? sessions
-			: sessions.filter((s) => s.status === statusFilter),
+		statusFilter === "all" ? sessions : sessions.filter((s) => s.status === statusFilter),
 		sortMode,
 	);
 
@@ -329,31 +318,32 @@ export function Sidebar({
 				? "folder"
 				: "all";
 	const prefixLen =
-		searchMode === "group"
-			? 7
-			: searchMode === "session"
-				? 5
-				: searchMode === "folder"
-					? 8
-					: 0;
+		searchMode === "group" ? 7 : searchMode === "session" ? 5 : searchMode === "folder" ? 8 : 0;
 	const searchQuery = rawSearch.slice(prefixLen).toLowerCase().trim();
 
-	const matchSession =
-		searchMode === "folder" ? sessionMatchesFolder : sessionMatchesSearch;
+	const matchSession = searchMode === "folder" ? sessionMatchesFolder : sessionMatchesSearch;
 
 	const filteredGroups = searchQuery
 		? groups.filter((g) => {
 				if (searchMode === "session" || searchMode === "folder") {
 					return g.slots.some((sid) => {
-						if (!sid) return false;
+						if (!sid) {
+							return false;
+						}
 						const s = sessions.find((s) => s.session_id === sid);
 						return s && matchSession(s, searchQuery);
 					});
 				}
-				if (containsMatch(g.name, searchQuery)) return true;
-				if (searchMode === "group") return false;
+				if (containsMatch(g.name, searchQuery)) {
+					return true;
+				}
+				if (searchMode === "group") {
+					return false;
+				}
 				return g.slots.some((sid) => {
-					if (!sid) return false;
+					if (!sid) {
+						return false;
+					}
 					const s = sessions.find((s) => s.session_id === sid);
 					return s && matchSession(s, searchQuery);
 				});
@@ -368,19 +358,24 @@ export function Sidebar({
 
 	useEffect(() => {
 		const handleKey = (e: KeyboardEvent) => {
-			if (renamingId || renamingGroupId) return;
+			if (renamingId || renamingGroupId) {
+				return;
+			}
 			if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-				if ((e.target as HTMLElement)?.closest?.(".xterm")) return;
+				if ((e.target as HTMLElement)?.closest?.(".xterm")) {
+					return;
+				}
 				e.preventDefault();
 				const flatItems = filteredSessions;
 				const idx = flatItems.findIndex((s) => s.session_id === selectedId);
 				if (idx === -1) {
-					if (flatItems[0]) onSelect(flatItems[0]);
+					if (flatItems[0]) {
+						onSelect(flatItems[0]);
+					}
 					return;
 				}
 				const next = e.key === "ArrowDown" ? idx + 1 : idx - 1;
-				const target =
-					flatItems[Math.max(0, Math.min(flatItems.length - 1, next))];
+				const target = flatItems[Math.max(0, Math.min(flatItems.length - 1, next))];
 				if (target) {
 					onSelect(target);
 					itemRefs.current
@@ -389,22 +384,18 @@ export function Sidebar({
 				}
 			}
 			if (e.key === "Enter" && selectedId) {
-				if ((e.target as HTMLElement)?.closest?.(".xterm")) return;
+				if ((e.target as HTMLElement)?.closest?.(".xterm")) {
+					return;
+				}
 				const session = sessions.find((s) => s.session_id === selectedId);
-				if (session) startRename(session);
+				if (session) {
+					startRename(session);
+				}
 			}
 		};
 		window.addEventListener("keydown", handleKey);
 		return () => window.removeEventListener("keydown", handleKey);
-	}, [
-		sessions,
-		selectedId,
-		onSelect,
-		renamingId,
-		renamingGroupId,
-		filteredSessions,
-		startRename,
-	]);
+	}, [sessions, selectedId, onSelect, renamingId, renamingGroupId, filteredSessions, startRename]);
 
 	function startRename(session: ClaudeSession) {
 		setRenamingId(session.session_id);
@@ -437,7 +428,9 @@ export function Sidebar({
 
 	function commitRenameGroup(id: string) {
 		const trimmed = renameGroupValue.trim();
-		if (trimmed) onRenameGroup(id, trimmed);
+		if (trimmed) {
+			onRenameGroup(id, trimmed);
+		}
 		setRenamingGroupId(null);
 	}
 
@@ -458,7 +451,9 @@ export function Sidebar({
 			"This will permanently delete the conversation file. This cannot be undone.",
 			{ title: "Delete session?", kind: "warning" },
 		);
-		if (!confirmed) return;
+		if (!confirmed) {
+			return;
+		}
 		try {
 			await invoke("delete_session", { sessionId });
 			onRefresh();
@@ -469,9 +464,7 @@ export function Sidebar({
 
 	// Sessions assigned to any group are shown in the groups section — hide from sessions list
 	const sessionsInGroups = new Set(
-		groupsCollapsed
-			? []
-			: filteredGroups.flatMap((g) => g.slots.filter(Boolean) as string[]),
+		groupsCollapsed ? [] : filteredGroups.flatMap((g) => g.slots.filter(Boolean) as string[]),
 	);
 	const unassignedSessions = searchFilteredSessions.filter(
 		(s) => !sessionsInGroups.has(s.session_id),
@@ -525,11 +518,7 @@ export function Sidebar({
 						type="button"
 						onClick={() => {
 							const next: StatusFilter =
-								statusFilter === "all"
-									? "active"
-									: statusFilter === "active"
-										? "offline"
-										: "all";
+								statusFilter === "all" ? "active" : statusFilter === "active" ? "offline" : "all";
 							setStatusFilter(next);
 							localStorage.setItem("sidebar-status-filter", next);
 						}}
@@ -542,18 +531,10 @@ export function Sidebar({
 							letterSpacing: "0.04em",
 							color: "var(--text-secondary)",
 						}}
-						onMouseEnter={(e) =>
-							(e.currentTarget.style.color = "var(--text-primary)")
-						}
-						onMouseLeave={(e) =>
-							(e.currentTarget.style.color = "var(--text-secondary)")
-						}
+						onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
+						onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
 					>
-						{statusFilter === "all"
-							? "ALL"
-							: statusFilter === "active"
-								? "ACTIVE"
-								: "OFF"}
+						{statusFilter === "all" ? "ALL" : statusFilter === "active" ? "ACTIVE" : "OFF"}
 					</button>
 					<div style={{ position: "relative" }}>
 						<button
@@ -573,9 +554,7 @@ export function Sidebar({
 										? "var(--text-secondary)"
 										: "var(--text-very-muted)",
 							}}
-							onMouseEnter={(e) =>
-								(e.currentTarget.style.color = "var(--text-primary)")
-							}
+							onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
 							onMouseLeave={(e) =>
 								(e.currentTarget.style.color =
 									sortMode !== "date" || groupMode !== "status"
@@ -602,9 +581,7 @@ export function Sidebar({
 									padding: "6px 0",
 								}}
 							>
-								<div style={{ padding: "4px 12px 2px", ...sectionLabel }}>
-									SORT
-								</div>
+								<div style={{ padding: "4px 12px 2px", ...sectionLabel }}>SORT</div>
 								{(
 									[
 										["date", "Newest first"],
@@ -632,20 +609,15 @@ export function Sidebar({
 											cursor: "pointer",
 											fontFamily: "inherit",
 										}}
-										onMouseEnter={(e) =>
-											(e.currentTarget.style.background = "var(--item-hover)")
-										}
-										onMouseLeave={(e) =>
-											(e.currentTarget.style.background = "none")
-										}
+										onMouseEnter={(e) => (e.currentTarget.style.background = "var(--item-hover)")}
+										onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
 									>
 										<span
 											style={{
 												width: 6,
 												height: 6,
 												borderRadius: "50%",
-												background:
-													sortMode === val ? "var(--accent)" : "transparent",
+												background: sortMode === val ? "var(--accent)" : "transparent",
 												border: `1.5px solid ${sortMode === val ? "var(--accent)" : "var(--text-very-muted)"}`,
 												flexShrink: 0,
 											}}
@@ -660,9 +632,7 @@ export function Sidebar({
 										margin: "4px 0",
 									}}
 								/>
-								<div style={{ padding: "4px 12px 2px", ...sectionLabel }}>
-									GROUP BY
-								</div>
+								<div style={{ padding: "4px 12px 2px", ...sectionLabel }}>GROUP BY</div>
 								{(
 									[
 										["status", "Status"],
@@ -690,20 +660,15 @@ export function Sidebar({
 											cursor: "pointer",
 											fontFamily: "inherit",
 										}}
-										onMouseEnter={(e) =>
-											(e.currentTarget.style.background = "var(--item-hover)")
-										}
-										onMouseLeave={(e) =>
-											(e.currentTarget.style.background = "none")
-										}
+										onMouseEnter={(e) => (e.currentTarget.style.background = "var(--item-hover)")}
+										onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
 									>
 										<span
 											style={{
 												width: 6,
 												height: 6,
 												borderRadius: "50%",
-												background:
-													groupMode === val ? "var(--accent)" : "transparent",
+												background: groupMode === val ? "var(--accent)" : "transparent",
 												border: `1.5px solid ${groupMode === val ? "var(--accent)" : "var(--text-very-muted)"}`,
 												flexShrink: 0,
 											}}
@@ -720,12 +685,8 @@ export function Sidebar({
 						aria-label="New session"
 						title="New session (⌘⇧N)"
 						style={{ ...iconBtn, fontSize: 18, color: "var(--accent)" }}
-						onMouseEnter={(e) =>
-							(e.currentTarget.style.color = "var(--text-primary)")
-						}
-						onMouseLeave={(e) =>
-							(e.currentTarget.style.color = "var(--accent)")
-						}
+						onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
+						onMouseLeave={(e) => (e.currentTarget.style.color = "var(--accent)")}
 					>
 						+
 					</button>
@@ -733,9 +694,7 @@ export function Sidebar({
 			</div>
 
 			{/* Search */}
-			<div
-				style={{ padding: "0 8px 4px", flexShrink: 0, position: "relative" }}
-			>
+			<div style={{ padding: "0 8px 4px", flexShrink: 0, position: "relative" }}>
 				{!sidebarSearch && (
 					<div
 						style={{
@@ -751,10 +710,7 @@ export function Sidebar({
 						}}
 					>
 						<span style={{ color: "var(--text-muted)" }}>Search</span>
-						<span style={{ color: "var(--text-very-muted)" }}>
-							{" "}
-							(@group: @tab: @folder:)
-						</span>
+						<span style={{ color: "var(--text-very-muted)" }}> (@group: @tab: @folder:)</span>
 					</div>
 				)}
 				<input
@@ -816,19 +772,13 @@ export function Sidebar({
 								flex: 1,
 								textAlign: "left",
 							}}
-							onMouseEnter={(e) =>
-								(e.currentTarget.style.color = "var(--text-secondary)")
-							}
-							onMouseLeave={(e) =>
-								(e.currentTarget.style.color = "var(--text-muted)")
-							}
+							onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
+							onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
 						>
 							<span
 								style={{
 									display: "inline-block",
-									transform: groupsCollapsed
-										? "rotate(-90deg)"
-										: "rotate(0deg)",
+									transform: groupsCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
 									transition: "transform 0.1s",
 									fontSize: 8,
 								}}
@@ -842,12 +792,8 @@ export function Sidebar({
 							onClick={onCreateGroup}
 							title="New group"
 							style={{ ...iconBtn, fontSize: 15, color: "var(--text-muted)" }}
-							onMouseEnter={(e) =>
-								(e.currentTarget.style.color = "var(--accent)")
-							}
-							onMouseLeave={(e) =>
-								(e.currentTarget.style.color = "var(--text-muted)")
-							}
+							onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+							onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
 						>
 							+
 						</button>
@@ -878,14 +824,19 @@ export function Sidebar({
 											gap: 4,
 										}}
 										onClick={() => {
-											if (!isRenamingGroup) onActivateGroup(group.id);
+											if (!isRenamingGroup) {
+												onActivateGroup(group.id);
+											}
 										}}
 										onMouseEnter={(e) => {
-											if (!isActive)
+											if (!isActive) {
 												e.currentTarget.style.background = "var(--item-hover)";
+											}
 										}}
 										onMouseLeave={(e) => {
-											if (!isActive) e.currentTarget.style.background = "none";
+											if (!isActive) {
+												e.currentTarget.style.background = "none";
+											}
 										}}
 										onDoubleClick={() => startRenameGroup(group)}
 									>
@@ -914,9 +865,7 @@ export function Sidebar({
 											<span
 												style={{
 													display: "inline-block",
-													transform: isCollapsedGroup
-														? "rotate(-90deg)"
-														: "rotate(0deg)",
+													transform: isCollapsedGroup ? "rotate(-90deg)" : "rotate(0deg)",
 													transition: "transform 0.1s",
 												}}
 											>
@@ -959,9 +908,7 @@ export function Sidebar({
 													flex: 1,
 													fontSize: 12,
 													fontWeight: isActive ? 500 : 400,
-													color: isActive
-														? "var(--text-primary)"
-														: "var(--text-secondary)",
+													color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
 													overflow: "hidden",
 													textOverflow: "ellipsis",
 													whiteSpace: "nowrap",
@@ -977,9 +924,7 @@ export function Sidebar({
 												type="button"
 												onClick={(e) => {
 													e.stopPropagation();
-													setLayoutPickerGroupId(
-														showLayoutPicker ? null : group.id,
-													);
+													setLayoutPickerGroupId(showLayoutPicker ? null : group.id);
 												}}
 												aria-label={`Change layout for ${group.name}`}
 												title="Change layout"
@@ -994,12 +939,10 @@ export function Sidebar({
 													borderRadius: 3,
 												}}
 												onMouseEnter={(e) =>
-													(e.currentTarget.style.color =
-														"var(--text-secondary)")
+													(e.currentTarget.style.color = "var(--text-secondary)")
 												}
 												onMouseLeave={(e) =>
-													(e.currentTarget.style.color =
-														"var(--text-very-muted)")
+													(e.currentTarget.style.color = "var(--text-very-muted)")
 												}
 											>
 												{group.layout}
@@ -1045,15 +988,11 @@ export function Sidebar({
 																			: l
 																	}
 																	style={{
-																		background: isActive
-																			? "var(--accent)"
-																			: "var(--bg-main)",
+																		background: isActive ? "var(--accent)" : "var(--bg-main)",
 																		border: "1px solid var(--border)",
 																		borderRadius: 4,
 																		padding: "5px 6px",
-																		cursor: tooSmall
-																			? "not-allowed"
-																			: "pointer",
+																		cursor: tooSmall ? "not-allowed" : "pointer",
 																		color: isActive
 																			? "var(--bg-main)"
 																			: tooSmall
@@ -1064,9 +1003,7 @@ export function Sidebar({
 																		alignItems: "center",
 																		gap: 3,
 																		opacity: tooSmall ? 0.4 : 1,
-																		textDecoration: tooSmall
-																			? "line-through"
-																			: "none",
+																		textDecoration: tooSmall ? "line-through" : "none",
 																	}}
 																>
 																	<LayoutIcon layout={l} />
@@ -1121,11 +1058,9 @@ export function Sidebar({
 										<div style={{ paddingLeft: 16, paddingTop: 2 }}>
 											{group.slots.map((sessionId, slotIdx) => {
 												const session = sessionId
-													? (sessions.find((s) => s.session_id === sessionId) ??
-														null)
+													? (sessions.find((s) => s.session_id === sessionId) ?? null)
 													: null;
-												const isSlotSelected =
-													sessionId !== null && sessionId === selectedId;
+												const isSlotSelected = sessionId !== null && sessionId === selectedId;
 
 												return (
 													<div
@@ -1137,9 +1072,7 @@ export function Sidebar({
 															? {
 																	"data-drag": "session",
 																	"data-drag-id": session.session_id,
-																	"data-drag-label":
-																		session.display_name ||
-																		session.project_name,
+																	"data-drag-label": session.display_name || session.project_name,
 																}
 															: {})}
 														style={{
@@ -1157,8 +1090,9 @@ export function Sidebar({
 															transition: "all 0.1s",
 														}}
 														onClick={() => {
-															if (session)
+															if (session) {
 																onActivateGroupAtSlot(group.id, slotIdx);
+															}
 														}}
 														onContextMenu={
 															session
@@ -1174,15 +1108,17 @@ export function Sidebar({
 																: undefined
 														}
 														onMouseEnter={(e) => {
-															if (session && !isSlotSelected)
-																e.currentTarget.style.background =
-																	"var(--item-hover)";
-															if (group.id === activeGroupId)
+															if (session && !isSlotSelected) {
+																e.currentTarget.style.background = "var(--item-hover)";
+															}
+															if (group.id === activeGroupId) {
 																onHoverSlot(slotIdx);
+															}
 														}}
 														onMouseLeave={(e) => {
-															if (!isSlotSelected && !(e.buttons & 1))
+															if (!isSlotSelected && !(e.buttons & 1)) {
 																e.currentTarget.style.background = "none";
+															}
 															onHoverSlot(null);
 														}}
 													>
@@ -1202,9 +1138,7 @@ export function Sidebar({
 																<StatusDot
 																	status={session.status}
 																	activity={activityMap.get(session.session_id)}
-																	unread={unreadSessions.has(
-																		session.session_id,
-																	)}
+																	unread={unreadSessions.has(session.session_id)}
 																	size={5}
 																/>
 																<span
@@ -1315,19 +1249,13 @@ export function Sidebar({
 										letterSpacing: "0.06em",
 										textAlign: "left",
 									}}
-									onMouseEnter={(e) =>
-										(e.currentTarget.style.color = "var(--text-secondary)")
-									}
-									onMouseLeave={(e) =>
-										(e.currentTarget.style.color = "var(--text-muted)")
-									}
+									onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
+									onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
 								>
 									<span
 										style={{
 											display: "inline-block",
-											transform: isCollapsed
-												? "rotate(-90deg)"
-												: "rotate(0deg)",
+											transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
 											transition: "transform 0.1s",
 											fontSize: 8,
 											marginRight: 2,
@@ -1375,8 +1303,11 @@ export function Sidebar({
 											<div
 												key={session.session_id}
 												ref={(el) => {
-													if (el) itemRefs.current.set(session.session_id, el);
-													else itemRefs.current.delete(session.session_id);
+													if (el) {
+														itemRefs.current.set(session.session_id, el);
+													} else {
+														itemRefs.current.delete(session.session_id);
+													}
 												}}
 												data-drop="session"
 												data-session-id={session.session_id}
@@ -1404,19 +1335,21 @@ export function Sidebar({
 												}}
 												onMouseEnter={(e) => {
 													if (!isSelected)
-														e.currentTarget.style.background =
-															rowTint ?? "var(--item-hover)";
+														e.currentTarget.style.background = rowTint ?? "var(--item-hover)";
 												}}
 												onMouseLeave={(e) => {
 													if (!isSelected && !(e.buttons & 1))
-														e.currentTarget.style.background =
-															rowTint ?? "none";
+														e.currentTarget.style.background = rowTint ?? "none";
 												}}
 												onClick={() => {
-													if (!isRenaming) onSelect(session);
+													if (!isRenaming) {
+														onSelect(session);
+													}
 												}}
 												onDoubleClick={() => {
-													if (!isRenaming) startRename(session);
+													if (!isRenaming) {
+														startRename(session);
+													}
 												}}
 												onContextMenu={(e) => {
 													e.preventDefault();
@@ -1471,9 +1404,7 @@ export function Sidebar({
 															textOverflow: "ellipsis",
 															whiteSpace: "nowrap",
 															fontWeight: isSelected ? 500 : 400,
-															color: isSelected
-																? "var(--text-primary)"
-																: "var(--text-secondary)",
+															color: isSelected ? "var(--text-primary)" : "var(--text-secondary)",
 															fontSize: 13,
 														}}
 													>
@@ -1557,12 +1488,8 @@ export function Sidebar({
 						fontFamily: "inherit",
 						fontWeight: 500,
 					}}
-					onMouseEnter={(e) =>
-						(e.currentTarget.style.color = "var(--text-secondary)")
-					}
-					onMouseLeave={(e) =>
-						(e.currentTarget.style.color = "var(--text-muted)")
-					}
+					onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
+					onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
 				>
 					⌘K
 				</button>
@@ -1582,12 +1509,8 @@ export function Sidebar({
 						fontFamily: "inherit",
 						fontWeight: 500,
 					}}
-					onMouseEnter={(e) =>
-						(e.currentTarget.style.color = "var(--text-secondary)")
-					}
-					onMouseLeave={(e) =>
-						(e.currentTarget.style.color = "var(--text-muted)")
-					}
+					onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
+					onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
 				>
 					?
 				</button>
@@ -1628,9 +1551,7 @@ export function Sidebar({
 							cursor: "pointer",
 							fontFamily: "inherit",
 						}}
-						onMouseEnter={(e) =>
-							(e.currentTarget.style.background = "var(--item-hover)")
-						}
+						onMouseEnter={(e) => (e.currentTarget.style.background = "var(--item-hover)")}
 						onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
 					>
 						Remove from group
@@ -1641,10 +1562,10 @@ export function Sidebar({
 			{/* Context menu */}
 			{contextMenu &&
 				(() => {
-					const session = sessions.find(
-						(s) => s.session_id === contextMenu.sessionId,
-					);
-					if (!session) return null;
+					const session = sessions.find((s) => s.session_id === contextMenu.sessionId);
+					if (!session) {
+						return null;
+					}
 					return (
 						<div
 							role="menu"
@@ -1669,31 +1590,28 @@ export function Sidebar({
 									key={action}
 									role="menuitem"
 									onClick={() => {
-										if (action === "Rename") startRename(session);
-										else if (action === "Archive")
+										if (action === "Rename") {
+											startRename(session);
+										} else if (action === "Archive") {
 											archiveSession(session.session_id);
-										else if (action === "Delete")
+										} else if (action === "Delete") {
 											deleteSession(session.session_id);
+										}
 									}}
 									style={{
 										display: "block",
 										width: "100%",
 										background: "none",
 										border: "none",
-										color:
-											action === "Delete" ? "#f87171" : "var(--text-secondary)",
+										color: action === "Delete" ? "#f87171" : "var(--text-secondary)",
 										fontSize: 13,
 										textAlign: "left",
 										padding: "6px 12px",
 										cursor: "pointer",
 										fontFamily: "inherit",
 									}}
-									onMouseEnter={(e) =>
-										(e.currentTarget.style.background = "var(--item-hover)")
-									}
-									onMouseLeave={(e) =>
-										(e.currentTarget.style.background = "none")
-									}
+									onMouseEnter={(e) => (e.currentTarget.style.background = "var(--item-hover)")}
+									onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
 								>
 									{action}
 								</button>

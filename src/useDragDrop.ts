@@ -4,11 +4,7 @@ import { clearDragPayload, getDragPayload, setDragPayload } from "./dragState";
 const DRAG_THRESHOLD = 5;
 
 interface DragDropHandlers {
-	onDropToGroupSlot: (
-		groupId: string,
-		slotIdx: number,
-		sessionId: string,
-	) => void;
+	onDropToGroupSlot: (groupId: string, slotIdx: number, sessionId: string) => void;
 	onAddToGroup: (groupId: string, sessionId: string) => void;
 	onRemoveFromGroup: (sessionId: string) => void;
 	onCreateGroupFromSessions: (a: string, b: string) => void;
@@ -55,7 +51,9 @@ export function useDragDrop(handlers: DragDropHandlers) {
 			// First move with button held — try to identify a drag source
 			if (!startPos.current) {
 				const source = findDragSource(e.target as Element);
-				if (!source) return;
+				if (!source) {
+					return;
+				}
 
 				const dragType = source.getAttribute("data-drag")!;
 				const label = source.getAttribute("data-drag-label") || "";
@@ -83,7 +81,9 @@ export function useDragDrop(handlers: DragDropHandlers) {
 			if (!isDraggingRef.current) {
 				const dx = e.clientX - startPos.current.x;
 				const dy = e.clientY - startPos.current.y;
-				if (Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) return;
+				if (Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) {
+					return;
+				}
 				isDraggingRef.current = true;
 				setIsDragging(true);
 				document.body.style.userSelect = "none";
@@ -110,7 +110,9 @@ export function useDragDrop(handlers: DragDropHandlers) {
 		}
 
 		function onPointerUp(e: PointerEvent) {
-			if (!startPos.current) return;
+			if (!startPos.current) {
+				return;
+			}
 
 			if (!isDraggingRef.current) {
 				startPos.current = null;
@@ -132,10 +134,14 @@ export function useDragDrop(handlers: DragDropHandlers) {
 
 			const payload = getDragPayload();
 			clearDragPayload();
-			if (!payload) return;
+			if (!payload) {
+				return;
+			}
 
 			const target = findDropTarget(e.clientX, e.clientY);
-			if (!target) return;
+			if (!target) {
+				return;
+			}
 
 			const dropType = target.getAttribute("data-drop");
 			const h = handlersRef.current;
@@ -155,14 +161,17 @@ export function useDragDrop(handlers: DragDropHandlers) {
 				h.onRemoveFromGroup(payload.sessionId);
 			} else if (dropType === "session" && payload.type === "session") {
 				const sid = target.getAttribute("data-session-id")!;
-				if (sid !== payload.sessionId)
+				if (sid !== payload.sessionId) {
 					h.onCreateGroupFromSessions(payload.sessionId, sid);
+				}
 			} else if (dropType === "grid-slot" && payload.type === "session") {
 				const gi = parseInt(target.getAttribute("data-grid-idx")!, 10);
 				h.onDropToGridSlot(gi, payload.sessionId);
 			} else if (dropType === "grid-slot" && payload.type === "pane") {
 				const gi = parseInt(target.getAttribute("data-grid-idx")!, 10);
-				if (gi !== payload.paneIdx) h.onSwapGridSlots(payload.paneIdx, gi);
+				if (gi !== payload.paneIdx) {
+					h.onSwapGridSlots(payload.paneIdx, gi);
+				}
 			}
 		}
 

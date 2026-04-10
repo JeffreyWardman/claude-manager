@@ -41,7 +41,9 @@ export function applyTheme(t: Theme) {
 }
 
 function isValidTheme(v: unknown): v is Theme {
-	if (!v || typeof v !== "object") return false;
+	if (!v || typeof v !== "object") {
+		return false;
+	}
 	const o = v as Record<string, unknown>;
 	return (
 		typeof o.id === "string" &&
@@ -61,9 +63,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 		invoke<unknown[]>("get_custom_themes")
 			.then((raw) => {
 				const builtinIds = new Set(themes.map((t) => t.id));
-				const valid = raw
-					.filter(isValidTheme)
-					.filter((t) => !builtinIds.has(t.id));
+				const valid = raw.filter(isValidTheme).filter((t) => !builtinIds.has(t.id));
 				setCustomThemes(valid);
 			})
 			.catch(() => {});
@@ -91,9 +91,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 	}, [theme]);
 
 	return (
-		<ThemeContext.Provider
-			value={{ theme, allThemes, setThemeId, previewTheme, clearPreview }}
-		>
+		<ThemeContext.Provider value={{ theme, allThemes, setThemeId, previewTheme, clearPreview }}>
 			{children}
 		</ThemeContext.Provider>
 	);

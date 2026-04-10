@@ -33,7 +33,9 @@ export function TerminalPane({ ptyId, cwd, cmd }: Props) {
 
 	useEffect(() => {
 		const container = containerRef.current;
-		if (!container) return;
+		if (!container) {
+			return;
+		}
 
 		const term = new Terminal({
 			theme: theme.terminal,
@@ -89,11 +91,12 @@ export function TerminalPane({ ptyId, cwd, cmd }: Props) {
 				id: ptyId,
 			});
 			if (scrollback !== null) {
-				if (scrollback.length > 0) term.write(b64ToBytes(scrollback));
+				if (scrollback.length > 0) {
+					term.write(b64ToBytes(scrollback));
+				}
 				invoke("pty_resize", { id: ptyId, rows, cols }).catch(() => {});
 			} else {
-				const skipPermissions =
-					localStorage.getItem("skip-permissions") === "true";
+				const skipPermissions = localStorage.getItem("skip-permissions") === "true";
 				invoke("pty_spawn", {
 					id: ptyId,
 					cwd,

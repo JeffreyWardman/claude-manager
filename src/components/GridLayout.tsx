@@ -108,12 +108,8 @@ export function GridLayout({
 				}}
 			>
 				<div style={{ fontSize: 32, pointerEvents: "none" }}>◆</div>
-				<div style={{ fontSize: 13, pointerEvents: "none" }}>
-					No group selected
-				</div>
-				<div style={{ fontSize: 11, pointerEvents: "none" }}>
-					Create a group in the sidebar
-				</div>
+				<div style={{ fontSize: 13, pointerEvents: "none" }}>No group selected</div>
+				<div style={{ fontSize: 11, pointerEvents: "none" }}>Create a group in the sidebar</div>
 			</div>
 		);
 	}
@@ -136,8 +132,7 @@ export function GridLayout({
 		>
 			{group.slots.map((sessionId, idx) => {
 				const isFocused = idx === focusedIdx && multiPane;
-				const isHovered =
-					idx === hoveredIdx && multiPane && !(isFocused && sessionId);
+				const isHovered = idx === hoveredIdx && multiPane && !(isFocused && sessionId);
 
 				if (!sessionId) {
 					return (
@@ -205,7 +200,9 @@ export function GridLayout({
 				}
 
 				const found = sessions.find((s) => s.session_id === sessionId) ?? null;
-				if (found) lastKnown.current.set(sessionId, found);
+				if (found) {
+					lastKnown.current.set(sessionId, found);
+				}
 				const session = found ?? lastKnown.current.get(sessionId) ?? null;
 
 				return (

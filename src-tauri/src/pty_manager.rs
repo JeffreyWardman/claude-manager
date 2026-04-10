@@ -95,7 +95,12 @@ pub fn pty_spawn(
 
     let pty_system = NativePtySystem::default();
     let pair = pty_system
-        .openpty(PtySize { rows, cols, pixel_width: 0, pixel_height: 0 })
+        .openpty(PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
         .map_err(|e| e.to_string())?;
 
     let (master, slave) = (pair.master, pair.slave);
@@ -125,7 +130,9 @@ pub fn pty_spawn(
     cmd_builder.env("TERM", "xterm-256color");
     cmd_builder.env("COLORTERM", "truecolor");
 
-    let mut child = slave.spawn_command(cmd_builder).map_err(|e| e.to_string())?;
+    let mut child = slave
+        .spawn_command(cmd_builder)
+        .map_err(|e| e.to_string())?;
     drop(slave);
 
     std::thread::spawn(move || {
@@ -192,15 +199,21 @@ pub fn pty_spawn(
                             sb.drain(..trim);
                         }
                     }
-                    let encoded =
-                        base64::engine::general_purpose::STANDARD.encode(&buf[..n]);
+                    let encoded = base64::engine::general_purpose::STANDARD.encode(&buf[..n]);
                     let _ = app.emit(&data_event, encoded);
                 }
             }
         }
     });
 
-    state.0.lock().unwrap().insert(id, PtyEntry { writer, master, scrollback });
+    state.0.lock().unwrap().insert(
+        id,
+        PtyEntry {
+            writer,
+            master,
+            scrollback,
+        },
+    );
     Ok(())
 }
 
@@ -241,7 +254,12 @@ pub fn pty_resize(
     let map = state.0.lock().unwrap();
     if let Some(e) = map.get(&id) {
         e.master
-            .resize(PtySize { rows, cols, pixel_width: 0, pixel_height: 0 })
+            .resize(PtySize {
+                rows,
+                cols,
+                pixel_width: 0,
+                pixel_height: 0,
+            })
             .map_err(|e| e.to_string())?;
     }
     Ok(())

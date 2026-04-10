@@ -103,7 +103,8 @@ fn parse_timestamp(ts: &str) -> i64 {
             7 => 181, 8 => 212, 9 => 243, 10 => 273, 11 => 304, 12 => 334,
             _ => 0,
         } +
-        day - 1;
+        day
+        - 1;
     days_since_epoch * 86_400_000
         + time_parts[0] * 3_600_000
         + time_parts[1] * 60_000
@@ -115,7 +116,10 @@ fn read_jsonl_header(path: &PathBuf) -> Option<JournalFirstLine> {
     let file = fs::File::open(path).ok()?;
     let reader = BufReader::new(file);
     for line in reader.lines().take(10) {
-        let line = match line { Ok(l) => l, Err(_) => continue };
+        let line = match line {
+            Ok(l) => l,
+            Err(_) => continue,
+        };
         if let Ok(entry) = serde_json::from_str::<JournalFirstLine>(&line) {
             if entry.cwd.is_some() && entry.session_id.is_some() {
                 return Some(entry);
@@ -192,17 +196,20 @@ pub fn get_all_sessions() -> Vec<ClaudeSession> {
                             let display_name = meta.and_then(|m| m.display_name.clone());
                             let pending_rename = meta.and_then(|m| m.pending_rename.clone());
                             let project_name = project_name_from_cwd(&cwd);
-                            candidates.push((started_at, ClaudeSession {
-                                pid: 0,
-                                session_id: sid,
-                                project_name,
-                                cwd,
+                            candidates.push((
                                 started_at,
-                                status: SessionStatus::Offline,
-                                display_name,
-                                git_branch: header.git_branch,
-                                pending_rename,
-                            }));
+                                ClaudeSession {
+                                    pid: 0,
+                                    session_id: sid,
+                                    project_name,
+                                    cwd,
+                                    started_at,
+                                    status: SessionStatus::Offline,
+                                    display_name,
+                                    git_branch: header.git_branch,
+                                    pending_rename,
+                                },
+                            ));
                         }
                     }
                 }

@@ -121,7 +121,9 @@ const LIGHT_IDS = new Set([
 ]);
 
 function isLightTheme(t: { id: string; bg: { main: string } }): boolean {
-	if (LIGHT_IDS.has(t.id)) return true;
+	if (LIGHT_IDS.has(t.id)) {
+		return true;
+	}
 	// Heuristic for custom themes: parse the main bg brightness
 	const hex = t.bg.main.replace("#", "");
 	if (hex.length === 6) {
@@ -146,8 +148,9 @@ function pairThemes(
 	// Pin defaults first
 	const defaultDark = dark.find((t) => t.id.startsWith("default-"));
 	const defaultLight = light.find((t) => t.id.startsWith("default-"));
-	if (defaultDark || defaultLight)
+	if (defaultDark || defaultLight) {
 		pairs.push({ dark: defaultDark, light: defaultLight });
+	}
 
 	const remaining = dark
 		.filter((t) => !t.id.startsWith("default-"))
@@ -160,10 +163,11 @@ function pairThemes(
 		const match = light.find(
 			(l) =>
 				!usedLight.has(l.id) &&
-				(l.name.startsWith(base) ||
-					l.id.replace("-light", "") === d.id.replace("-dark", "")),
+				(l.name.startsWith(base) || l.id.replace("-light", "") === d.id.replace("-dark", "")),
 		);
-		if (match) usedLight.add(match.id);
+		if (match) {
+			usedLight.add(match.id);
+		}
 		pairs.push({ dark: d, light: match });
 	}
 
@@ -181,7 +185,9 @@ function fuzzyMatch(text: string, query: string): boolean {
 	const lower = text.toLowerCase();
 	let qi = 0;
 	for (let i = 0; i < lower.length && qi < query.length; i++) {
-		if (lower[i] === query[qi]) qi++;
+		if (lower[i] === query[qi]) {
+			qi++;
+		}
 	}
 	return qi === query.length;
 }
@@ -202,13 +208,7 @@ const HOTKEYS = [
 	{ keys: "⌘1–9", desc: "Jump to group" },
 ];
 
-function Section({
-	title,
-	children,
-}: {
-	title: string;
-	children: React.ReactNode;
-}) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
 	return (
 		<div style={{ marginBottom: 16 }}>
 			<div
@@ -296,13 +296,8 @@ function Table({ rows }: { rows: [string, string][] }) {
 	);
 }
 
-export function Settings({
-	onClose,
-	enabledLayouts,
-	onChangeEnabledLayouts,
-}: Props) {
-	const { theme, allThemes, setThemeId, previewTheme, clearPreview } =
-		useTheme();
+export function Settings({ onClose, enabledLayouts, onChangeEnabledLayouts }: Props) {
+	const { theme, allThemes, setThemeId, previewTheme, clearPreview } = useTheme();
 	const [tab, setTab] = useState<Tab>("preferences");
 	const [skipPermissions, setSkipPermissions] = useState(
 		() => localStorage.getItem("skip-permissions") === "true",
@@ -332,7 +327,9 @@ export function Settings({
 				const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
 					'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
 				);
-				if (focusable.length === 0) return;
+				if (focusable.length === 0) {
+					return;
+				}
 				const first = focusable[0];
 				const last = focusable[focusable.length - 1];
 				if (e.shiftKey && document.activeElement === first) {
@@ -362,8 +359,7 @@ export function Settings({
 		fontWeight: tab === t ? 600 : 400,
 		color: tab === t ? "var(--text-primary)" : "var(--text-muted)",
 		padding: "4px 8px",
-		borderBottom:
-			tab === t ? "2px solid var(--accent)" : "2px solid transparent",
+		borderBottom: tab === t ? "2px solid var(--accent)" : "2px solid transparent",
 		fontFamily: "inherit",
 	});
 
@@ -429,12 +425,8 @@ export function Settings({
 							lineHeight: 1,
 							padding: "8px",
 						}}
-						onMouseEnter={(e) =>
-							(e.currentTarget.style.color = "var(--text-primary)")
-						}
-						onMouseLeave={(e) =>
-							(e.currentTarget.style.color = "var(--text-muted)")
-						}
+						onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
+						onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
 					>
 						×
 					</button>
@@ -456,32 +448,16 @@ export function Settings({
 					>
 						Preferences
 					</button>
-					<button
-						type="button"
-						style={tabStyle("theme")}
-						onClick={() => setTab("theme")}
-					>
+					<button type="button" style={tabStyle("theme")} onClick={() => setTab("theme")}>
 						Theme
 					</button>
-					<button
-						type="button"
-						style={tabStyle("hotkeys")}
-						onClick={() => setTab("hotkeys")}
-					>
+					<button type="button" style={tabStyle("hotkeys")} onClick={() => setTab("hotkeys")}>
 						Hotkeys
 					</button>
-					<button
-						type="button"
-						style={tabStyle("guide")}
-						onClick={() => setTab("guide")}
-					>
+					<button type="button" style={tabStyle("guide")} onClick={() => setTab("guide")}>
 						Guide
 					</button>
-					<button
-						type="button"
-						style={tabStyle("about")}
-						onClick={() => setTab("about")}
-					>
+					<button type="button" style={tabStyle("about")} onClick={() => setTab("about")}>
 						About
 					</button>
 				</div>
@@ -518,7 +494,9 @@ export function Settings({
 											type="button"
 											key={layout}
 											onClick={() => {
-												if (layout === "1x1") return;
+												if (layout === "1x1") {
+													return;
+												}
 												const next = enabled
 													? enabledLayouts.filter((l) => l !== layout)
 													: [...enabledLayouts, layout];
@@ -544,9 +522,7 @@ export function Settings({
 													gridTemplateColumns: `repeat(${cols}, 1fr)`,
 													gridTemplateRows: `repeat(${rows}, 1fr)`,
 													gap: 1,
-													color: enabled
-														? "var(--text-primary)"
-														: "var(--text-muted)",
+													color: enabled ? "var(--text-primary)" : "var(--text-muted)",
 												}}
 											>
 												{cells.map(([gc, gr], i) => (
@@ -569,9 +545,7 @@ export function Settings({
 													fontSize: 8,
 													fontWeight: 600,
 													letterSpacing: "0.02em",
-													color: enabled
-														? "var(--text-secondary)"
-														: "var(--text-muted)",
+													color: enabled ? "var(--text-secondary)" : "var(--text-muted)",
 												}}
 											>
 												{layout}
@@ -675,18 +649,9 @@ export function Settings({
 									<div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
 										{(platform === "linux"
 											? [
-													[
-														"Complete",
-														"/usr/share/sounds/freedesktop/stereo/complete.oga",
-													],
-													[
-														"Bell",
-														"/usr/share/sounds/freedesktop/stereo/bell.oga",
-													],
-													[
-														"Message",
-														"/usr/share/sounds/freedesktop/stereo/message.oga",
-													],
+													["Complete", "/usr/share/sounds/freedesktop/stereo/complete.oga"],
+													["Bell", "/usr/share/sounds/freedesktop/stereo/bell.oga"],
+													["Message", "/usr/share/sounds/freedesktop/stereo/message.oga"],
 													[
 														"Dialog Info",
 														"/usr/share/sounds/freedesktop/stereo/dialog-information.oga",
@@ -709,10 +674,7 @@ export function Settings({
 													["Funk", "/System/Library/Sounds/Funk.aiff"],
 													["Morse", "/System/Library/Sounds/Morse.aiff"],
 													["Sosumi", "/System/Library/Sounds/Sosumi.aiff"],
-													[
-														"Submarine",
-														"/System/Library/Sounds/Submarine.aiff",
-													],
+													["Submarine", "/System/Library/Sounds/Submarine.aiff"],
 													["Basso", "/System/Library/Sounds/Basso.aiff"],
 												]
 										).map(([name, path]) => {
@@ -727,14 +689,10 @@ export function Settings({
 														invoke("play_sound", { path });
 													}}
 													style={{
-														background: isSelected
-															? "var(--accent)"
-															: "var(--bg-main)",
+														background: isSelected ? "var(--accent)" : "var(--bg-main)",
 														border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
 														borderRadius: 4,
-														color: isSelected
-															? "var(--bg-main)"
-															: "var(--text-muted)",
+														color: isSelected ? "var(--bg-main)" : "var(--text-muted)",
 														fontSize: 10,
 														padding: "2px 6px",
 														cursor: "pointer",
@@ -746,41 +704,26 @@ export function Settings({
 											);
 										})}
 									</div>
-									<div
-										style={{ display: "flex", alignItems: "center", gap: 8 }}
-									>
+									<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
 										<button
 											type="button"
 											onClick={async () => {
-												const { open } = await import(
-													"@tauri-apps/plugin-dialog"
-												);
+												const { open } = await import("@tauri-apps/plugin-dialog");
 												const path = await open({
 													title: "Select notification sound",
 													filters: [
 														{
 															name: "Audio",
-															extensions: [
-																"mp3",
-																"wav",
-																"ogg",
-																"m4a",
-																"aac",
-																"aiff",
-															],
+															extensions: ["mp3", "wav", "ogg", "m4a", "aac", "aiff"],
 														},
 													],
 												});
 												if (typeof path === "string") {
 													setNotifSoundPath(path);
 													localStorage.setItem("notif-sound-path", path);
-													import("@tauri-apps/api/core").then(
-														({ convertFileSrc }) => {
-															new Audio(convertFileSrc(path))
-																.play()
-																.catch(() => {});
-														},
-													);
+													import("@tauri-apps/api/core").then(({ convertFileSrc }) => {
+														new Audio(convertFileSrc(path)).play().catch(() => {});
+													});
 												}
 											}}
 											style={{
@@ -796,21 +739,20 @@ export function Settings({
 										>
 											Custom file...
 										</button>
-										{notifSoundPath &&
-											!notifSoundPath.startsWith("/System/") && (
-												<span
-													style={{
-														fontSize: 10,
-														color: "var(--text-muted)",
-														overflow: "hidden",
-														textOverflow: "ellipsis",
-														whiteSpace: "nowrap",
-														flex: 1,
-													}}
-												>
-													{notifSoundPath.split("/").pop()}
-												</span>
-											)}
+										{notifSoundPath && !notifSoundPath.startsWith("/System/") && (
+											<span
+												style={{
+													fontSize: 10,
+													color: "var(--text-muted)",
+													overflow: "hidden",
+													textOverflow: "ellipsis",
+													whiteSpace: "nowrap",
+													flex: 1,
+												}}
+											>
+												{notifSoundPath.split("/").pop()}
+											</span>
+										)}
 									</div>
 								</div>
 							)}
@@ -835,10 +777,9 @@ export function Settings({
 									marginBottom: 6,
 								}}
 							>
-								One pattern per line. Matches against session name and path
-								(relative to home directory). Supports globs (<Code>*</Code>,{" "}
-								<Code>**</Code>, <Code>?</Code>). Prefix with <Code>!</Code> to
-								un-ignore. Lines starting with <Code>#</Code> are comments.
+								One pattern per line. Matches against session name and path (relative to home
+								directory). Supports globs (<Code>*</Code>, <Code>**</Code>, <Code>?</Code>). Prefix
+								with <Code>!</Code> to un-ignore. Lines starting with <Code>#</Code> are comments.
 							</div>
 							<textarea
 								aria-label="Ignore patterns"
@@ -924,9 +865,7 @@ export function Settings({
 							>
 								{pairThemes(
 									allThemes.filter(
-										(t) =>
-											!themeSearch ||
-											fuzzyMatch(t.name, themeSearch.toLowerCase()),
+										(t) => !themeSearch || fuzzyMatch(t.name, themeSearch.toLowerCase()),
 									),
 								).flatMap(({ dark, light }) => {
 									const renderCard = (t: (typeof allThemes)[0]) => {
@@ -956,9 +895,7 @@ export function Settings({
 													transition: "border-color 0.1s",
 												}}
 											>
-												<div
-													style={{ display: "flex", gap: 3, marginBottom: 8 }}
-												>
+												<div style={{ display: "flex", gap: 3, marginBottom: 8 }}>
 													{palette.map((c, i) => (
 														<div
 															key={i}
@@ -1007,26 +944,14 @@ export function Settings({
 													>
 														{t.name}
 													</span>
-													{isActive && (
-														<span style={{ fontSize: 10, color: t.accent }}>
-															✓
-														</span>
-													)}
+													{isActive && <span style={{ fontSize: 10, color: t.accent }}>✓</span>}
 												</div>
 											</button>
 										);
 									};
 									return [
-										dark ? (
-											renderCard(dark)
-										) : (
-											<div key={`empty-dark-${light?.id}`} />
-										),
-										light ? (
-											renderCard(light)
-										) : (
-											<div key={`empty-light-${dark?.id}`} />
-										),
+										dark ? renderCard(dark) : <div key={`empty-dark-${light?.id}`} />,
+										light ? renderCard(light) : <div key={`empty-light-${dark?.id}`} />,
 									];
 								})}
 							</div>
@@ -1046,11 +971,7 @@ export function Settings({
 										borderBottom: "1px solid var(--border)",
 									}}
 								>
-									<span
-										style={{ fontSize: 12, color: "var(--text-secondary)" }}
-									>
-										{desc}
-									</span>
+									<span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{desc}</span>
 									<kbd
 										style={{
 											fontSize: 11,
@@ -1078,22 +999,16 @@ export function Settings({
 							}}
 						>
 							<Section title="Filtering and sorting">
-								<P>
-									The sidebar header has clickable controls for filtering and
-									sorting:
-								</P>
+								<P>The sidebar header has clickable controls for filtering and sorting:</P>
 								<Table
 									rows={[
 										["ALL / LIVE / OFF", "Filter by status"],
-										[
-											"Sort/Group dropdown",
-											"Sort by date or name; group by status or location",
-										],
+										["Sort/Group dropdown", "Sort by date or name; group by status or location"],
 									]}
 								/>
 								<P>
-									The search bar filters groups and sessions by name, path, or
-									ID. Scope with a prefix:
+									The search bar filters groups and sessions by name, path, or ID. Scope with a
+									prefix:
 								</P>
 								<Table
 									rows={[
@@ -1103,10 +1018,7 @@ export function Settings({
 										["(no prefix)", "Search everything"],
 									]}
 								/>
-								<P>
-									Folder search accepts full paths, ~/paths, or bare names
-									(assumes ~/).
-								</P>
+								<P>Folder search accepts full paths, ~/paths, or bare names (assumes ~/).</P>
 							</Section>
 
 							<Section title="Activity indicators">
@@ -1120,12 +1032,12 @@ export function Settings({
 									]}
 								/>
 								<P>
-									Unread is cleared when you click the pane, click the session
-									in the sidebar, or type in it.
+									Unread is cleared when you click the pane, click the session in the sidebar, or
+									type in it.
 								</P>
 								<P>
-									Enable a completion sound in Preferences to get an audio
-									notification when a session finishes.
+									Enable a completion sound in Preferences to get an audio notification when a
+									session finishes.
 								</P>
 							</Section>
 
@@ -1134,57 +1046,50 @@ export function Settings({
 								<Table
 									rows={[
 										["Archive", "Hides from sidebar. File preserved on disk."],
-										[
-											"Delete",
-											"Permanently removes conversation file. Cannot be undone.",
-										],
+										["Delete", "Permanently removes conversation file. Cannot be undone."],
 									]}
 								/>
 							</Section>
 
 							<Section title="Ignore patterns">
 								<P>
-									Hide sessions from the sidebar via Preferences &gt; Ignore
-									Patterns. One pattern per line, matched against session name
-									and path (relative to home directory).
+									Hide sessions from the sidebar via Preferences &gt; Ignore Patterns. One pattern
+									per line, matched against session name and path (relative to home directory).
 								</P>
 								<P>
-									Supports globs: <Code>*</Code> (any characters within a
-									segment), <Code>**</Code> (any characters across segments),{" "}
-									<Code>?</Code> (single character). Prefix with <Code>!</Code>{" "}
-									to un-ignore. Lines starting with <Code>#</Code> are comments.
+									Supports globs: <Code>*</Code> (any characters within a segment), <Code>**</Code>{" "}
+									(any characters across segments), <Code>?</Code> (single character). Prefix with{" "}
+									<Code>!</Code> to un-ignore. Lines starting with <Code>#</Code> are comments.
 								</P>
 							</Section>
 
 							<Section title="Groups and tiling">
 								<P>
-									Drag sessions onto a group header to add them. If the group is
-									full, it automatically expands to the next enabled layout.
+									Drag sessions onto a group header to add them. If the group is full, it
+									automatically expands to the next enabled layout.
 								</P>
 								<P>
-									Change tiling layouts from the layout icon in the group
-									header. Enable or disable layouts in Preferences.
+									Change tiling layouts from the layout icon in the group header. Enable or disable
+									layouts in Preferences.
 								</P>
 								<P>
-									Cycle between groups with <Kbd>Ctrl+Tab</Kbd> /{" "}
-									<Kbd>Ctrl+Shift+Tab</Kbd>, or jump directly with{" "}
-									<Kbd>Cmd+1</Kbd>–<Kbd>9</Kbd>. Delete the active group with{" "}
+									Cycle between groups with <Kbd>Ctrl+Tab</Kbd> / <Kbd>Ctrl+Shift+Tab</Kbd>, or jump
+									directly with <Kbd>Cmd+1</Kbd>–<Kbd>9</Kbd>. Delete the active group with{" "}
 									<Kbd>Cmd+Delete</Kbd>.
 								</P>
 							</Section>
 
 							<Section title="Multi-window">
 								<P>
-									<Kbd>Cmd+N</Kbd> opens a new window. Windows share the same
-									session pool but have independent layouts. Session locking
-									prevents two windows from resuming the same Claude session.
+									<Kbd>Cmd+N</Kbd> opens a new window. Windows share the same session pool but have
+									independent layouts. Session locking prevents two windows from resuming the same
+									Claude session.
 								</P>
 							</Section>
 
 							<Section title="Custom themes">
 								<P>
-									Drop JSON theme files into{" "}
-									<Code>~/.config/claude-manager/themes/</Code>. See the{" "}
+									Drop JSON theme files into <Code>~/.config/claude-manager/themes/</Code>. See the{" "}
 									<a
 										href="https://github.com/JeffreyWardman/claude-manager/blob/main/README.md#custom-themes"
 										target="_blank"
@@ -1230,19 +1135,10 @@ export function Settings({
 									rel="noopener noreferrer"
 									aria-label="GitHub repository"
 									style={{ color: "var(--text-muted)", lineHeight: 1 }}
-									onMouseEnter={(e) =>
-										(e.currentTarget.style.color = "var(--text-primary)")
-									}
-									onMouseLeave={(e) =>
-										(e.currentTarget.style.color = "var(--text-muted)")
-									}
+									onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
+									onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
 								>
-									<svg
-										width="16"
-										height="16"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-									>
+									<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 										<path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z" />
 									</svg>
 								</a>
@@ -1252,8 +1148,7 @@ export function Settings({
 								0.1.0
 							</div>
 							<p style={{ marginBottom: 12 }}>
-								A desktop app for managing multiple Claude Code sessions side by
-								side.
+								A desktop app for managing multiple Claude Code sessions side by side.
 							</p>
 							<p style={{ color: "var(--text-muted)", fontSize: 11 }}>
 								MIT License — Jeffrey Wardman

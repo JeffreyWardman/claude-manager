@@ -25,12 +25,16 @@ export function CommandPalette({ sessions, onSelect, onClose }: Props) {
 
 	useEffect(() => {
 		const handleKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") onClose();
+			if (e.key === "Escape") {
+				onClose();
+			}
 			if (e.key === "Tab" && dialogRef.current) {
 				const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
 					'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
 				);
-				if (focusable.length === 0) return;
+				if (focusable.length === 0) {
+					return;
+				}
 				const first = focusable[0];
 				const last = focusable[focusable.length - 1];
 				if (e.shiftKey && document.activeElement === first) {
@@ -88,11 +92,7 @@ export function CommandPalette({ sessions, onSelect, onClose }: Props) {
 					boxShadow: "0 24px 48px rgba(0,0,0,0.6)",
 				}}
 			>
-				<Command
-					value={value}
-					onValueChange={setValue}
-					style={{ background: "transparent" }}
-				>
+				<Command value={value} onValueChange={setValue} style={{ background: "transparent" }}>
 					<div
 						style={{
 							display: "flex",
@@ -141,11 +141,7 @@ export function CommandPalette({ sessions, onSelect, onClose }: Props) {
 						{active.length > 0 && (
 							<Command.Group heading="ACTIVE" style={{ padding: "0" }}>
 								{active.map((s) => (
-									<SessionItem
-										key={s.session_id}
-										session={s}
-										onSelect={handleSelect}
-									/>
+									<SessionItem key={s.session_id} session={s} onSelect={handleSelect} />
 								))}
 							</Command.Group>
 						)}
@@ -153,11 +149,7 @@ export function CommandPalette({ sessions, onSelect, onClose }: Props) {
 						{offline.length > 0 && (
 							<Command.Group heading="OFFLINE">
 								{offline.slice(0, 15).map((s) => (
-									<SessionItem
-										key={s.session_id}
-										session={s}
-										onSelect={handleSelect}
-									/>
+									<SessionItem key={s.session_id} session={s} onSelect={handleSelect} />
 								))}
 							</Command.Group>
 						)}
@@ -175,9 +167,7 @@ function SessionItem({
 	session: ClaudeSession;
 	onSelect: (id: string) => void;
 }) {
-	const name =
-		session.display_name ||
-		`${session.project_name}-${session.session_id.slice(0, 5)}`;
+	const name = session.display_name || `${session.project_name}-${session.session_id.slice(0, 5)}`;
 	return (
 		<Command.Item
 			value={`${name} ${session.cwd} ${session.git_branch ?? ""}`}
@@ -199,9 +189,7 @@ function SessionItem({
 		>
 			<StatusDot status={session.status} size={7} />
 			<span style={{ flex: 1, fontWeight: 500, color: "#ededef" }}>{name}</span>
-			<span style={{ fontSize: 11, color: "#8a8a8a" }}>
-				{formatCwd(session.cwd)}
-			</span>
+			<span style={{ fontSize: 11, color: "#8a8a8a" }}>{formatCwd(session.cwd)}</span>
 			{session.git_branch && (
 				<span
 					style={{

@@ -9,13 +9,7 @@ interface Props {
 	size?: number;
 }
 
-export function StatusDot({
-	status,
-	activity,
-	unread,
-	focused,
-	size = 8,
-}: Props) {
+export function StatusDot({ status, activity, unread, focused, size = 8 }: Props) {
 	if (activity === "computing") {
 		return (
 			<span

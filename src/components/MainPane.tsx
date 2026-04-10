@@ -40,12 +40,8 @@ export function MainPane({
 				className="flex flex-col items-center justify-center flex-1 h-full"
 				style={{ color: "var(--text-very-muted)" }}
 			>
-				<div style={{ fontSize: 32, marginBottom: 12, pointerEvents: "none" }}>
-					◆
-				</div>
-				<div style={{ fontSize: 13, pointerEvents: "none" }}>
-					Select a session
-				</div>
+				<div style={{ fontSize: 32, marginBottom: 12, pointerEvents: "none" }}>◆</div>
+				<div style={{ fontSize: 13, pointerEvents: "none" }}>Select a session</div>
 				<div
 					style={{
 						fontSize: 11,
@@ -79,10 +75,7 @@ export function MainPane({
 	const inGrid = gridSlotIdx !== undefined;
 
 	return (
-		<div
-			className="flex flex-col flex-1 h-full"
-			style={{ background: "var(--bg-main)" }}
-		>
+		<div className="flex flex-col flex-1 h-full" style={{ background: "var(--bg-main)" }}>
 			{/* Header */}
 			<div
 				{...(!inGrid ? { "data-tauri-drag-region": true } : {})}
@@ -132,8 +125,7 @@ export function MainPane({
 							whiteSpace: "nowrap",
 						}}
 					>
-						{session.display_name ||
-							`${session.project_name}-${session.session_id.slice(0, 5)}`}
+						{session.display_name || `${session.project_name}-${session.session_id.slice(0, 5)}`}
 					</span>
 					<span
 						style={{
@@ -164,22 +156,15 @@ export function MainPane({
 						aria-selected={view === "claude"}
 						style={tabStyle(view === "claude")}
 						onClick={() => setView("claude")}
-						onMouseEnter={(e) =>
-							(e.currentTarget.style.color = "var(--text-secondary)")
-						}
+						onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
 						onMouseLeave={(e) =>
 							(e.currentTarget.style.color =
-								view === "claude"
-									? "var(--text-secondary)"
-									: "var(--text-muted)")
+								view === "claude" ? "var(--text-secondary)" : "var(--text-muted)")
 						}
 					>
 						CLAUDE
 					</button>
-					<span
-						aria-hidden="true"
-						style={{ color: "var(--text-very-muted)", fontSize: 10 }}
-					>
+					<span aria-hidden="true" style={{ color: "var(--text-very-muted)", fontSize: 10 }}>
 						|
 					</span>
 					<button
@@ -188,22 +173,15 @@ export function MainPane({
 						aria-selected={view === "terminal"}
 						style={tabStyle(view === "terminal")}
 						onClick={() => setView("terminal")}
-						onMouseEnter={(e) =>
-							(e.currentTarget.style.color = "var(--text-secondary)")
-						}
+						onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
 						onMouseLeave={(e) =>
 							(e.currentTarget.style.color =
-								view === "terminal"
-									? "var(--text-secondary)"
-									: "var(--text-muted)")
+								view === "terminal" ? "var(--text-secondary)" : "var(--text-muted)")
 						}
 					>
 						TERMINAL
 					</button>
-					<span
-						aria-hidden="true"
-						style={{ color: "var(--text-very-muted)", fontSize: 10 }}
-					>
+					<span aria-hidden="true" style={{ color: "var(--text-very-muted)", fontSize: 10 }}>
 						|
 					</span>
 					<button
@@ -214,14 +192,10 @@ export function MainPane({
 						style={{ ...tabStyle(view === "split"), fontSize: 15 }}
 						onClick={() => setView((v) => (v === "split" ? "claude" : "split"))}
 						title="Split view"
-						onMouseEnter={(e) =>
-							(e.currentTarget.style.color = "var(--text-secondary)")
-						}
+						onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
 						onMouseLeave={(e) =>
 							(e.currentTarget.style.color =
-								view === "split"
-									? "var(--text-secondary)"
-									: "var(--text-muted)")
+								view === "split" ? "var(--text-secondary)" : "var(--text-muted)")
 						}
 					>
 						⧉
@@ -244,12 +218,8 @@ export function MainPane({
 								marginLeft: 4,
 								lineHeight: 1,
 							}}
-							onMouseEnter={(e) =>
-								(e.currentTarget.style.color = "var(--text-secondary)")
-							}
-							onMouseLeave={(e) =>
-								(e.currentTarget.style.color = "var(--text-very-muted)")
-							}
+							onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
+							onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-very-muted)")}
 						>
 							×
 						</button>

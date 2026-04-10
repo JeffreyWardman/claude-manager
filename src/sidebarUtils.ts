@@ -27,10 +27,7 @@ export function sortAlpha(sessions: ClaudeSession[]): ClaudeSession[] {
 	});
 }
 
-export function sortSessions(
-	sessions: ClaudeSession[],
-	mode: SortMode,
-): ClaudeSession[] {
+export function sortSessions(sessions: ClaudeSession[], mode: SortMode): ClaudeSession[] {
 	switch (mode) {
 		case "active":
 			return sortActiveFirst(sessions);
@@ -43,7 +40,9 @@ export function sortSessions(
 
 export function projectLabel(cwd: string): string {
 	const parts = cwd.replace(/\/$/, "").split("/");
-	if (parts.length >= 2) return parts.slice(-2).join("/");
+	if (parts.length >= 2) {
+		return parts.slice(-2).join("/");
+	}
 	return parts[parts.length - 1] || cwd;
 }
 
@@ -76,7 +75,9 @@ export function groupByLocation(
 	const map = new Map<string, ClaudeSession[]>();
 	for (const s of sessions) {
 		const key = projectLabel(s.cwd);
-		if (!map.has(key)) map.set(key, []);
+		if (!map.has(key)) {
+			map.set(key, []);
+		}
 		map.get(key)!.push(s);
 	}
 	return Array.from(map.entries())
@@ -84,7 +85,9 @@ export function groupByLocation(
 		.sort((a, b) => {
 			const aActive = a.sessions.some((s) => s.status === "active") ? 0 : 1;
 			const bActive = b.sessions.some((s) => s.status === "active") ? 0 : 1;
-			if (aActive !== bActive) return aActive - bActive;
+			if (aActive !== bActive) {
+				return aActive - bActive;
+			}
 			return a.label.localeCompare(b.label);
 		});
 }
@@ -97,10 +100,14 @@ export function parseIgnorePatterns(raw: string): {
 	const exclude: string[] = [];
 	for (const line of raw.split("\n")) {
 		const trimmed = line.trim();
-		if (!trimmed || trimmed.startsWith("#")) continue;
+		if (!trimmed || trimmed.startsWith("#")) {
+			continue;
+		}
 		if (trimmed.startsWith("!")) {
 			const pat = trimmed.slice(1).trim();
-			if (pat) include.push(pat.toLowerCase());
+			if (pat) {
+				include.push(pat.toLowerCase());
+			}
 		} else {
 			exclude.push(trimmed.toLowerCase());
 		}
@@ -115,7 +122,9 @@ function globToRegex(pattern: string): RegExp {
 		if (c === "*" && pattern[i + 1] === "*") {
 			re += ".*";
 			i++; // skip second *
-			if (pattern[i + 1] === "/") i++; // skip trailing /
+			if (pattern[i + 1] === "/") {
+				i++;
+			} // skip trailing /
 		} else if (c === "*") {
 			re += "[^/]*";
 		} else if (c === "?") {
@@ -139,9 +148,7 @@ function patternMatchesSession(
 ): boolean {
 	if (/[*?]/.test(pattern)) {
 		return (
-			matchesGlob(name, pattern) ||
-			matchesGlob(cwd, pattern) ||
-			matchesGlob(cwdTilde, pattern)
+			matchesGlob(name, pattern) || matchesGlob(cwd, pattern) || matchesGlob(cwdTilde, pattern)
 		);
 	}
 	// Path-like pattern (contains /) → exact match against cwd ending
@@ -150,11 +157,7 @@ function patternMatchesSession(
 		return cwd.endsWith(p) || cwdTilde.endsWith(p);
 	}
 	// Plain keyword → substring match against name and cwd
-	return (
-		name.includes(pattern) ||
-		cwd.includes(pattern) ||
-		cwdTilde.includes(pattern)
-	);
+	return name.includes(pattern) || cwd.includes(pattern) || cwdTilde.includes(pattern);
 }
 
 export function isSessionIgnored(
@@ -165,14 +168,12 @@ export function isSessionIgnored(
 	const cwd = session.cwd.toLowerCase();
 	const cwdTilde = cwd.replace(/^\/users\/[^/]+/, "~");
 
-	const excluded = patterns.exclude.some((p) =>
-		patternMatchesSession(p, name, cwd, cwdTilde),
-	);
-	if (!excluded) return false;
+	const excluded = patterns.exclude.some((p) => patternMatchesSession(p, name, cwd, cwdTilde));
+	if (!excluded) {
+		return false;
+	}
 
-	const included = patterns.include.some((p) =>
-		patternMatchesSession(p, name, cwd, cwdTilde),
-	);
+	const included = patterns.include.some((p) => patternMatchesSession(p, name, cwd, cwdTilde));
 	return !included;
 }
 
@@ -180,35 +181,38 @@ export function containsMatch(text: string, query: string): boolean {
 	return text.toLowerCase().includes(query);
 }
 
-export function sessionMatchesFolder(
-	session: ClaudeSession,
-	query: string,
-): boolean {
+export function sessionMatchesFolder(session: ClaudeSession, query: string): boolean {
 	const cwd = session.cwd;
 	const cwdTilde = cwd.replace(/^\/Users\/[^/]+/, "~");
-	if (containsMatch(cwd, query) || containsMatch(cwdTilde, query)) return true;
+	if (containsMatch(cwd, query) || containsMatch(cwdTilde, query)) {
+		return true;
+	}
 	if (!query.startsWith("~") && !query.startsWith("/")) {
-		if (containsMatch(cwdTilde, `~/${query}`)) return true;
+		if (containsMatch(cwdTilde, `~/${query}`)) {
+			return true;
+		}
 	}
 	return false;
 }
 
-export function sessionMatchesSearch(
-	session: ClaudeSession,
-	query: string,
-): boolean {
+export function sessionMatchesSearch(session: ClaudeSession, query: string): boolean {
 	const name = session.display_name || session.project_name;
-	if (containsMatch(name, query) || containsMatch(session.session_id, query))
+	if (containsMatch(name, query) || containsMatch(session.session_id, query)) {
 		return true;
+	}
 
 	const cwd = session.cwd;
 	const cwdTilde = cwd.replace(/^\/Users\/[^/]+/, "~");
 
-	if (containsMatch(cwd, query) || containsMatch(cwdTilde, query)) return true;
+	if (containsMatch(cwd, query) || containsMatch(cwdTilde, query)) {
+		return true;
+	}
 
 	// Bare path like "repos/project" — also match as if prefixed with ~/
 	if (!query.startsWith("~") && !query.startsWith("/")) {
-		if (containsMatch(cwdTilde, `~/${query}`)) return true;
+		if (containsMatch(cwdTilde, `~/${query}`)) {
+			return true;
+		}
 	}
 
 	return false;
