@@ -144,33 +144,33 @@ export function useDragDrop(handlers: DragDropHandlers) {
 			}
 
 			const dropType = target.getAttribute("data-drop");
-			const h = handlersRef.current;
+			const handlers = handlersRef.current;
 
 			if (dropType === "group-slot" && payload.type === "session") {
-				const gid = target.getAttribute("data-group-id")!;
-				const si = parseInt(target.getAttribute("data-slot-idx")!, 10);
-				h.onDropToGroupSlot(gid, si, payload.sessionId);
-				h.onActivateGroupAtSlot(gid, si);
+				const groupId = target.getAttribute("data-group-id")!;
+				const slotIdx = parseInt(target.getAttribute("data-slot-idx")!, 10);
+				handlers.onDropToGroupSlot(groupId, slotIdx, payload.sessionId);
+				handlers.onActivateGroupAtSlot(groupId, slotIdx);
 			} else if (dropType === "group-header" && payload.type === "session") {
-				const gid = target.getAttribute("data-group-id")!;
-				h.onAddToGroup(gid, payload.sessionId);
-				h.onActivateGroupAtSlot(gid, 0);
+				const groupId = target.getAttribute("data-group-id")!;
+				handlers.onAddToGroup(groupId, payload.sessionId);
+				handlers.onActivateGroupAtSlot(groupId, 0);
 			} else if (dropType === "new-group" && payload.type === "session") {
-				h.onCreateGroupWithSession(payload.sessionId);
+				handlers.onCreateGroupWithSession(payload.sessionId);
 			} else if (dropType === "ungroup" && payload.type === "session") {
-				h.onRemoveFromGroup(payload.sessionId);
+				handlers.onRemoveFromGroup(payload.sessionId);
 			} else if (dropType === "session" && payload.type === "session") {
-				const sid = target.getAttribute("data-session-id")!;
-				if (sid !== payload.sessionId) {
-					h.onCreateGroupFromSessions(payload.sessionId, sid);
+				const targetSessionId = target.getAttribute("data-session-id")!;
+				if (targetSessionId !== payload.sessionId) {
+					handlers.onCreateGroupFromSessions(payload.sessionId, targetSessionId);
 				}
 			} else if (dropType === "grid-slot" && payload.type === "session") {
-				const gi = parseInt(target.getAttribute("data-grid-idx")!, 10);
-				h.onDropToGridSlot(gi, payload.sessionId);
+				const gridIdx = parseInt(target.getAttribute("data-grid-idx")!, 10);
+				handlers.onDropToGridSlot(gridIdx, payload.sessionId);
 			} else if (dropType === "grid-slot" && payload.type === "pane") {
-				const gi = parseInt(target.getAttribute("data-grid-idx")!, 10);
-				if (gi !== payload.paneIdx) {
-					h.onSwapGridSlots(payload.paneIdx, gi);
+				const gridIdx = parseInt(target.getAttribute("data-grid-idx")!, 10);
+				if (gridIdx !== payload.paneIdx) {
+					handlers.onSwapGridSlots(payload.paneIdx, gridIdx);
 				}
 			}
 		}

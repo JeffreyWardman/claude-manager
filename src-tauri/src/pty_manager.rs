@@ -185,19 +185,19 @@ pub fn pty_spawn(
                         // Claude needs time to write its pid file.
                         // Emit at 1s and 3s to catch it reliably.
                         for delay in [1, 3] {
-                            let a = app.clone();
+                            let app_handle = app.clone();
                             std::thread::spawn(move || {
                                 std::thread::sleep(std::time::Duration::from_secs(delay));
-                                let _ = a.emit("sessions-changed", ());
+                                let _ = app_handle.emit("sessions-changed", ());
                             });
                         }
                     }
                     {
-                        let mut sb = scrollback_writer.lock().unwrap();
-                        sb.extend_from_slice(&buf[..n]);
-                        if sb.len() > MAX_BUF {
-                            let trim = sb.len() - MAX_BUF;
-                            sb.drain(..trim);
+                        let mut scrollback = scrollback_writer.lock().unwrap();
+                        scrollback.extend_from_slice(&buf[..n]);
+                        if scrollback.len() > MAX_BUF {
+                            let excess = scrollback.len() - MAX_BUF;
+                            scrollback.drain(..excess);
                         }
                     }
                     let encoded = base64::engine::general_purpose::STANDARD.encode(&buf[..n]);

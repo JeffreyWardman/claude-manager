@@ -79,6 +79,7 @@ Safety: stop after 5 rounds regardless and report remaining issues. Do not loop 
 - [ ] No unnecessary `.clone()` or `.to_string()`
 - [ ] `impl Default` alongside `new()`; `?` over nested `if let Ok`
 - [ ] `map_while(Result::ok)` over `.flatten()` on `Lines`
+- [ ] No single-letter variables outside short closures; descriptive names everywhere
 
 ### TypeScript (`src/`)
 
@@ -88,6 +89,7 @@ Safety: stop after 5 rounds regardless and report remaining issues. Do not loop 
 - [ ] No `any` types; all `if` with curly braces; no commented-out code
 - [ ] No dead exports or unused imports; no magic numbers
 - [ ] No unnecessary `as` casts; consistent naming
+- [ ] No single-letter variables outside short closures (`.map(s => ...)` ok, `const a = ...` not ok)
 - [ ] No unnecessary re-renders from unstable references
 
 ### UI & Accessibility

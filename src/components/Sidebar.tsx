@@ -51,18 +51,18 @@ interface ContextMenu {
 
 function timeAgo(ms: number): string {
 	const diff = Date.now() - ms;
-	const m = Math.floor(diff / 60000);
-	if (m < 1) {
+	const mins = Math.floor(diff / 60000);
+	if (mins < 1) {
 		return "now";
 	}
-	if (m < 60) {
-		return `${m}m`;
+	if (mins < 60) {
+		return `${mins}m`;
 	}
-	const h = Math.floor(m / 60);
-	if (h < 24) {
-		return `${h}h`;
+	const hrs = Math.floor(mins / 60);
+	if (hrs < 24) {
+		return `${hrs}h`;
 	}
-	return `${Math.floor(h / 24)}d`;
+	return `${Math.floor(hrs / 24)}d`;
 }
 
 const LAYOUT_ICON_CELLS: Record<
@@ -289,8 +289,12 @@ export function Sidebar({
 			setGroupSlotContextMenu(null);
 			setFilterDropdownOpen(false);
 		};
-		window.addEventListener("click", close);
-		return () => window.removeEventListener("click", close);
+		window.addEventListener("mousedown", close);
+		window.addEventListener("blur", close);
+		return () => {
+			window.removeEventListener("mousedown", close);
+			window.removeEventListener("blur", close);
+		};
 	}, [contextMenu, layoutPickerGroupId, groupSlotContextMenu, filterDropdownOpen]);
 
 	const filteredSessions = sortSessions(
@@ -451,6 +455,34 @@ export function Sidebar({
 		}
 	}
 
+	function sessionActions(session: ClaudeSession, onDone: () => void) {
+		return (["Rename", "Archive", "Delete"] as const).map((action) => (
+			<button
+				type="button"
+				key={action}
+				role="menuitem"
+				onClick={() => {
+					if (action === "Rename") {
+						startRename(session);
+					} else if (action === "Archive") {
+						archiveSession(session.session_id);
+					} else if (action === "Delete") {
+						deleteSession(session.session_id);
+					}
+					onDone();
+				}}
+				style={{
+					...menuItemStyle,
+					color: action === "Delete" ? "var(--danger)" : "var(--text-secondary)",
+				}}
+				onMouseEnter={menuItemHover}
+				onMouseLeave={menuItemUnhover}
+			>
+				{action}
+			</button>
+		));
+	}
+
 	// Sessions assigned to any group are shown in the groups section — hide from sessions list
 	const sessionsInGroups = new Set(
 		groupsCollapsed ? [] : filteredGroups.flatMap((g) => g.slots.filter(Boolean) as string[]),
@@ -503,11 +535,15 @@ export function Sidebar({
 						fontWeight: 600,
 						color: "var(--text-primary)",
 						letterSpacing: "-0.01em",
+						overflow: "hidden",
+						textOverflow: "ellipsis",
+						whiteSpace: "nowrap",
+						minWidth: 0,
 					}}
 				>
 					Claude Manager
 				</span>
-				<div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+				<div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
 					<button
 						type="button"
 						onClick={() => {
@@ -560,7 +596,7 @@ export function Sidebar({
 						</button>
 						{filterDropdownOpen && (
 							<div
-								onClick={(e) => e.stopPropagation()}
+								onMouseDown={(e) => e.stopPropagation()}
 								style={{
 									position: "absolute",
 									top: "100%",
@@ -701,10 +737,18 @@ export function Sidebar({
 							fontFamily: "inherit",
 							pointerEvents: "none",
 							lineHeight: "normal",
+							overflow: "hidden",
+							textOverflow: "ellipsis",
+							whiteSpace: "nowrap",
 						}}
 					>
 						<span style={{ color: "var(--text-muted)" }}>Search</span>
-						<span style={{ color: "var(--text-very-muted)" }}> (@group: @tab: @folder:)</span>
+						{width > 200 && (
+							<span style={{ color: "var(--text-very-muted)" }}>
+								{" "}
+								(@group: @tab: @folder:)
+							</span>
+						)}
 					</div>
 				)}
 				<input
@@ -943,7 +987,7 @@ export function Sidebar({
 											</button>
 											{showLayoutPicker && (
 												<div
-													onClick={(e) => e.stopPropagation()}
+													onMouseDown={(e) => e.stopPropagation()}
 													style={{
 														position: "absolute",
 														top: "calc(100% + 4px)",
@@ -1515,7 +1559,7 @@ export function Sidebar({
 			{/* Group slot context menu */}
 			{groupSlotContextMenu && (
 				<div
-					onClick={(e) => e.stopPropagation()}
+					onMouseDown={(e) => e.stopPropagation()}
 					style={{
 						position: "fixed",
 						left: groupSlotContextMenu.x,
@@ -1541,6 +1585,15 @@ export function Sidebar({
 					>
 						Remove from group
 					</button>
+					<div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />
+					{(() => {
+						const session = sessions.find(
+							(s) => s.session_id === groupSlotContextMenu.sessionId,
+						);
+						return session
+							? sessionActions(session, () => setGroupSlotContextMenu(null))
+							: null;
+					})()}
 				</div>
 			)}
 
@@ -1555,7 +1608,7 @@ export function Sidebar({
 						<div
 							role="menu"
 							aria-label="Session actions"
-							onClick={(e) => e.stopPropagation()}
+							onMouseDown={(e) => e.stopPropagation()}
 							style={{
 								position: "fixed",
 								left: contextMenu.x,
@@ -1613,30 +1666,7 @@ export function Sidebar({
 									/>
 								</>
 							)}
-							{(["Rename", "Archive", "Delete"] as const).map((action) => (
-								<button
-									type="button"
-									key={action}
-									role="menuitem"
-									onClick={() => {
-										if (action === "Rename") {
-											startRename(session);
-										} else if (action === "Archive") {
-											archiveSession(session.session_id);
-										} else if (action === "Delete") {
-											deleteSession(session.session_id);
-										}
-									}}
-									style={{
-										...menuItemStyle,
-										color: action === "Delete" ? "var(--danger)" : "var(--text-secondary)",
-									}}
-									onMouseEnter={menuItemHover}
-									onMouseLeave={menuItemUnhover}
-								>
-									{action}
-								</button>
-							))}
+							{sessionActions(session, () => setContextMenu(null))}
 						</div>
 					);
 				})()}

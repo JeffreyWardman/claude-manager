@@ -122,9 +122,9 @@ pub fn get_all_sessions() -> Vec<ClaudeSession> {
                     continue;
                 }
                 if let Ok(content) = fs::read_to_string(&path) {
-                    if let Ok(sf) = serde_json::from_str::<SessionFile>(&content) {
-                        if crate::utils::is_pid_alive(sf.pid) {
-                            alive_cwd_pids.insert(sf.cwd, sf.pid);
+                    if let Ok(session_file) = serde_json::from_str::<SessionFile>(&content) {
+                        if crate::utils::is_pid_alive(session_file.pid) {
+                            alive_cwd_pids.insert(session_file.cwd, session_file.pid);
                         }
                     }
                 }
@@ -144,11 +144,11 @@ pub fn get_all_sessions() -> Vec<ClaudeSession> {
                 }
                 if let Ok(session_entries) = fs::read_dir(&project_path) {
                     for session_entry in session_entries.flatten() {
-                        let sp = session_entry.path();
-                        if sp.extension().and_then(|e| e.to_str()) != Some("jsonl") {
+                        let session_path = session_entry.path();
+                        if session_path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
                             continue;
                         }
-                        let filename_id = sp
+                        let filename_id = session_path
                             .file_stem()
                             .and_then(|s| s.to_str())
                             .unwrap_or("")
@@ -156,15 +156,15 @@ pub fn get_all_sessions() -> Vec<ClaudeSession> {
                         if filename_id.len() != 36 {
                             continue;
                         }
-                        if let Some(header) = read_jsonl_header(&sp) {
+                        if let Some(header) = read_jsonl_header(&session_path) {
                             let cwd = header.cwd.unwrap_or_default();
-                            let sid = filename_id; // JSONL filename is the resume key
+                            let session_id = filename_id;
                             let started_at = header
                                 .timestamp
                                 .as_deref()
                                 .map(parse_timestamp)
                                 .unwrap_or(0);
-                            let meta = metadata.get(&sid);
+                            let meta = metadata.get(&session_id);
                             if meta.map(|m| m.archived).unwrap_or(false) {
                                 continue;
                             }
@@ -175,7 +175,7 @@ pub fn get_all_sessions() -> Vec<ClaudeSession> {
                                 started_at,
                                 ClaudeSession {
                                     pid: 0,
-                                    session_id: sid,
+                                    session_id,
                                     project_name,
                                     cwd,
                                     started_at,
