@@ -626,6 +626,7 @@ function AppInner() {
 					onRenameGroup={handleRenameGroup}
 					onChangeLayout={handleChangeLayout}
 					onRemoveFromGroup={handleRemoveFromGroup}
+					onAddToGroup={handleAddToGroup}
 					onOpenPalette={() => setPaletteOpen(true)}
 					onOpenSettings={() => setSettingsOpen(true)}
 					onOpenNewSession={() => setNewSessionOpen(true)}

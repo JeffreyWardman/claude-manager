@@ -65,7 +65,8 @@ export function MainPane({
 		fontSize: 11,
 		fontWeight: active ? 500 : 400,
 		color: active ? "var(--text-secondary)" : "var(--text-muted)",
-		padding: "0 8px",
+		padding: "4px 8px",
+		minHeight: 24,
 		letterSpacing: "0.04em",
 	});
 
@@ -215,6 +216,8 @@ export function MainPane({
 								fontSize: 14,
 								color: "var(--text-very-muted)",
 								padding: "4px 6px",
+								minHeight: 24,
+								minWidth: 24,
 								marginLeft: 4,
 								lineHeight: 1,
 							}}

@@ -74,7 +74,7 @@ Audit docs go in `docs/audits/`.
 
 ## Accessibility
 
-WCAG 2.1 AA compliant (5 audit rounds, all passing). Key patterns:
+WCAG 2.2 AA compliant (5 audit rounds, all passing). Key patterns:
 - All modals: `role="dialog"`, `aria-modal`, focus traps
 - All icon buttons: `aria-label`
 - All collapse buttons: `aria-expanded`

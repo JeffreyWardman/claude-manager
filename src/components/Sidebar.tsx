@@ -43,6 +43,7 @@ interface Props {
 	onRenameGroup: (id: string, name: string) => void;
 	onChangeLayout: (id: string, layout: PaneLayout) => void;
 	onRemoveFromGroup: (sessionId: string) => void;
+	onAddToGroup: (groupId: string, sessionId: string) => void;
 	onOpenPalette: () => void;
 	onOpenSettings: () => void;
 	onOpenNewSession: () => void;
@@ -238,6 +239,7 @@ export function Sidebar({
 	onRenameGroup,
 	onChangeLayout,
 	onRemoveFromGroup,
+	onAddToGroup,
 	onOpenPalette,
 	onOpenSettings,
 	onOpenNewSession,
@@ -482,6 +484,11 @@ export function Sidebar({
 		fontSize: 13,
 		lineHeight: 1,
 		padding: "2px 4px",
+		minHeight: 24,
+		minWidth: 24,
+		display: "inline-flex" as const,
+		alignItems: "center" as const,
+		justifyContent: "center" as const,
 		borderRadius: 4,
 	} as React.CSSProperties;
 
@@ -1485,6 +1492,8 @@ export function Sidebar({
 						cursor: "pointer",
 						fontSize: 12,
 						padding: "4px",
+						minHeight: 24,
+						minWidth: 24,
 						fontFamily: "inherit",
 						fontWeight: 500,
 					}}
@@ -1506,6 +1515,8 @@ export function Sidebar({
 						cursor: "pointer",
 						fontSize: 14,
 						padding: "4px",
+						minHeight: 24,
+						minWidth: 24,
 						fontFamily: "inherit",
 						fontWeight: 500,
 					}}
@@ -1584,6 +1595,74 @@ export function Sidebar({
 								padding: "4px 0",
 							}}
 						>
+							{groups.length > 0 && (
+								<>
+									{groups
+										.filter((g) => !g.slots.includes(session.session_id))
+										.map((g) => (
+											<button
+												type="button"
+												key={g.id}
+												role="menuitem"
+												onClick={() => {
+													onAddToGroup(g.id, session.session_id);
+													setContextMenu(null);
+												}}
+												style={{
+													display: "block",
+													width: "100%",
+													background: "none",
+													border: "none",
+													color: "var(--text-secondary)",
+													fontSize: 13,
+													textAlign: "left",
+													padding: "6px 12px",
+													cursor: "pointer",
+													fontFamily: "inherit",
+												}}
+												onMouseEnter={(e) =>
+													(e.currentTarget.style.background = "var(--item-hover)")
+												}
+												onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+											>
+												Add to {g.name}
+											</button>
+										))}
+									{groups.some((g) => g.slots.includes(session.session_id)) && (
+										<button
+											type="button"
+											role="menuitem"
+											onClick={() => {
+												onRemoveFromGroup(session.session_id);
+												setContextMenu(null);
+											}}
+											style={{
+												display: "block",
+												width: "100%",
+												background: "none",
+												border: "none",
+												color: "var(--text-secondary)",
+												fontSize: 13,
+												textAlign: "left",
+												padding: "6px 12px",
+												cursor: "pointer",
+												fontFamily: "inherit",
+											}}
+											onMouseEnter={(e) => (e.currentTarget.style.background = "var(--item-hover)")}
+											onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+										>
+											Remove from group
+										</button>
+									)}
+									<div
+										style={{
+											height: 1,
+											background: "var(--border)",
+											margin: "4px 0",
+										}}
+									/>
+								</>
+							)}
 							{(["Rename", "Archive", "Delete"] as const).map((action) => (
 								<button
 									type="button"

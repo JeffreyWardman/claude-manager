@@ -1,8 +1,8 @@
-Run a WCAG 2.1 AA accessibility audit on this project's frontend code.
+Run a WCAG 2.2 AA accessibility audit on this project's frontend code.
 
 ## Instructions
 
-1. Use the Explore agent to perform a thorough WCAG 2.1 AA audit. The agent should read ALL frontend files in `src/` and check for:
+1. Use the Explore agent to perform a thorough WCAG 2.2 AA audit. The agent should read ALL frontend files in `src/` and check for:
    - **Color contrast** (1.4.3): Calculate actual ratios for text vs background colors in themes.ts and any hardcoded colors. Require 4.5:1 for normal text, 3:1 for large text and UI components.
    - **ARIA labels** (4.1.2, 1.1.1): All interactive elements (buttons, inputs, links) must have accessible names. Icon-only buttons need aria-label.
    - **Keyboard support** (2.1.1): All interactive elements must be operable via keyboard. Check for div-with-onClick without tabIndex/onKeyDown.
