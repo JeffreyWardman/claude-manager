@@ -1,10 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
-
-use crate::utils::claude_projects_dir;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ConversationEntry {
@@ -98,18 +96,15 @@ fn encode_path_for_claude(path: &str) -> String {
     path.trim_start_matches('/').replace('/', "-")
 }
 
-fn find_jsonl_path(cwd: &str, session_id: &str) -> Option<PathBuf> {
-    let projects_dir = claude_projects_dir()?;
+fn find_jsonl_path(projects_dir: &Path, cwd: &str, session_id: &str) -> Option<PathBuf> {
     let encoded = encode_path_for_claude(cwd);
-    // Try exact match first
     let path = projects_dir
         .join(&encoded)
         .join(format!("{}.jsonl", session_id));
     if path.exists() {
         return Some(path);
     }
-    // Scan all project dirs for this session_id (handles paths with hyphens)
-    if let Ok(entries) = fs::read_dir(&projects_dir) {
+    if let Ok(entries) = fs::read_dir(projects_dir) {
         for entry in entries.flatten() {
             let candidate = entry.path().join(format!("{}.jsonl", session_id));
             if candidate.exists() {
@@ -123,8 +118,13 @@ fn find_jsonl_path(cwd: &str, session_id: &str) -> Option<PathBuf> {
 const MAX_ENTRIES: usize = 100;
 
 #[tauri::command]
-pub fn get_conversation(cwd: String, session_id: String) -> Vec<ConversationEntry> {
-    let Some(path) = find_jsonl_path(&cwd, &session_id) else {
+pub fn get_conversation(
+    config_dir: String,
+    cwd: String,
+    session_id: String,
+) -> Vec<ConversationEntry> {
+    let projects_dir = PathBuf::from(&config_dir).join("projects");
+    let Some(path) = find_jsonl_path(&projects_dir, &cwd, &session_id) else {
         return vec![];
     };
     let Ok(file) = fs::File::open(&path) else {
@@ -173,8 +173,9 @@ pub fn get_conversation(cwd: String, session_id: String) -> Vec<ConversationEntr
 
 /// Returns the byte size of the JSONL file — used by the frontend to detect updates
 #[tauri::command]
-pub fn get_jsonl_size(cwd: String, session_id: String) -> u64 {
-    find_jsonl_path(&cwd, &session_id)
+pub fn get_jsonl_size(config_dir: String, cwd: String, session_id: String) -> u64 {
+    let projects_dir = PathBuf::from(&config_dir).join("projects");
+    find_jsonl_path(&projects_dir, &cwd, &session_id)
         .and_then(|p| fs::metadata(p).ok())
         .map(|m| m.len())
         .unwrap_or(0)

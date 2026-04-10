@@ -106,7 +106,8 @@ fn read_jsonl_header(path: &Path) -> Option<JournalFirstLine> {
 
 const MAX_OFFLINE_SESSIONS: usize = 50;
 
-pub fn get_all_sessions() -> Vec<ClaudeSession> {
+pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
+    let config_path = PathBuf::from(config_dir);
     let metadata = crate::metadata::load();
 
     // Step 1: Scan pid files for alive processes. Build cwd → pid map.
@@ -114,78 +115,76 @@ pub fn get_all_sessions() -> Vec<ClaudeSession> {
     // source of truth for session identity. Pid files only tell us what's running.
     let mut alive_cwd_pids: std::collections::HashMap<String, u32> =
         std::collections::HashMap::new();
-    if let Some(sessions_dir) = dirs_next::home_dir().map(|h| h.join(".claude").join("sessions")) {
-        if let Ok(entries) = fs::read_dir(&sessions_dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.extension().and_then(|e| e.to_str()) != Some("json") {
-                    continue;
-                }
-                if let Ok(content) = fs::read_to_string(&path) {
-                    if let Ok(session_file) = serde_json::from_str::<SessionFile>(&content) {
-                        if crate::utils::is_pid_alive(session_file.pid) {
-                            alive_cwd_pids.insert(session_file.cwd, session_file.pid);
-                        }
+    let sessions_dir = config_path.join("sessions");
+    if let Ok(entries) = fs::read_dir(&sessions_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("json") {
+                continue;
+            }
+            if let Ok(content) = fs::read_to_string(&path) {
+                if let Ok(session_file) = serde_json::from_str::<SessionFile>(&content) {
+                    if crate::utils::is_pid_alive(session_file.pid) {
+                        alive_cwd_pids.insert(session_file.cwd, session_file.pid);
                     }
                 }
             }
         }
     }
 
-    // Step 2: Scan ~/.claude/projects/*/*.jsonl — every session shown in the UI
+    // Step 2: Scan projects/*/*.jsonl — every session shown in the UI
     // comes from here, so only sessions with real conversation data are visible.
     let mut candidates: Vec<(i64, ClaudeSession)> = Vec::new();
-    if let Some(projects_dir) = crate::utils::claude_projects_dir() {
-        if let Ok(project_entries) = fs::read_dir(&projects_dir) {
-            for project_entry in project_entries.flatten() {
-                let project_path = project_entry.path();
-                if !project_path.is_dir() {
-                    continue;
-                }
-                if let Ok(session_entries) = fs::read_dir(&project_path) {
-                    for session_entry in session_entries.flatten() {
-                        let session_path = session_entry.path();
-                        if session_path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
+    let projects_dir = config_path.join("projects");
+    if let Ok(project_entries) = fs::read_dir(&projects_dir) {
+        for project_entry in project_entries.flatten() {
+            let project_path = project_entry.path();
+            if !project_path.is_dir() {
+                continue;
+            }
+            if let Ok(session_entries) = fs::read_dir(&project_path) {
+                for session_entry in session_entries.flatten() {
+                    let session_path = session_entry.path();
+                    if session_path.extension().and_then(|e| e.to_str()) != Some("jsonl") {
+                        continue;
+                    }
+                    let filename_id = session_path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("")
+                        .to_string();
+                    if filename_id.len() != 36 {
+                        continue;
+                    }
+                    if let Some(header) = read_jsonl_header(&session_path) {
+                        let cwd = header.cwd.unwrap_or_default();
+                        let session_id = filename_id;
+                        let started_at = header
+                            .timestamp
+                            .as_deref()
+                            .map(parse_timestamp)
+                            .unwrap_or(0);
+                        let meta = metadata.get(&session_id);
+                        if meta.map(|m| m.archived).unwrap_or(false) {
                             continue;
                         }
-                        let filename_id = session_path
-                            .file_stem()
-                            .and_then(|s| s.to_str())
-                            .unwrap_or("")
-                            .to_string();
-                        if filename_id.len() != 36 {
-                            continue;
-                        }
-                        if let Some(header) = read_jsonl_header(&session_path) {
-                            let cwd = header.cwd.unwrap_or_default();
-                            let session_id = filename_id;
-                            let started_at = header
-                                .timestamp
-                                .as_deref()
-                                .map(parse_timestamp)
-                                .unwrap_or(0);
-                            let meta = metadata.get(&session_id);
-                            if meta.map(|m| m.archived).unwrap_or(false) {
-                                continue;
-                            }
-                            let display_name = meta.and_then(|m| m.display_name.clone());
-                            let pending_rename = meta.and_then(|m| m.pending_rename.clone());
-                            let project_name = project_name_from_cwd(&cwd);
-                            candidates.push((
+                        let display_name = meta.and_then(|m| m.display_name.clone());
+                        let pending_rename = meta.and_then(|m| m.pending_rename.clone());
+                        let project_name = project_name_from_cwd(&cwd);
+                        candidates.push((
+                            started_at,
+                            ClaudeSession {
+                                pid: 0,
+                                session_id,
+                                project_name,
+                                cwd,
                                 started_at,
-                                ClaudeSession {
-                                    pid: 0,
-                                    session_id,
-                                    project_name,
-                                    cwd,
-                                    started_at,
-                                    status: SessionStatus::Offline,
-                                    display_name,
-                                    git_branch: header.git_branch,
-                                    pending_rename,
-                                },
-                            ));
-                        }
+                                status: SessionStatus::Offline,
+                                display_name,
+                                git_branch: header.git_branch,
+                                pending_rename,
+                            },
+                        ));
                     }
                 }
             }

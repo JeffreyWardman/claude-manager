@@ -100,10 +100,8 @@ pub fn archive_session(session_id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn delete_session(session_id: String) -> Result<(), String> {
-    // Remove the JSONL file from ~/.claude/projects/*/
-    let projects_dir =
-        crate::utils::claude_projects_dir().ok_or_else(|| "no home dir".to_string())?;
+pub fn delete_session(config_dir: String, session_id: String) -> Result<(), String> {
+    let projects_dir = PathBuf::from(&config_dir).join("projects");
 
     if let Ok(project_entries) = fs::read_dir(&projects_dir) {
         for entry in project_entries.flatten() {
