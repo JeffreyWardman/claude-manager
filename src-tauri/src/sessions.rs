@@ -26,6 +26,7 @@ pub enum SessionStatus {
 
 // The session file written by Claude Code at ~/.claude/sessions/<pid>.json
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct SessionFile {
     pid: u32,
     #[serde(rename = "sessionId")]

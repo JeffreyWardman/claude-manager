@@ -220,10 +220,42 @@ describe("addToGroup", () => {
     expect(result).toBe(groups); // same reference — no change
   });
 
-  it("does nothing if the group is full", () => {
+  it("does nothing if the group is full and no enabled layouts provided", () => {
     const groups = [makeGroup("A", ["s1", "s2"])];
     const result = addToGroup(groups, "A", "s3");
     expect(slots(result[0])).toEqual(["s1", "s2"]);
+  });
+
+  it("expands to the next enabled layout when the group is full", () => {
+    const groups = [makeGroup("A", ["s1"], "1x1")];
+    const enabled: PaneLayout[] = ["1x1", "2x1", "2x2"];
+    const result = addToGroup(groups, "A", "s2", enabled);
+    expect(result[0].layout).toBe("2x1");
+    expect(slots(result[0])).toEqual(["s1", "s2"]);
+  });
+
+  it("skips disabled layouts when expanding", () => {
+    const groups = [makeGroup("A", ["s1"], "1x1")];
+    const enabled: PaneLayout[] = ["1x1", "2x2"];
+    const result = addToGroup(groups, "A", "s2", enabled);
+    expect(result[0].layout).toBe("2x2");
+    expect(slots(result[0])).toEqual(["s1", "s2", null, null]);
+  });
+
+  it("does nothing if the group is full and no larger layout is enabled", () => {
+    const groups = [makeGroup("A", ["s1", "s2"], "2x1")];
+    const enabled: PaneLayout[] = ["1x1", "2x1"];
+    const result = addToGroup(groups, "A", "s3", enabled);
+    expect(result[0].layout).toBe("2x1");
+    expect(slots(result[0])).toEqual(["s1", "s2"]);
+  });
+
+  it("preserves existing slots when expanding layout", () => {
+    const groups = [makeGroup("A", ["s1", "s2"], "2x1")];
+    const enabled: PaneLayout[] = ["1x1", "2x1", "2x2"];
+    const result = addToGroup(groups, "A", "s3", enabled);
+    expect(result[0].layout).toBe("2x2");
+    expect(slots(result[0])).toEqual(["s1", "s2", "s3", null]);
   });
 
   it("does nothing if groupId does not exist", () => {

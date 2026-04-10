@@ -3,8 +3,14 @@ import { invoke } from "@tauri-apps/api/core";
 import type { ClaudeSession, PaneGroup, PaneLayout } from "../types";
 import { StatusDot } from "./StatusDot";
 import type { ActivityState } from "../hooks/usePtyActivity";
+import { sortSessions, groupByStatus, groupByLocation, containsMatch, sessionMatchesSearch, sessionMatchesFolder } from "../sidebarUtils";
+import type { SortMode } from "../sidebarUtils";
 
-const ALL_LAYOUTS: PaneLayout[] = ["1x1", "2x1", "1x2", "2x2"];
+
+const SLOT_COUNTS: Record<PaneLayout, number> = {
+  "1x1": 1, "2x1": 2, "1x2": 2, "2x2": 4, "3x1": 3, "1x3": 3, "3x2": 6, "2x3": 6,
+  "2+1": 3, "1+2": 3, "3+1": 4, "1+3": 4,
+};
 
 interface Props {
   sessions: ClaudeSession[];
@@ -25,11 +31,9 @@ interface Props {
   onOpenSettings: () => void;
   onOpenNewSession: () => void;
   onRefresh: () => void;
-}
-
-interface Group {
-  label: string;
-  sessions: ClaudeSession[];
+  enabledLayouts: PaneLayout[];
+  unreadSessions: Set<string>;
+  onHoverSlot: (idx: number | null) => void;
 }
 
 type GroupMode = "status" | "location";
@@ -51,58 +55,30 @@ function timeAgo(ms: number): string {
   return `${Math.floor(h / 24)}d`;
 }
 
-function projectLabel(cwd: string): string {
-  const parts = cwd.replace(/\/$/, "").split("/");
-  if (parts.length >= 2) return parts.slice(-2).join("/");
-  return parts[parts.length - 1] || cwd;
-}
+const LAYOUT_ICON_CELLS: Record<PaneLayout, { cols: number; rows: number; cells: [string, string][] }> = {
+  "1x1": { cols: 1, rows: 1, cells: [["1", "1"]] },
+  "2x1": { cols: 2, rows: 1, cells: [["1", "1"], ["2", "1"]] },
+  "1x2": { cols: 1, rows: 2, cells: [["1", "1"], ["1", "2"]] },
+  "2x2": { cols: 2, rows: 2, cells: [["1", "1"], ["2", "1"], ["1", "2"], ["2", "2"]] },
+  "3x1": { cols: 3, rows: 1, cells: [["1", "1"], ["2", "1"], ["3", "1"]] },
+  "1x3": { cols: 1, rows: 3, cells: [["1", "1"], ["1", "2"], ["1", "3"]] },
+  "3x2": { cols: 3, rows: 2, cells: [["1", "1"], ["2", "1"], ["3", "1"], ["1", "2"], ["2", "2"], ["3", "2"]] },
+  "2x3": { cols: 2, rows: 3, cells: [["1", "1"], ["2", "1"], ["1", "2"], ["2", "2"], ["1", "3"], ["2", "3"]] },
+  "2+1": { cols: 2, rows: 2, cells: [["1", "1"], ["2", "1"], ["1 / 3", "2"]] },
+  "1+2": { cols: 2, rows: 2, cells: [["1 / 3", "1"], ["1", "2"], ["2", "2"]] },
+  "3+1": { cols: 3, rows: 2, cells: [["1", "1"], ["2", "1"], ["3", "1"], ["1 / 4", "2"]] },
+  "1+3": { cols: 3, rows: 2, cells: [["1 / 4", "1"], ["1", "2"], ["2", "2"], ["3", "2"]] },
+};
 
-function groupByStatus(sessions: ClaudeSession[]): Group[] {
-  const groups: Group[] = [
-    { label: "ACTIVE", sessions: sessions.filter((s) => s.status === "active") },
-    { label: "OFFLINE", sessions: sessions.filter((s) => s.status === "offline") },
-  ];
-  return groups.filter((g) => g.sessions.length > 0);
-}
-
-function groupByLocation(sessions: ClaudeSession[]): Group[] {
-  const map = new Map<string, ClaudeSession[]>();
-  for (const s of sessions) {
-    const key = projectLabel(s.cwd);
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(s);
-  }
-  return Array.from(map.entries())
-    .map(([label, sess]) => ({ label, sessions: sess }))
-    .sort((a, b) => {
-      const aActive = a.sessions.some((s) => s.status === "active") ? 0 : 1;
-      const bActive = b.sessions.some((s) => s.status === "active") ? 0 : 1;
-      if (aActive !== bActive) return aActive - bActive;
-      return a.label.localeCompare(b.label);
-    });
-}
-
-// Tiny layout icon: renders a miniature grid preview
 function LayoutIcon({ layout }: { layout: PaneLayout }) {
-  const cell = { width: 5, height: 4, background: "currentColor", borderRadius: 1 } as React.CSSProperties;
-  if (layout === "1x1") return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 1 }}>
-      <div style={cell} />
-    </div>
-  );
-  if (layout === "2x1") return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
-      <div style={cell} /><div style={cell} />
-    </div>
-  );
-  if (layout === "1x2") return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 1 }}>
-      <div style={cell} /><div style={cell} />
-    </div>
-  );
+  const entry = LAYOUT_ICON_CELLS[layout];
+  if (!entry) return null;
+  const { cols, rows, cells } = entry;
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
-      <div style={cell} /><div style={cell} /><div style={cell} /><div style={cell} />
+    <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)`, gap: 1 }}>
+      {cells.map(([gc, gr], i) => (
+        <div key={i} style={{ gridColumn: gc, gridRow: gr, width: "100%", height: 4, background: "currentColor", borderRadius: 1, minWidth: 5 }} />
+      ))}
     </div>
   );
 }
@@ -111,8 +87,10 @@ export function Sidebar({
   sessions, selectedId, groups, activeGroupId, activityMap, width,
   onSelect, onActivateGroup, onActivateGroupAtSlot, onCreateGroup, onDeleteGroup, onRenameGroup,
   onChangeLayout, onRemoveFromGroup,
-  onOpenPalette, onOpenSettings, onOpenNewSession, onRefresh,
+  onOpenPalette, onOpenSettings, onOpenNewSession, onRefresh, enabledLayouts, unreadSessions, onHoverSlot,
 }: Props) {
+  const [sidebarSearch, setSidebarSearch] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [groupsCollapsed, setGroupsCollapsed] = useState(false);
   const [groupMode, setGroupMode] = useState<GroupMode>(
@@ -120,6 +98,9 @@ export function Sidebar({
   );
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(
     () => (localStorage.getItem("sidebar-status-filter") as StatusFilter | null) ?? "all"
+  );
+  const [sortMode, setSortMode] = useState<SortMode>(
+    () => (localStorage.getItem("sidebar-sort-mode") as SortMode | null) ?? "date"
   );
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -129,6 +110,7 @@ export function Sidebar({
   const [renameGroupValue, setRenameGroupValue] = useState("");
   const [layoutPickerGroupId, setLayoutPickerGroupId] = useState<string | null>(null);
   const [groupSlotContextMenu, setGroupSlotContextMenu] = useState<{ sessionId: string; x: number; y: number } | null>(null);
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
 
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const renameInputRef = useRef<HTMLInputElement>(null);
@@ -149,21 +131,46 @@ export function Sidebar({
   }, [renamingGroupId]);
 
   useEffect(() => {
-    if (!contextMenu && !layoutPickerGroupId && !groupSlotContextMenu) return;
-    const close = () => { setContextMenu(null); setLayoutPickerGroupId(null); setGroupSlotContextMenu(null); };
+    if (!contextMenu && !layoutPickerGroupId && !groupSlotContextMenu && !filterDropdownOpen) return;
+    const close = () => { setContextMenu(null); setLayoutPickerGroupId(null); setGroupSlotContextMenu(null); setFilterDropdownOpen(false); };
     window.addEventListener("click", close);
     return () => window.removeEventListener("click", close);
-  }, [contextMenu, layoutPickerGroupId, groupSlotContextMenu]);
+  }, [contextMenu, layoutPickerGroupId, groupSlotContextMenu, filterDropdownOpen]);
 
-  const cycleFilter = () =>
-    setStatusFilter((f) => {
-      const next = f === "all" ? "active" : f === "active" ? "offline" : "all";
-      localStorage.setItem("sidebar-status-filter", next);
-      return next;
-    });
+  const filteredSessions = sortSessions(
+    statusFilter === "all" ? sessions : sessions.filter((s) => s.status === statusFilter),
+    sortMode,
+  );
 
-  const filteredSessions =
-    statusFilter === "all" ? sessions : sessions.filter((s) => s.status === statusFilter);
+  const rawSearch = sidebarSearch.trim();
+  const searchMode = rawSearch.startsWith("@group:") ? "group" : rawSearch.startsWith("@tab:") ? "session" : rawSearch.startsWith("@folder:") ? "folder" : "all";
+  const prefixLen = searchMode === "group" ? 7 : searchMode === "session" ? 5 : searchMode === "folder" ? 8 : 0;
+  const searchQuery = rawSearch.slice(prefixLen).toLowerCase().trim();
+
+  const matchSession = searchMode === "folder" ? sessionMatchesFolder : sessionMatchesSearch;
+
+  const filteredGroups = searchQuery
+    ? groups.filter((g) => {
+        if (searchMode === "session" || searchMode === "folder") {
+          return g.slots.some((sid) => {
+            if (!sid) return false;
+            const s = sessions.find((s) => s.session_id === sid);
+            return s && matchSession(s, searchQuery);
+          });
+        }
+        if (containsMatch(g.name, searchQuery)) return true;
+        if (searchMode === "group") return false;
+        return g.slots.some((sid) => {
+          if (!sid) return false;
+          const s = sessions.find((s) => s.session_id === sid);
+          return s && matchSession(s, searchQuery);
+        });
+      })
+    : groups;
+
+  const searchFilteredSessions = searchQuery
+    ? (searchMode === "group" ? [] : filteredSessions.filter((s) => matchSession(s, searchQuery)))
+    : filteredSessions;
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -228,29 +235,18 @@ export function Sidebar({
 
   async function deleteSession(sessionId: string) {
     setContextMenu(null);
+    const { ask } = await import("@tauri-apps/plugin-dialog");
+    const confirmed = await ask("This will permanently delete the conversation file. This cannot be undone.", { title: "Delete session?", kind: "warning" });
+    if (!confirmed) return;
     try { await invoke("delete_session", { sessionId }); onRefresh(); } catch (e) { console.error(e); }
-  }
-
-  async function summarizeSession(session: ClaudeSession) {
-    setContextMenu(null);
-    try {
-      const lines = await invoke<{ role: string; text: string; timestamp: string }[]>(
-        "get_conversation", { cwd: session.cwd, sessionId: session.session_id }
-      );
-      const firstUser = lines.find((l) => l.role === "user");
-      if (!firstUser) return;
-      const summary = firstUser.text.trim().slice(0, 60).replace(/\n/g, " ");
-      await invoke("rename_session", { sessionId: session.session_id, name: summary });
-      onRefresh();
-    } catch (e) { console.error(e); }
   }
 
   // Sessions assigned to any group are shown in the groups section — hide from sessions list
   const sessionsInGroups = new Set(
-    groupsCollapsed ? [] : groups.flatMap((g) => g.slots.filter(Boolean) as string[])
+    groupsCollapsed ? [] : filteredGroups.flatMap((g) => g.slots.filter(Boolean) as string[])
   );
-  const unassignedSessions = filteredSessions.filter((s) => !sessionsInGroups.has(s.session_id));
-  const sessionGroups = groupMode === "status" ? groupByStatus(unassignedSessions) : groupByLocation(unassignedSessions);
+  const unassignedSessions = searchFilteredSessions.filter((s) => !sessionsInGroups.has(s.session_id));
+  const sessionGroups = groupMode === "status" ? groupByStatus(unassignedSessions, sortMode) : groupByLocation(unassignedSessions, sortMode);
 
   const iconBtn = {
     background: "none", border: "none", color: "var(--text-very-muted)", cursor: "pointer",
@@ -273,30 +269,95 @@ export function Sidebar({
         style={{ height: 52, paddingTop: 28, flexShrink: 0 }}
       >
         <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
-          claude-manager
+          Claude Manager
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <button
-            onClick={cycleFilter}
+            onClick={() => {
+              const next: StatusFilter = statusFilter === "all" ? "active" : statusFilter === "active" ? "offline" : "all";
+              setStatusFilter(next);
+              localStorage.setItem("sidebar-status-filter", next);
+            }}
+            aria-label={`Filter: ${statusFilter}. Click to cycle.`}
             title={`Filter: ${statusFilter}`}
-            style={{ ...iconBtn, fontSize: 10, fontWeight: 600, letterSpacing: "0.04em", color: statusFilter !== "all" ? "var(--text-secondary)" : "var(--text-very-muted)" }}
+            style={{ ...iconBtn, fontSize: 10, fontWeight: 600, letterSpacing: "0.04em", color: "var(--text-secondary)" }}
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = statusFilter !== "all" ? "var(--text-secondary)" : "var(--text-very-muted)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
           >
-            {statusFilter === "all" ? "ALL" : statusFilter === "active" ? "LIVE" : "OFF"}
+            {statusFilter === "all" ? "ALL" : statusFilter === "active" ? "ACTIVE" : "OFF"}
           </button>
-          <button
-            onClick={() => setGroupMode((m) => { const next = m === "status" ? "location" : "status"; localStorage.setItem("sidebar-group-mode", next); return next; })}
-            title={groupMode === "status" ? "Group by location" : "Group by status"}
-            style={{ ...iconBtn, fontSize: 15, color: groupMode === "location" ? "var(--text-secondary)" : "var(--text-very-muted)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = groupMode === "location" ? "var(--text-secondary)" : "var(--text-very-muted)")}
-          >
-            {groupMode === "status" ? "⌂" : "●"}
-          </button>
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); setFilterDropdownOpen((o) => !o); }}
+              aria-label="Sort and group options"
+              aria-expanded={filterDropdownOpen}
+              title="Sort & group"
+              style={{
+                ...iconBtn,
+                fontSize: 12,
+                color: (sortMode !== "date" || groupMode !== "status")
+                  ? "var(--text-secondary)" : "var(--text-very-muted)",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color =
+                (sortMode !== "date" || groupMode !== "status")
+                  ? "var(--text-secondary)" : "var(--text-very-muted)"
+              )}
+            >
+              ↕
+            </button>
+            {filterDropdownOpen && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  right: 0,
+                  marginTop: 4,
+                  background: "var(--bg-sidebar)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 6,
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+                  zIndex: 1000,
+                  minWidth: 160,
+                  padding: "6px 0",
+                }}
+              >
+                <div style={{ padding: "4px 12px 2px", ...sectionLabel }}>SORT</div>
+                {([["date", "Newest first"], ["alpha", "Alphabetical"]] as [SortMode, string][]).map(([val, label]) => (
+                  <button
+                    key={val}
+                    onClick={() => { setSortMode(val); localStorage.setItem("sidebar-sort-mode", val); }}
+                    style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", background: "none", border: "none", color: "var(--text-secondary)", fontSize: 12, textAlign: "left", padding: "5px 12px", cursor: "pointer", fontFamily: "inherit" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--item-hover)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+                  >
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: sortMode === val ? "var(--accent)" : "transparent", border: `1.5px solid ${sortMode === val ? "var(--accent)" : "var(--text-very-muted)"}`, flexShrink: 0 }} />
+                    {label}
+                  </button>
+                ))}
+
+                <div style={{ borderTop: "1px solid var(--border)", margin: "4px 0" }} />
+                <div style={{ padding: "4px 12px 2px", ...sectionLabel }}>GROUP BY</div>
+                {([["status", "Status"], ["location", "Location"]] as [GroupMode, string][]).map(([val, label]) => (
+                  <button
+                    key={val}
+                    onClick={() => { setGroupMode(val); localStorage.setItem("sidebar-group-mode", val); }}
+                    style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", background: "none", border: "none", color: "var(--text-secondary)", fontSize: 12, textAlign: "left", padding: "5px 12px", cursor: "pointer", fontFamily: "inherit" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--item-hover)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+                  >
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: groupMode === val ? "var(--accent)" : "transparent", border: `1.5px solid ${groupMode === val ? "var(--accent)" : "var(--text-very-muted)"}`, flexShrink: 0 }} />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={onOpenNewSession}
-            title="New session (⌘N)"
+            aria-label="New session"
+            title="New session (⌘⇧N)"
             style={{ ...iconBtn, fontSize: 18, color: "var(--accent)" }}
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
             onMouseLeave={(e) => (e.currentTarget.style.color = "var(--accent)")}
@@ -304,6 +365,37 @@ export function Sidebar({
             +
           </button>
         </div>
+      </div>
+
+      {/* Search */}
+      <div style={{ padding: "0 8px 4px", flexShrink: 0, position: "relative" }}>
+        {!sidebarSearch && (
+          <div style={{ position: "absolute", top: 0, left: 8, right: 8, padding: "4px 8px", fontSize: 11, fontFamily: "inherit", pointerEvents: "none", lineHeight: "normal" }}>
+            <span style={{ color: "var(--text-muted)" }}>Search</span>
+            <span style={{ color: "var(--text-very-muted)" }}> (@group: @tab: @folder:)</span>
+          </div>
+        )}
+        <input
+          ref={searchRef}
+          aria-label="Search sessions and groups"
+          value={sidebarSearch}
+          onChange={(e) => setSidebarSearch(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Escape") { setSidebarSearch(""); searchRef.current?.blur(); } }}
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          style={{
+            width: "100%",
+            background: sidebarSearch ? "var(--bg-main)" : "transparent",
+            border: "1px solid var(--border)",
+            borderRadius: 5,
+            color: "var(--text-primary)",
+            fontSize: 11,
+            padding: "4px 8px",
+            outline: "none",
+            fontFamily: "inherit",
+          }}
+        />
       </div>
 
       {/* Scrollable content */}
@@ -316,6 +408,8 @@ export function Sidebar({
             style={{ display: "flex", alignItems: "center", padding: "2px 8px", gap: 4 }}
           >
             <button
+              aria-label={`${groupsCollapsed ? "Expand" : "Collapse"} groups section`}
+              aria-expanded={!groupsCollapsed}
               onClick={() => setGroupsCollapsed((c) => !c)}
               style={{ ...sectionLabel, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, padding: 0, fontFamily: "inherit", flex: 1, textAlign: "left" }}
               onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
@@ -335,7 +429,7 @@ export function Sidebar({
             </button>
           </div>
 
-          {!groupsCollapsed && groups.map((group) => {
+          {!groupsCollapsed && filteredGroups.map((group) => {
             const isActive = group.id === activeGroupId;
             const isCollapsedGroup = collapsed[group.id];
             const isRenamingGroup = renamingGroupId === group.id;
@@ -364,8 +458,10 @@ export function Sidebar({
                   onDoubleClick={() => startRenameGroup(group)}
                 >
                   <button
+                    aria-label={`${isCollapsedGroup ? "Expand" : "Collapse"} group ${group.name}`}
+                    aria-expanded={!isCollapsedGroup}
                     onClick={(e) => { e.stopPropagation(); setCollapsed((c) => ({ ...c, [group.id]: !c[group.id] })); }}
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--text-very-muted)", fontSize: 8, lineHeight: 1, flexShrink: 0 }}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "var(--text-very-muted)", fontSize: 8, lineHeight: 1, flexShrink: 0 }}
                   >
                     <span style={{ display: "inline-block", transform: isCollapsedGroup ? "rotate(-90deg)" : "rotate(0deg)", transition: "transform 0.1s" }}>▾</span>
                   </button>
@@ -393,6 +489,7 @@ export function Sidebar({
                   <div style={{ position: "relative", flexShrink: 0 }}>
                     <button
                       onClick={(e) => { e.stopPropagation(); setLayoutPickerGroupId(showLayoutPicker ? null : group.id); }}
+                      aria-label={`Change layout for ${group.name}`}
                       title="Change layout"
                       style={{ ...iconBtn, fontSize: 9, fontWeight: 600, letterSpacing: "0.04em", color: "var(--text-very-muted)", padding: "2px 5px", border: "1px solid var(--border)", borderRadius: 3 }}
                       onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
@@ -415,30 +512,42 @@ export function Sidebar({
                           padding: "6px",
                           display: "flex",
                           gap: 4,
+                          maxWidth: "calc(100vw - 40px)",
+                          overflowX: "auto",
                         }}
                       >
-                        {ALL_LAYOUTS.map((l) => (
-                          <button
-                            key={l}
-                            onClick={() => { onChangeLayout(group.id, l); setLayoutPickerGroupId(null); }}
-                            title={l}
-                            style={{
-                              background: l === group.layout ? "var(--accent)" : "var(--bg-main)",
-                              border: "1px solid var(--border)",
-                              borderRadius: 4,
-                              padding: "5px 6px",
-                              cursor: "pointer",
-                              color: l === group.layout ? "#fff" : "var(--text-muted)",
-                              display: "flex",
-                              flexDirection: "column",
-                              alignItems: "center",
-                              gap: 3,
-                            }}
-                          >
-                            <LayoutIcon layout={l} />
-                            <span style={{ fontSize: 8, letterSpacing: "0.02em", fontWeight: 600 }}>{l}</span>
-                          </button>
-                        ))}
+                        {(() => {
+                          const occupied = group.slots.filter(Boolean).length;
+                          return enabledLayouts.map((l) => {
+                            const tooSmall = SLOT_COUNTS[l] < occupied;
+                            const isActive = l === group.layout;
+                            return (
+                              <button
+                                key={l}
+                                disabled={tooSmall}
+                                onClick={() => { if (!tooSmall) { onChangeLayout(group.id, l); setLayoutPickerGroupId(null); } }}
+                                title={tooSmall ? `${l} — not enough slots (${SLOT_COUNTS[l]} < ${occupied} sessions)` : l}
+                                style={{
+                                  background: isActive ? "var(--accent)" : "var(--bg-main)",
+                                  border: "1px solid var(--border)",
+                                  borderRadius: 4,
+                                  padding: "5px 6px",
+                                  cursor: tooSmall ? "not-allowed" : "pointer",
+                                  color: isActive ? "var(--bg-main)" : tooSmall ? "var(--text-very-muted)" : "var(--text-muted)",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  alignItems: "center",
+                                  gap: 3,
+                                  opacity: tooSmall ? 0.4 : 1,
+                                  textDecoration: tooSmall ? "line-through" : "none",
+                                }}
+                              >
+                                <LayoutIcon layout={l} />
+                                <span style={{ fontSize: 8, letterSpacing: "0.02em", fontWeight: 600 }}>{l}</span>
+                              </button>
+                            );
+                          });
+                        })()}
                       </div>
                     )}
                   </div>
@@ -446,6 +555,7 @@ export function Sidebar({
                   {/* Delete group */}
                   <button
                     onClick={(e) => { e.stopPropagation(); onDeleteGroup(group.id); }}
+                    aria-label={`Delete group ${group.name}`}
                     title="Remove group"
                     style={{ ...iconBtn, fontSize: 13, flexShrink: 0, color: "var(--text-very-muted)", opacity: 0 }}
                     onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = "#f87171"; }}
@@ -483,13 +593,13 @@ export function Sidebar({
                           }}
                           onClick={() => { if (session) onActivateGroupAtSlot(group.id, slotIdx); }}
                           onContextMenu={session ? (e) => { e.preventDefault(); e.stopPropagation(); setGroupSlotContextMenu({ sessionId: session.session_id, x: e.clientX, y: e.clientY }); } : undefined}
-                          onMouseEnter={(e) => { if (session && !isSlotSelected) e.currentTarget.style.background = "var(--item-hover)"; }}
-                          onMouseLeave={(e) => { if (!isSlotSelected) e.currentTarget.style.background = "none"; }}
+                          onMouseEnter={(e) => { if (session && !isSlotSelected) e.currentTarget.style.background = "var(--item-hover)"; if (group.id === activeGroupId) onHoverSlot(slotIdx); }}
+                          onMouseLeave={(e) => { if (!isSlotSelected && !(e.buttons & 1)) e.currentTarget.style.background = "none"; onHoverSlot(null); }}
                         >
                           <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, flexShrink: 0, pointerEvents: "none" }}>{slotIdx + 1}</span>
                           {session ? (
                             <>
-                              <StatusDot status={session.status} activity={activityMap.get(session.session_id)} size={5} />
+                              <StatusDot status={session.status} activity={activityMap.get(session.session_id)} unread={unreadSessions.has(session.session_id)} size={5} />
                               <span style={{ fontSize: 11, color: isSlotSelected ? "var(--text-primary)" : "var(--text-secondary)", fontWeight: isSlotSelected ? 500 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, pointerEvents: "none" }}>
                                 {session.display_name || `${session.project_name}-${session.session_id.slice(0, 5)}`}
                               </span>
@@ -541,6 +651,8 @@ export function Sidebar({
           return (
             <div key={group.label}>
               <button
+                aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${group.label} sessions`}
+                aria-expanded={!isCollapsed}
                 onClick={() => setCollapsed((c) => ({ ...c, [group.label]: !c[group.label] }))}
                 className="flex items-center gap-1 w-full px-4 py-1"
                 style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", textAlign: "left" }}
@@ -582,17 +694,16 @@ export function Sidebar({
                       transition: "background 0.05s",
                     }}
                     onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = rowTint ?? "var(--item-hover)"; }}
-                    onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = rowTint ?? "none"; }}
+                    onMouseLeave={(e) => { if (!isSelected && !(e.buttons & 1)) e.currentTarget.style.background = rowTint ?? "none"; }}
                     onClick={() => { if (!isRenaming) onSelect(session); }}
                     onDoubleClick={() => { if (!isRenaming) startRename(session); }}
                     onContextMenu={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       setContextMenu({ sessionId: session.session_id, x: e.clientX, y: e.clientY });
-                      onSelect(session);
                     }}
                   >
-                    <StatusDot status={session.status} activity={activity} size={7} />
+                    <StatusDot status={session.status} activity={activity} unread={unreadSessions.has(session.session_id)} size={7} />
                     {isRenaming ? (
                       <input
                         ref={renameInputRef}
@@ -640,8 +751,8 @@ export function Sidebar({
 
       {/* Footer */}
       <div style={{ display: "flex", alignItems: "center", padding: "0 12px", gap: 12, height: 28, borderTop: "1px solid var(--border)", color: "var(--text-muted)", fontSize: 11, flexShrink: 0 }}>
-        <button onClick={onOpenPalette} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 11, padding: 0, fontFamily: "inherit" }} onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")} onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}>⌘K</button>
-        <button onClick={onOpenSettings} title="Preferences (⌘P)" style={{ marginLeft: "auto", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 11, padding: 0, fontFamily: "inherit" }} onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")} onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}>?</button>
+        <button aria-label="Command palette" onClick={onOpenPalette} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 12, padding: "4px", fontFamily: "inherit", fontWeight: 500 }} onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")} onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}>⌘K</button>
+        <button aria-label="Settings" onClick={onOpenSettings} title="Preferences (⌘P)" style={{ marginLeft: "auto", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 14, padding: "4px", fontFamily: "inherit", fontWeight: 500 }} onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")} onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}>?</button>
       </div>
 
       {/* Group slot context menu */}
@@ -667,17 +778,19 @@ export function Sidebar({
         if (!session) return null;
         return (
           <div
+            role="menu"
+            aria-label="Session actions"
             onClick={(e) => e.stopPropagation()}
             style={{ position: "fixed", left: contextMenu.x, top: contextMenu.y, background: "var(--bg-sidebar)", border: "1px solid var(--border)", borderRadius: 6, boxShadow: "0 4px 16px rgba(0,0,0,0.4)", zIndex: 1000, minWidth: 140, padding: "4px 0" }}
           >
-            {(["Rename", "Archive", "Delete", "Summarize"] as const).map((action) => (
+            {(["Rename", "Archive", "Delete"] as const).map((action) => (
               <button
                 key={action}
+                role="menuitem"
                 onClick={() => {
                   if (action === "Rename") startRename(session);
                   else if (action === "Archive") archiveSession(session.session_id);
                   else if (action === "Delete") deleteSession(session.session_id);
-                  else if (action === "Summarize") summarizeSession(session);
                 }}
                 style={{ display: "block", width: "100%", background: "none", border: "none", color: action === "Delete" ? "#f87171" : "var(--text-secondary)", fontSize: 13, textAlign: "left", padding: "6px 12px", cursor: "pointer", fontFamily: "inherit" }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = "var(--item-hover)")}
@@ -689,6 +802,7 @@ export function Sidebar({
           </div>
         );
       })()}
+
     </div>
   );
 }

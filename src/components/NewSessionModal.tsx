@@ -12,6 +12,7 @@ function formatCwd(cwd: string): string {
 
 export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [value, setValue] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
 
@@ -20,6 +21,19 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
@@ -59,6 +73,9 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="New session"
       style={{
         position: "fixed",
         inset: 0,
@@ -73,6 +90,7 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
         style={{
           width: 560,
@@ -93,9 +111,10 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
             borderBottom: filtered.length > 0 ? "1px solid #222" : undefined,
           }}
         >
-          <span style={{ color: "#4b4b4b", fontSize: 15 }}>⌕</span>
+          <span style={{ color: "#8a8a8a", fontSize: 15 }}>⌕</span>
           <input
             ref={inputRef}
+            aria-label="Project path"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -110,34 +129,40 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
               fontFamily: "inherit",
             }}
           />
-          <span style={{ color: "#3b3b3b", fontSize: 11 }}>esc</span>
+          <span style={{ color: "#8a8a8a", fontSize: 11 }}>esc</span>
         </div>
 
         {/* Suggestions */}
         {filtered.length > 0 && (
-          <div style={{ maxHeight: 320, overflowY: "auto", padding: "4px 0" }}>
+          <div role="listbox" aria-label="Recent directories" style={{ maxHeight: 320, overflowY: "auto", padding: "4px 0" }}>
             {filtered.map((cwd, i) => (
-              <div
+              <button
                 key={cwd}
+                role="option"
+                aria-selected={i === activeIdx}
                 onClick={() => confirm(cwd)}
                 onMouseEnter={() => setActiveIdx(i)}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: 8,
+                  width: "100%",
                   padding: "7px 14px",
                   cursor: "pointer",
                   background: i === activeIdx ? "rgba(255,255,255,0.07)" : "none",
                   fontSize: 13,
                   color: i === activeIdx ? "#ededef" : "#9ca3af",
+                  border: "none",
+                  textAlign: "left",
+                  fontFamily: "inherit",
                 }}
               >
-                <span style={{ fontSize: 11, color: "#4b4b4b" }}>⌂</span>
+                <span style={{ fontSize: 11, color: "#8a8a8a" }}>⌂</span>
                 <span style={{ flex: 1 }}>{formatCwd(cwd)}</span>
-                <span style={{ fontSize: 11, color: "#3b3b3b", fontFamily: "monospace" }}>
+                <span style={{ fontSize: 11, color: "#8a8a8a", fontFamily: "monospace" }}>
                   {cwd.split("/").pop()}
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -151,12 +176,12 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
               gap: 8,
               padding: "10px 14px",
               fontSize: 13,
-              color: "#4b4b4b",
+              color: "#8a8a8a",
             }}
           >
             <span>Open in</span>
             <span style={{ color: "#9ca3af", fontFamily: "monospace" }}>{value.trim()}</span>
-            <span style={{ marginLeft: "auto", fontSize: 11, color: "#3b3b3b" }}>↵ enter</span>
+            <span style={{ marginLeft: "auto", fontSize: 11, color: "#8a8a8a" }}>↵ enter</span>
           </div>
         )}
       </div>

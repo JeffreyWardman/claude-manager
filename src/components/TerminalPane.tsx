@@ -82,7 +82,8 @@ export function TerminalPane({ ptyId, cwd, cmd }: Props) {
         if (scrollback.length > 0) term.write(b64ToBytes(scrollback));
         invoke("pty_resize", { id: ptyId, rows, cols }).catch(() => {});
       } else {
-        invoke("pty_spawn", { id: ptyId, cwd, rows, cols, resume: !cmd, cmd: cmd ?? null }).catch((err: unknown) => {
+        const skipPermissions = localStorage.getItem("skip-permissions") === "true";
+        invoke("pty_spawn", { id: ptyId, cwd, rows, cols, resume: !cmd, cmd: cmd ?? null, skipPermissions }).catch((err: unknown) => {
           term.writeln(`\r\n\x1b[31mFailed to start terminal: ${err}\x1b[0m`);
         });
       }

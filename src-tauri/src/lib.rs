@@ -1,14 +1,10 @@
 mod commands;
-mod db;
 mod journal;
 mod metadata;
 mod pty_manager;
 mod sessions;
 
-use sqlx::PgPool;
 use tauri::Manager;
-
-pub struct DbState(pub Option<PgPool>);
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -19,25 +15,14 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             app.manage(pty_manager::PtyState::new());
-
-            let handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                match db::connect().await {
-                    Ok(pool) => {
-                        handle.manage(DbState(Some(pool)));
-                    }
-                    Err(e) => {
-                        eprintln!("DB connection failed (session naming unavailable): {e}");
-                        handle.manage(DbState(None));
-                    }
-                }
-            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_sessions,
-            commands::get_display_names,
-            commands::set_display_name,
+            commands::get_custom_themes,
+            commands::new_window,
+            commands::get_platform,
+            commands::play_sound,
             journal::get_conversation,
             journal::get_jsonl_size,
             metadata::rename_session,

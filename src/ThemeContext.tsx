@@ -1,19 +1,24 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { themes, Theme, defaultTheme } from "./themes";
 
 interface ThemeContextValue {
   theme: Theme;
   allThemes: Theme[];
   setThemeId: (id: string) => void;
+  previewTheme: (t: Theme) => void;
+  clearPreview: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
   theme: defaultTheme,
   allThemes: themes,
   setThemeId: () => {},
+  previewTheme: () => {},
+  clearPreview: () => {},
 });
 
-function applyTheme(t: Theme) {
+export function applyTheme(t: Theme) {
   const r = document.documentElement;
   r.style.setProperty("--bg-sidebar", t.bg.sidebar);
   r.style.setProperty("--bg-main", t.bg.main);
@@ -27,14 +32,32 @@ function applyTheme(t: Theme) {
   r.style.setProperty("--accent", t.accent);
 }
 
+function isValidTheme(v: unknown): v is Theme {
+  if (!v || typeof v !== "object") return false;
+  const o = v as Record<string, unknown>;
+  return typeof o.id === "string" && typeof o.name === "string" && typeof o.bg === "object" && typeof o.accent === "string";
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [themeId, setThemeIdState] = useState(
     () => localStorage.getItem("cm-theme") ?? defaultTheme.id
   );
+  const [customThemes, setCustomThemes] = useState<Theme[]>([]);
 
-  const theme = themes.find((t) => t.id === themeId) ?? defaultTheme;
+  useEffect(() => {
+    invoke<unknown[]>("get_custom_themes")
+      .then((raw) => {
+        const builtinIds = new Set(themes.map((t) => t.id));
+        const valid = raw.filter(isValidTheme).filter((t) => !builtinIds.has(t.id));
+        setCustomThemes(valid);
+      })
+      .catch(() => {});
+  }, []);
 
-  // Apply CSS vars whenever theme changes (and on first mount)
+  const allThemes = useMemo(() => [...themes, ...customThemes], [customThemes]);
+
+  const theme = allThemes.find((t) => t.id === themeId) ?? defaultTheme;
+
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
@@ -44,8 +67,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("cm-theme", id);
   };
 
+  const previewTheme = useCallback((t: Theme) => {
+    applyTheme(t);
+  }, []);
+
+  const clearPreview = useCallback(() => {
+    applyTheme(theme);
+  }, [theme]);
+
   return (
-    <ThemeContext.Provider value={{ theme, allThemes: themes, setThemeId }}>
+    <ThemeContext.Provider value={{ theme, allThemes, setThemeId, previewTheme, clearPreview }}>
       {children}
     </ThemeContext.Provider>
   );

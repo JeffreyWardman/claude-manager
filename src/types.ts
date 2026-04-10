@@ -1,5 +1,7 @@
 export type SessionStatus = "active" | "offline";
-export type PaneLayout = "1x1" | "2x1" | "1x2" | "2x2";
+export type PaneLayout =
+  | "1x1" | "2x1" | "1x2" | "2x2" | "3x1" | "1x3" | "3x2" | "2x3"
+  | "2+1" | "1+2" | "3+1" | "1+3";
 
 export interface PaneGroup {
   id: string;

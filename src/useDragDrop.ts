@@ -78,6 +78,7 @@ export function useDragDrop(handlers: DragDropHandlers) {
         setIsDragging(true);
         document.body.style.userSelect = "none";
         document.body.style.webkitUserSelect = "none";
+        document.body.classList.add("dragging");
         const ghost = document.createElement("div");
         ghost.className = "drag-ghost";
         ghost.textContent = labelRef.current;
@@ -117,6 +118,7 @@ export function useDragDrop(handlers: DragDropHandlers) {
       setIsDragging(false);
       document.body.style.userSelect = "";
       document.body.style.webkitUserSelect = "";
+      document.body.classList.remove("dragging");
 
       const payload = getDragPayload();
       clearDragPayload();

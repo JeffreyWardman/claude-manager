@@ -2,15 +2,57 @@ use base64::Engine as _;
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use std::collections::HashMap;
 use std::io::{Read, Write};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use std::{fs, process};
 use tauri::{AppHandle, Emitter, State};
 
 const MAX_BUF: usize = 512 * 1024; // 512 KB scrollback
 
+fn locks_dir() -> Option<PathBuf> {
+    dirs_next::home_dir().map(|h| h.join(".claude").join("manager").join("locks"))
+}
+
+fn lock_path(id: &str) -> Option<PathBuf> {
+    locks_dir().map(|d| d.join(format!("{id}.lock")))
+}
+
+fn is_pid_alive(pid: u32) -> bool {
+    std::process::Command::new("kill")
+        .args(["-0", &pid.to_string()])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+fn acquire_lock(id: &str) -> Result<(), String> {
+    let path = lock_path(id).ok_or("no home dir")?;
+    if let Ok(content) = fs::read_to_string(&path) {
+        if let Ok(pid) = content.trim().parse::<u32>() {
+            if pid != process::id() && is_pid_alive(pid) {
+                return Err(format!("Session is locked by another instance (pid {pid})"));
+            }
+        }
+    }
+    if let Some(parent) = path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    fs::write(&path, process::id().to_string()).map_err(|e| e.to_string())
+}
+
+fn release_lock(id: &str) {
+    if let Some(path) = lock_path(id) {
+        if let Ok(content) = fs::read_to_string(&path) {
+            if content.trim().parse::<u32>().ok() == Some(process::id()) {
+                let _ = fs::remove_file(&path);
+            }
+        }
+    }
+}
+
 struct PtyEntry {
     writer: Box<dyn Write + Send>,
     master: Box<dyn portable_pty::MasterPty + Send>,
-    /// Accumulated output, capped at MAX_BUF. Replayed on reattach.
     scrollback: Arc<Mutex<Vec<u8>>>,
 }
 
@@ -30,6 +72,7 @@ pub fn pty_spawn(
     cols: u16,
     resume: bool,
     cmd: Option<String>,
+    skip_permissions: Option<bool>,
     state: State<'_, PtyState>,
     app: AppHandle,
 ) -> Result<(), String> {
@@ -41,6 +84,11 @@ pub fn pty_spawn(
     } else {
         cwd
     };
+
+    // Lock this session so no other instance can resume it
+    if cmd.is_none() {
+        acquire_lock(&id)?;
+    }
 
     // Kill any existing PTY with this id first
     state.0.lock().unwrap().remove(&id);
@@ -60,10 +108,15 @@ pub fn pty_spawn(
     } else {
         // Claude session
         let mut c = CommandBuilder::new("/bin/zsh");
-        let claude_cmd = if resume {
-            format!("/opt/homebrew/bin/claude --resume {}", id)
+        let skip = if skip_permissions.unwrap_or(false) {
+            " --dangerously-skip-permissions"
         } else {
-            "/opt/homebrew/bin/claude".to_string()
+            ""
+        };
+        let claude_cmd = if resume {
+            format!("/opt/homebrew/bin/claude --resume {}{}", id, skip)
+        } else {
+            format!("/opt/homebrew/bin/claude{}", skip)
         };
         c.args(["-l", "-c", &claude_cmd]);
         c
@@ -99,6 +152,7 @@ pub fn pty_spawn(
 
     std::thread::spawn(move || {
         let mut buf = vec![0u8; 8192];
+        let mut first_output = true;
         loop {
             match reader.read(&mut buf) {
                 Ok(0) | Err(_) => {
@@ -112,11 +166,24 @@ pub fn pty_spawn(
                     if is_same {
                         map.remove(&id_for_exit);
                         drop(map);
+                        release_lock(&id_for_exit);
                         let _ = app.emit("sessions-changed", ());
                     }
                     break;
                 }
                 Ok(n) => {
+                    if first_output {
+                        first_output = false;
+                        // Claude needs time to write its pid file.
+                        // Emit at 1s and 3s to catch it reliably.
+                        for delay in [1, 3] {
+                            let a = app.clone();
+                            std::thread::spawn(move || {
+                                std::thread::sleep(std::time::Duration::from_secs(delay));
+                                let _ = a.emit("sessions-changed", ());
+                            });
+                        }
+                    }
                     {
                         let mut sb = scrollback_writer.lock().unwrap();
                         sb.extend_from_slice(&buf[..n]);
@@ -183,5 +250,6 @@ pub fn pty_resize(
 #[tauri::command]
 pub fn pty_kill(id: String, state: State<'_, PtyState>) -> Result<(), String> {
     state.0.lock().unwrap().remove(&id);
+    release_lock(&id);
     Ok(())
 }

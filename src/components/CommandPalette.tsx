@@ -21,10 +21,24 @@ export function CommandPalette({ sessions, onSelect, onClose }: Props) {
     inputRef.current?.focus();
   }, []);
 
-  // Close on Escape or click outside
+  const dialogRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
@@ -44,6 +58,9 @@ export function CommandPalette({ sessions, onSelect, onClose }: Props) {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Command palette"
       style={{
         position: "fixed",
         inset: 0,
@@ -58,11 +75,12 @@ export function CommandPalette({ sessions, onSelect, onClose }: Props) {
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
         style={{
           width: 560,
           background: "#1a1a1a",
-          border: "1px solid #2a2a2a",
+          border: "1px solid #888888",
           borderRadius: 8,
           overflow: "hidden",
           boxShadow: "0 24px 48px rgba(0,0,0,0.6)",
@@ -82,9 +100,10 @@ export function CommandPalette({ sessions, onSelect, onClose }: Props) {
               borderBottom: "1px solid #222",
             }}
           >
-            <span style={{ color: "#4b4b4b", fontSize: 15 }}>⌕</span>
+            <span style={{ color: "#8a8a8a", fontSize: 15 }}>⌕</span>
             <Command.Input
               ref={inputRef}
+              aria-label="Search sessions"
               placeholder="Search sessions..."
               style={{
                 flex: 1,
@@ -96,7 +115,7 @@ export function CommandPalette({ sessions, onSelect, onClose }: Props) {
                 fontFamily: "inherit",
               }}
             />
-            <span style={{ color: "#3b3b3b", fontSize: 11 }}>esc</span>
+            <span style={{ color: "#8a8a8a", fontSize: 11 }}>esc</span>
           </div>
 
           <Command.List
@@ -107,7 +126,7 @@ export function CommandPalette({ sessions, onSelect, onClose }: Props) {
             }}
           >
             <Command.Empty
-              style={{ padding: "24px 14px", color: "#3b3b3b", fontSize: 13, textAlign: "center" }}
+              style={{ padding: "24px 14px", color: "#8a8a8a", fontSize: 13, textAlign: "center" }}
             >
               No sessions found.
             </Command.Empty>
@@ -167,12 +186,12 @@ function SessionItem({
     >
       <StatusDot status={session.status} size={7} />
       <span style={{ flex: 1, fontWeight: 500, color: "#ededef" }}>{name}</span>
-      <span style={{ fontSize: 11, color: "#3b3b3b" }}>{formatCwd(session.cwd)}</span>
+      <span style={{ fontSize: 11, color: "#8a8a8a" }}>{formatCwd(session.cwd)}</span>
       {session.git_branch && (
         <span
           style={{
             fontSize: 10,
-            color: "#2a2a2a",
+            color: "#888888",
             maxWidth: 80,
             overflow: "hidden",
             textOverflow: "ellipsis",

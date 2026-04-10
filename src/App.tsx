@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useSessions } from "./hooks/useSessions";
 import { usePtyActivity } from "./hooks/usePtyActivity";
@@ -13,11 +13,15 @@ import { ThemeProvider } from "./ThemeContext";
 import type { ClaudeSession, PaneGroup, PaneLayout } from "./types";
 import { dropToSlot, dropToGroupSlot, swapSlots, removeFromGroup, removeFromSlot, addToGroup } from "./groupOps";
 import { useDragDrop } from "./useDragDrop";
+import { parseIgnorePatterns, isSessionIgnored } from "./sidebarUtils";
 
 const MIN_SIDEBAR_WIDTH = 160;
 const MAX_SIDEBAR_WIDTH = 480;
 
-const SLOT_COUNTS: Record<PaneLayout, number> = { "1x1": 1, "2x1": 2, "1x2": 2, "2x2": 4 };
+const SLOT_COUNTS: Record<PaneLayout, number> = {
+  "1x1": 1, "2x1": 2, "1x2": 2, "2x2": 4, "3x1": 3, "1x3": 3, "3x2": 6, "2x3": 6,
+  "2+1": 3, "1+2": 3, "3+1": 4, "1+3": 4,
+};
 
 function genId() { return Math.random().toString(36).slice(2, 10); }
 
@@ -39,13 +43,50 @@ function loadGroups(): PaneGroup[] {
 
 function AppInner() {
   const { sessions, loading, refresh } = useSessions();
-  const activityMap = usePtyActivity(sessions.map((s) => s.session_id));
+  const [unreadSessions, setUnreadSessions] = useState<Set<string>>(new Set());
+  const clearUnread = useCallback((id: string) => {
+    setUnreadSessions((s) => {
+      if (!s.has(id)) return s;
+      const next = new Set(s);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+  const handlePtyExit = useCallback((sessionId: string) => {
+    setGroups((prev) => {
+      const next = prev.map((g) => ({
+        ...g,
+        slots: g.slots.map((s) => (s === sessionId ? null : s)),
+      }));
+      localStorage.setItem("pane-groups", JSON.stringify(next));
+      return next;
+    });
+    setStandaloneSelectedId((prev) => (prev === sessionId ? null : prev));
+  }, []);
+  const activityMap = usePtyActivity(sessions.map((s) => s.session_id), clearUnread, handlePtyExit);
+
+  const [ignorePatternsRaw, setIgnorePatternsRaw] = useState(
+    () => localStorage.getItem("ignore-patterns") ?? ""
+  );
+  const ignorePatterns = useMemo(() => parseIgnorePatterns(ignorePatternsRaw), [ignorePatternsRaw]);
+
+  // Override session status based on local PTY state and filter ignored sessions.
+  const liveSessions = useMemo(() =>
+    sessions
+      .map((s) =>
+        activityMap.has(s.session_id) && s.status === "offline"
+          ? { ...s, status: "active" as const }
+          : s
+      )
+      .filter((s) => !isSessionIgnored(s, ignorePatterns)),
+  [sessions, activityMap, ignorePatterns]);
 
   const [groups, setGroups] = useState<PaneGroup[]>(loadGroups);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(
     () => localStorage.getItem("active-group-id") ?? null
   );
   const [focusedSlotIdx, setFocusedSlotIdx] = useState(0);
+  const [hoveredSlotIdx, setHoveredSlotIdx] = useState<number | null>(null);
   const [standaloneSelectedId, setStandaloneSelectedId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -53,18 +94,42 @@ function AppInner() {
   const [sidebarVisible, setSidebarVisible] = useState(
     () => localStorage.getItem("sidebar-visible") !== "false"
   );
+  const VALID_LAYOUTS: Set<string> = new Set([
+    "1x1", "2x1", "1x2", "2x2", "3x1", "1x3", "3x2", "2x3",
+    "2+1", "1+2", "3+1", "1+3",
+  ]);
+  const [enabledLayouts, setEnabledLayouts] = useState<PaneLayout[]>(
+    () => {
+      try {
+        const saved = localStorage.getItem("enabled-layouts");
+        if (saved) {
+          const parsed = (JSON.parse(saved) as string[]).filter((l) => VALID_LAYOUTS.has(l)) as PaneLayout[];
+          if (parsed.length > 0) return parsed;
+        }
+      } catch {}
+      return ["1x1", "2x1", "1x2", "2x2"];
+    }
+  );
   const [sidebarWidth, setSidebarWidth] = useState(
     () => parseInt(localStorage.getItem("sidebar-width") ?? "240")
   );
 
-  const activeGroup = groups.find((g) => g.id === activeGroupId) ?? groups[0] ?? null;
+  const activeGroup = groups.find((g) => g.id === activeGroupId) ?? null;
 
-  // Ensure activeGroupId tracks groups[0] when groups change
+  // Re-read ignore patterns when settings closes
+  const prevSettingsOpen = useRef(false);
   useEffect(() => {
-    if (!activeGroupId && groups.length > 0) {
-      const id = groups[0].id;
-      setActiveGroupId(id);
-      localStorage.setItem("active-group-id", id);
+    if (prevSettingsOpen.current && !settingsOpen) {
+      setIgnorePatternsRaw(localStorage.getItem("ignore-patterns") ?? "");
+    }
+    prevSettingsOpen.current = settingsOpen;
+  }, [settingsOpen]);
+
+  // Clear activeGroupId if the group was deleted
+  useEffect(() => {
+    if (activeGroupId && !groups.find((g) => g.id === activeGroupId)) {
+      setActiveGroupId(null);
+      localStorage.removeItem("active-group-id");
     }
   }, [groups, activeGroupId]);
 
@@ -133,6 +198,7 @@ function AppInner() {
       const slots = Array.from({ length: count }, (_, i) => g.slots[i] ?? null);
       return { ...g, layout, slots };
     }));
+    activateGroup(id);
   }, [groups]);
 
   const handleDropToSlot = useCallback((slotIdx: number, sessionId: string) => {
@@ -159,8 +225,8 @@ function AppInner() {
   }, [groups]);
 
   const handleAddToGroup = useCallback((groupId: string, sessionId: string) => {
-    persistGroups(addToGroup(groups, groupId, sessionId));
-  }, [groups]);
+    persistGroups(addToGroup(groups, groupId, sessionId, enabledLayouts));
+  }, [groups, enabledLayouts]);
 
   const handleCreateGroupWithSessionRef = useRef<(sid: string) => void>(() => {});
   const handleCreateGroupFromSessionsRef = useRef<(a: string, b: string) => void>(() => {});
@@ -215,9 +281,31 @@ function AppInner() {
 
   const selectedId = standaloneSelectedId ?? activeGroup?.slots[focusedSlotIdx] ?? null;
 
+  // Mark unread when computing→waiting on a non-focused session
+  const prevActivityForUnreadRef = useRef<Map<string, ActivityState>>(new Map());
+  useEffect(() => {
+    const prev = prevActivityForUnreadRef.current;
+    for (const [id, state] of activityMap) {
+      if (state === "waiting" && prev.get(id) === "computing" && id !== selectedId) {
+        setUnreadSessions((s) => new Set(s).add(id));
+        if (localStorage.getItem("notif-sound-enabled") === "true") {
+          const soundPath = localStorage.getItem("notif-sound-path");
+          if (soundPath) invoke("play_sound", { path: soundPath }).catch(() => {});
+        }
+      }
+    }
+    prevActivityForUnreadRef.current = new Map(activityMap);
+  }, [activityMap, selectedId]);
+
+  // Clear unread when a session is focused (click pane or sidebar)
+  useEffect(() => {
+    if (selectedId) clearUnread(selectedId);
+  }, [selectedId, clearUnread]);
+
   const handleNewSession = useCallback((cwd: string) => {
     const tmpId = `new-${Date.now()}`;
-    invoke("pty_spawn", { id: tmpId, cwd, rows: 24, cols: 80, resume: false, cmd: null })
+    const skipPermissions = localStorage.getItem("skip-permissions") === "true";
+    invoke("pty_spawn", { id: tmpId, cwd, rows: 24, cols: 80, resume: false, cmd: null, skipPermissions })
       .then(() => refresh())
       .catch(console.error);
   }, [refresh]);
@@ -253,7 +341,9 @@ function AppInner() {
         });
         return;
       }
-      if (mod && e.key === "n") { e.preventDefault(); setNewSessionOpen(true); return; }
+      if (mod && e.shiftKey && e.key === "N") { e.preventDefault(); setNewSessionOpen(true); return; }
+      if (mod && e.key === "m") { e.preventDefault(); import("@tauri-apps/api/window").then(({ getCurrentWindow }) => getCurrentWindow().minimize()); return; }
+      if (mod && e.key === "n") { e.preventDefault(); invoke("new_window").catch(console.error); return; }
       if (mod && e.key === "w") {
         e.preventDefault();
         if (selectedId) {
@@ -264,18 +354,42 @@ function AppInner() {
         return;
       }
 
+      if (mod && (e.key === "Backspace" || e.key === "Delete")) {
+        e.preventDefault();
+        if (activeGroupId) {
+          handleDeleteGroup(activeGroupId);
+        } else if (selectedId) {
+          invoke("archive_session", { sessionId: selectedId })
+            .then(() => refresh())
+            .catch(console.error);
+        }
+        return;
+      }
+
+      if (e.ctrlKey && e.key === "Tab" && groups.length > 0) {
+        e.preventDefault();
+        const currentIdx = groups.findIndex((g) => g.id === activeGroupId);
+        const delta = e.shiftKey ? -1 : 1;
+        const nextIdx = (currentIdx + delta + groups.length) % groups.length;
+        activateGroup(groups[nextIdx].id);
+        return;
+      }
+
       if (paletteOpen || settingsOpen) return;
       const tag = (e.target as HTMLElement).tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
 
-      if (e.key >= "1" && e.key <= "9" && !mod) {
-        const target = sessions[parseInt(e.key) - 1];
-        if (target) selectSession(target);
+      if (e.key >= "1" && e.key <= "9" && mod) {
+        e.preventDefault();
+        const target = groups[parseInt(e.key) - 1];
+        if (target) activateGroup(target.id);
+        return;
       }
+
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [sessions, selectedId, paletteOpen, settingsOpen, selectSession]);
+  }, [liveSessions, selectedId, paletteOpen, settingsOpen, selectSession]);
 
   function startResize(e: React.MouseEvent) {
     e.preventDefault();
@@ -296,17 +410,22 @@ function AppInner() {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-very-muted)", fontSize: 12 }}>
-        Loading sessions...
+      <div data-tauri-drag-region style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-very-muted)", fontSize: 12 }}>
+        <span style={{ pointerEvents: "none" }}>Loading sessions...</span>
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", height: "100%", background: "var(--bg-main)" }}>
+    <div style={{ display: "flex", height: "100%", background: "var(--bg-main)", position: "relative" }}>
+      {/* Window drag bar — always present at top for titlebar overlay */}
+      <div
+        data-tauri-drag-region
+        style={{ position: "absolute", top: 0, left: 0, right: 0, height: 28, zIndex: 900 }}
+      />
       {sidebarVisible && (
         <Sidebar
-          sessions={sessions}
+          sessions={liveSessions}
           selectedId={selectedId}
           groups={groups}
           activeGroupId={activeGroup?.id ?? null}
@@ -324,10 +443,16 @@ function AppInner() {
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenNewSession={() => setNewSessionOpen(true)}
           onRefresh={refresh}
+          enabledLayouts={enabledLayouts}
+          unreadSessions={unreadSessions}
+          onHoverSlot={setHoveredSlotIdx}
         />
       )}
       {sidebarVisible && (
         <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize sidebar"
           onMouseDown={startResize}
           style={{
             width: 4,
@@ -341,21 +466,29 @@ function AppInner() {
         />
       )}
       {standaloneSelectedId ? (
-        <MainPane session={sessions.find((s) => s.session_id === standaloneSelectedId) ?? null} />
+        <MainPane
+          session={liveSessions.find((s) => s.session_id === standaloneSelectedId) ?? null}
+          activityMap={activityMap}
+          unreadSessions={unreadSessions}
+          focused
+        />
       ) : (
         <GridLayout
           group={activeGroup}
-          sessions={sessions}
+          sessions={liveSessions}
           focusedIdx={focusedSlotIdx}
+          hoveredIdx={hoveredSlotIdx}
           onFocus={setFocusedSlotIdx}
           onRemoveFromSlot={handleRemoveFromSlot}
           dndActive={dndActive}
+          activityMap={activityMap}
+          unreadSessions={unreadSessions}
         />
       )}
 
       {paletteOpen && (
         <CommandPalette
-          sessions={sessions}
+          sessions={liveSessions}
           onSelect={selectSession}
           onClose={() => setPaletteOpen(false)}
         />
@@ -367,7 +500,7 @@ function AppInner() {
           onClose={() => setNewSessionOpen(false)}
         />
       )}
-      {settingsOpen && <Settings onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && <Settings onClose={() => setSettingsOpen(false)} enabledLayouts={enabledLayouts} onChangeEnabledLayouts={(layouts) => { setEnabledLayouts(layouts); localStorage.setItem("enabled-layouts", JSON.stringify(layouts)); }} />}
     </div>
   );
 }

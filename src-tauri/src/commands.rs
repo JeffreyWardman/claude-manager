@@ -1,49 +1,59 @@
-use crate::DbState;
 use crate::sessions::{get_all_sessions, ClaudeSession};
-use std::collections::HashMap;
-use tauri::State;
+use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder};
+
+#[tauri::command]
+pub fn get_custom_themes() -> Vec<serde_json::Value> {
+    let Some(dir) = dirs_next::home_dir()
+        .map(|h| h.join(".config").join("claude-manager").join("themes"))
+    else {
+        return vec![];
+    };
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+        return vec![];
+    };
+    entries
+        .flatten()
+        .filter(|e| e.path().extension().and_then(|x| x.to_str()) == Some("json"))
+        .filter_map(|e| {
+            let content = std::fs::read_to_string(e.path()).ok()?;
+            serde_json::from_str::<serde_json::Value>(&content).ok()
+        })
+        .collect()
+}
 
 #[tauri::command]
 pub fn get_sessions() -> Vec<ClaudeSession> {
     get_all_sessions()
 }
 
-/// Fetch all display names from Postgres. Returns empty map if DB unavailable.
 #[tauri::command]
-pub async fn get_display_names(
-    db: State<'_, DbState>,
-) -> Result<HashMap<String, String>, String> {
-    let Some(pool) = db.0.as_ref() else {
-        return Ok(HashMap::new());
-    };
-    let rows: Vec<(String, String)> =
-        sqlx::query_as("SELECT session_id, display_name FROM sessions")
-            .fetch_all(pool)
-            .await
-            .map_err(|e| e.to_string())?;
-    Ok(rows.into_iter().collect())
+pub fn get_platform() -> String {
+    std::env::consts::OS.to_string()
 }
 
-/// Upsert a display name. No-op if DB unavailable.
 #[tauri::command]
-pub async fn set_display_name(
-    session_id: String,
-    display_name: String,
-    db: State<'_, DbState>,
-) -> Result<(), String> {
-    let Some(pool) = db.0.as_ref() else {
-        return Ok(());
-    };
-    sqlx::query(
-        "INSERT INTO sessions (session_id, display_name)
-         VALUES ($1, $2)
-         ON CONFLICT (session_id) DO UPDATE
-         SET display_name = $2, updated_at = NOW()",
-    )
-    .bind(&session_id)
-    .bind(&display_name)
-    .execute(pool)
-    .await
-    .map_err(|e| e.to_string())?;
+pub fn play_sound(path: String) {
+    std::thread::spawn(move || {
+        #[cfg(target_os = "macos")]
+        { let _ = std::process::Command::new("afplay").arg(&path).output(); }
+        #[cfg(target_os = "linux")]
+        { let _ = std::process::Command::new("paplay").arg(&path).output(); }
+    });
+}
+
+#[tauri::command]
+pub fn new_window(app: AppHandle) -> Result<(), String> {
+    let label = format!("main-{}", std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis());
+    WebviewWindowBuilder::new(&app, &label, WebviewUrl::default())
+        .title("claude-manager")
+        .inner_size(1200.0, 800.0)
+        .min_inner_size(800.0, 500.0)
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .hidden_title(true)
+        .build()
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
