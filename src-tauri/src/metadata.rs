@@ -45,17 +45,16 @@ fn save(store: &MetadataStore) {
 pub fn rename_session(session_id: String, name: String) -> Result<(), String> {
     let mut store = load();
     let entry = store.entry(session_id).or_default();
-    let trimmed = name.trim().to_string();
-    entry.display_name = if trimmed.is_empty() {
-        None
-    } else {
-        Some(trimmed.clone())
+    let value = {
+        let trimmed = name.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
     };
-    entry.pending_rename = if trimmed.is_empty() {
-        None
-    } else {
-        Some(trimmed)
-    };
+    entry.pending_rename = value.clone();
+    entry.display_name = value;
     save(&store);
     Ok(())
 }

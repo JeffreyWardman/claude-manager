@@ -7,6 +7,8 @@ use std::sync::{Arc, Mutex};
 use std::{fs, process};
 use tauri::{AppHandle, Emitter, State};
 
+use crate::utils::is_pid_alive;
+
 const MAX_BUF: usize = 512 * 1024; // 512 KB scrollback
 
 fn locks_dir() -> Option<PathBuf> {
@@ -15,14 +17,6 @@ fn locks_dir() -> Option<PathBuf> {
 
 fn lock_path(id: &str) -> Option<PathBuf> {
     locks_dir().map(|d| d.join(format!("{id}.lock")))
-}
-
-fn is_pid_alive(pid: u32) -> bool {
-    std::process::Command::new("kill")
-        .args(["-0", &pid.to_string()])
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
 }
 
 fn acquire_lock(id: &str) -> Result<(), String> {
@@ -58,9 +52,15 @@ struct PtyEntry {
 
 pub struct PtyState(Arc<Mutex<HashMap<String, PtyEntry>>>);
 
+impl Default for PtyState {
+    fn default() -> Self {
+        PtyState(Arc::new(Mutex::new(HashMap::new())))
+    }
+}
+
 impl PtyState {
     pub fn new() -> Self {
-        PtyState(Arc::new(Mutex::new(HashMap::new())))
+        Self::default()
     }
 }
 
@@ -111,17 +111,18 @@ pub fn pty_spawn(
         c.args(["-l"]);
         c
     } else {
-        // Claude session
-        let mut c = CommandBuilder::new("/bin/zsh");
+        // Claude session — use $SHELL (login shell resolves PATH for `claude`)
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| String::from("/bin/sh"));
+        let mut c = CommandBuilder::new(&shell);
         let skip = if skip_permissions.unwrap_or(false) {
             " --dangerously-skip-permissions"
         } else {
             ""
         };
         let claude_cmd = if resume {
-            format!("/opt/homebrew/bin/claude --resume {}{}", id, skip)
+            format!("claude --resume {id}{skip}")
         } else {
-            format!("/opt/homebrew/bin/claude{}", skip)
+            format!("claude{skip}")
         };
         c.args(["-l", "-c", &claude_cmd]);
         c

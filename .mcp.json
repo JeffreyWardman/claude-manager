@@ -1,28 +1,19 @@
 {
-  "mcpServers": {
-    "drawio": {
-      "type": "stdio",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@drawio/mcp"
-      ]
-    },
-    "shadcn": {
-      "command": "npx",
-      "args": [
-        "shadcn@latest",
-        "mcp"
-      ]
-    },
-    "storybook": {
-      "type": "stdio",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@storybook/mcp"
-      ],
-      "env": {}
-    }
-  }
+	"mcpServers": {
+		"drawio": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["-y", "@drawio/mcp"]
+		},
+		"shadcn": {
+			"command": "npx",
+			"args": ["shadcn@latest", "mcp"]
+		},
+		"storybook": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["-y", "@storybook/mcp"],
+			"env": {}
+		}
+	}
 }

@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
-use std::process::Command;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ClaudeSession {
@@ -26,14 +25,9 @@ pub enum SessionStatus {
 
 // The session file written by Claude Code at ~/.claude/sessions/<pid>.json
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct SessionFile {
     pid: u32,
-    #[serde(rename = "sessionId")]
-    session_id: String,
     cwd: String,
-    #[serde(rename = "startedAt")]
-    started_at: i64,
 }
 
 // First line of a conversation JSONL file
@@ -47,28 +41,12 @@ struct JournalFirstLine {
     git_branch: Option<String>,
 }
 
-fn is_process_alive(pid: u32) -> bool {
-    Command::new("kill")
-        .args(["-0", &pid.to_string()])
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
-}
-
 fn project_name_from_cwd(cwd: &str) -> String {
     PathBuf::from(cwd)
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or(cwd)
         .to_string()
-}
-
-fn claude_sessions_dir() -> Option<PathBuf> {
-    dirs_next::home_dir().map(|h| h.join(".claude").join("sessions"))
-}
-
-fn claude_projects_dir() -> Option<PathBuf> {
-    dirs_next::home_dir().map(|h| h.join(".claude").join("projects"))
 }
 
 /// Parse the timestamp string "2026-04-06T04:39:58.491Z" to unix ms
@@ -112,7 +90,7 @@ fn parse_timestamp(ts: &str) -> i64 {
 }
 
 /// Read cwd, sessionId, timestamp from the first valid line of a JSONL file
-fn read_jsonl_header(path: &PathBuf) -> Option<JournalFirstLine> {
+fn read_jsonl_header(path: &Path) -> Option<JournalFirstLine> {
     let file = fs::File::open(path).ok()?;
     let reader = BufReader::new(file);
     for line in reader.lines().take(10) {
@@ -139,7 +117,7 @@ pub fn get_all_sessions() -> Vec<ClaudeSession> {
     // source of truth for session identity. Pid files only tell us what's running.
     let mut alive_cwd_pids: std::collections::HashMap<String, u32> =
         std::collections::HashMap::new();
-    if let Some(sessions_dir) = claude_sessions_dir() {
+    if let Some(sessions_dir) = dirs_next::home_dir().map(|h| h.join(".claude").join("sessions")) {
         if let Ok(entries) = fs::read_dir(&sessions_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
@@ -148,7 +126,7 @@ pub fn get_all_sessions() -> Vec<ClaudeSession> {
                 }
                 if let Ok(content) = fs::read_to_string(&path) {
                     if let Ok(sf) = serde_json::from_str::<SessionFile>(&content) {
-                        if is_process_alive(sf.pid) {
+                        if crate::utils::is_pid_alive(sf.pid) {
                             alive_cwd_pids.insert(sf.cwd, sf.pid);
                         }
                     }
@@ -160,7 +138,7 @@ pub fn get_all_sessions() -> Vec<ClaudeSession> {
     // Step 2: Scan ~/.claude/projects/*/*.jsonl — every session shown in the UI
     // comes from here, so only sessions with real conversation data are visible.
     let mut candidates: Vec<(i64, ClaudeSession)> = Vec::new();
-    if let Some(projects_dir) = claude_projects_dir() {
+    if let Some(projects_dir) = crate::utils::claude_projects_dir() {
         if let Ok(project_entries) = fs::read_dir(&projects_dir) {
             for project_entry in project_entries.flatten() {
                 let project_path = project_entry.path();

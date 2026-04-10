@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ConversationEntry {
@@ -68,26 +69,30 @@ fn extract_text(content: &serde_json::Value) -> Option<String> {
     }
 }
 
+fn strip_regexes() -> &'static [regex::Regex] {
+    static REGEXES: OnceLock<Vec<regex::Regex>> = OnceLock::new();
+    REGEXES.get_or_init(|| {
+        [
+            r"<command-message>.*?</command-message>",
+            r"<command-name>.*?</command-name>",
+            r"<system-reminder>[\s\S]*?</system-reminder>",
+            r"<local-command-caveat>[\s\S]*?</local-command-caveat>",
+        ]
+        .iter()
+        .filter_map(|p| regex::Regex::new(p).ok())
+        .collect()
+    })
+}
+
 fn strip_system_tags(text: &str) -> String {
-    // Strip <command-message>, <system-reminder>, etc.
-    let re_patterns = [
-        r"<command-message>.*?</command-message>",
-        r"<command-name>.*?</command-name>",
-        r"<system-reminder>[\s\S]*?</system-reminder>",
-        r"<local-command-caveat>[\s\S]*?</local-command-caveat>",
-    ];
     let mut result = text.to_string();
-    for pattern in &re_patterns {
-        if let Ok(re) = regex::Regex::new(pattern) {
-            result = re.replace_all(&result, "").to_string();
-        }
+    for re in strip_regexes() {
+        result = re.replace_all(&result, "").to_string();
     }
     result.trim().to_string()
 }
 
-fn claude_projects_dir() -> Option<PathBuf> {
-    dirs_next::home_dir().map(|h| h.join(".claude").join("projects"))
-}
+use crate::utils::claude_projects_dir;
 
 fn encode_path_for_claude(path: &str) -> String {
     path.trim_start_matches('/').replace('/', "-")
@@ -129,7 +134,7 @@ pub fn get_conversation(cwd: String, session_id: String) -> Vec<ConversationEntr
     let reader = BufReader::new(file);
     let mut entries: Vec<ConversationEntry> = Vec::new();
 
-    for line in reader.lines().flatten() {
+    for line in reader.lines().map_while(Result::ok) {
         let Ok(raw) = serde_json::from_str::<RawEntry>(&line) else {
             continue;
         };

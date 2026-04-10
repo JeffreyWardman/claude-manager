@@ -371,7 +371,7 @@ export function Settings({ onClose, enabledLayouts, onChangeEnabledLayouts }: Pr
 			style={{
 				position: "fixed",
 				inset: 0,
-				background: "rgba(0,0,0,0.5)",
+				background: "rgba(0,0,0,0.6)",
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
@@ -385,12 +385,14 @@ export function Settings({ onClose, enabledLayouts, onChangeEnabledLayouts }: Pr
 					background: "var(--bg-sidebar)",
 					border: "1px solid var(--border)",
 					borderRadius: 8,
-					width: "60vh",
+					width: 560,
+					maxWidth: "90vw",
 					height: "60vh",
-					padding: "20px 24px 24px",
+					maxHeight: "90vh",
+					padding: 24,
 					display: "flex",
 					flexDirection: "column",
-					boxShadow: "0 24px 48px rgba(0,0,0,0.4)",
+					boxShadow: "0 24px 48px rgba(0,0,0,0.6)",
 				}}
 				onClick={(e) => e.stopPropagation()}
 			>

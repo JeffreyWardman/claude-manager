@@ -3,6 +3,7 @@ mod journal;
 mod metadata;
 mod pty_manager;
 mod sessions;
+mod utils;
 
 use tauri::Manager;
 
