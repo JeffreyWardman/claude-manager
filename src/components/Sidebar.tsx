@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
+import { SLOT_COUNTS } from "../groupOps";
 import type { ActivityState } from "../hooks/usePtyActivity";
 import type { SortMode } from "../sidebarUtils";
 import {
@@ -11,22 +12,8 @@ import {
 	sortSessions,
 } from "../sidebarUtils";
 import type { ClaudeSession, PaneGroup, PaneLayout } from "../types";
+import { menuItemHover, menuItemStyle, menuItemUnhover, sessionDisplayName } from "../utils";
 import { StatusDot } from "./StatusDot";
-
-const SLOT_COUNTS: Record<PaneLayout, number> = {
-	"1x1": 1,
-	"2x1": 2,
-	"1x2": 2,
-	"2x2": 4,
-	"3x1": 3,
-	"1x3": 3,
-	"3x2": 6,
-	"2x3": 6,
-	"2+1": 3,
-	"1+2": 3,
-	"3+1": 4,
-	"1+3": 4,
-};
 
 interface Props {
 	sessions: ClaudeSession[];
@@ -1295,9 +1282,7 @@ export function Sidebar({
 									group.sessions.map((session) => {
 										const isSelected = session.session_id === selectedId;
 										const isRenaming = renamingId === session.session_id;
-										const name =
-											session.display_name ||
-											`${session.project_name}-${session.session_id.slice(0, 5)}`;
+										const name = sessionDisplayName(session);
 										const activity = activityMap.get(session.session_id);
 										const rowTint =
 											activity === "computing"
@@ -1550,20 +1535,9 @@ export function Sidebar({
 							onRemoveFromGroup(groupSlotContextMenu.sessionId);
 							setGroupSlotContextMenu(null);
 						}}
-						style={{
-							display: "block",
-							width: "100%",
-							background: "none",
-							border: "none",
-							color: "var(--text-secondary)",
-							fontSize: 13,
-							textAlign: "left",
-							padding: "6px 12px",
-							cursor: "pointer",
-							fontFamily: "inherit",
-						}}
-						onMouseEnter={(e) => (e.currentTarget.style.background = "var(--item-hover)")}
-						onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+						style={menuItemStyle}
+						onMouseEnter={menuItemHover}
+						onMouseLeave={menuItemUnhover}
 					>
 						Remove from group
 					</button>
@@ -1608,22 +1582,9 @@ export function Sidebar({
 													onAddToGroup(g.id, session.session_id);
 													setContextMenu(null);
 												}}
-												style={{
-													display: "block",
-													width: "100%",
-													background: "none",
-													border: "none",
-													color: "var(--text-secondary)",
-													fontSize: 13,
-													textAlign: "left",
-													padding: "6px 12px",
-													cursor: "pointer",
-													fontFamily: "inherit",
-												}}
-												onMouseEnter={(e) =>
-													(e.currentTarget.style.background = "var(--item-hover)")
-												}
-												onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+												style={menuItemStyle}
+												onMouseEnter={menuItemHover}
+												onMouseLeave={menuItemUnhover}
 											>
 												Add to {g.name}
 											</button>
@@ -1636,20 +1597,9 @@ export function Sidebar({
 												onRemoveFromGroup(session.session_id);
 												setContextMenu(null);
 											}}
-											style={{
-												display: "block",
-												width: "100%",
-												background: "none",
-												border: "none",
-												color: "var(--text-secondary)",
-												fontSize: 13,
-												textAlign: "left",
-												padding: "6px 12px",
-												cursor: "pointer",
-												fontFamily: "inherit",
-											}}
-											onMouseEnter={(e) => (e.currentTarget.style.background = "var(--item-hover)")}
-											onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+											style={menuItemStyle}
+											onMouseEnter={menuItemHover}
+											onMouseLeave={menuItemUnhover}
 										>
 											Remove from group
 										</button>
@@ -1678,19 +1628,11 @@ export function Sidebar({
 										}
 									}}
 									style={{
-										display: "block",
-										width: "100%",
-										background: "none",
-										border: "none",
+										...menuItemStyle,
 										color: action === "Delete" ? "var(--danger)" : "var(--text-secondary)",
-										fontSize: 13,
-										textAlign: "left",
-										padding: "6px 12px",
-										cursor: "pointer",
-										fontFamily: "inherit",
 									}}
-									onMouseEnter={(e) => (e.currentTarget.style.background = "var(--item-hover)")}
-									onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+									onMouseEnter={menuItemHover}
+									onMouseLeave={menuItemUnhover}
 								>
 									{action}
 								</button>

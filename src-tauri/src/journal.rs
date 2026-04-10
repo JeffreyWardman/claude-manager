@@ -87,7 +87,7 @@ fn strip_regexes() -> &'static [regex::Regex] {
 fn strip_system_tags(text: &str) -> String {
     let mut result = text.to_string();
     for re in strip_regexes() {
-        result = re.replace_all(&result, "").to_string();
+        result = re.replace_all(&result, "").into_owned();
     }
     result.trim().to_string()
 }

@@ -1,16 +1,14 @@
 import { Command } from "cmdk";
 import { useEffect, useRef, useState } from "react";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 import type { ClaudeSession } from "../types";
+import { formatCwd, modalBackdropStyle, modalDialogStyle, sessionDisplayName } from "../utils";
 import { StatusDot } from "./StatusDot";
 
 interface Props {
 	sessions: ClaudeSession[];
 	onSelect: (session: ClaudeSession) => void;
 	onClose: () => void;
-}
-
-function formatCwd(cwd: string): string {
-	return cwd.replace(/^\/Users\/[^/]+/, "~");
 }
 
 export function CommandPalette({ sessions, onSelect, onClose }: Props) {
@@ -22,33 +20,7 @@ export function CommandPalette({ sessions, onSelect, onClose }: Props) {
 	}, []);
 
 	const dialogRef = useRef<HTMLDivElement>(null);
-
-	useEffect(() => {
-		const handleKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				onClose();
-			}
-			if (e.key === "Tab" && dialogRef.current) {
-				const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-					'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-				);
-				if (focusable.length === 0) {
-					return;
-				}
-				const first = focusable[0];
-				const last = focusable[focusable.length - 1];
-				if (e.shiftKey && document.activeElement === first) {
-					e.preventDefault();
-					last.focus();
-				} else if (!e.shiftKey && document.activeElement === last) {
-					e.preventDefault();
-					first.focus();
-				}
-			}
-		};
-		window.addEventListener("keydown", handleKey);
-		return () => window.removeEventListener("keydown", handleKey);
-	}, [onClose]);
+	useFocusTrap(dialogRef, onClose);
 
 	const active = sessions.filter((s) => s.status === "active");
 
@@ -67,31 +39,10 @@ export function CommandPalette({ sessions, onSelect, onClose }: Props) {
 			role="dialog"
 			aria-modal="true"
 			aria-label="Command palette"
-			style={{
-				position: "fixed",
-				inset: 0,
-				display: "flex",
-				alignItems: "flex-start",
-				justifyContent: "center",
-				paddingTop: 120,
-				background: "rgba(0,0,0,0.6)",
-				zIndex: 50,
-				backdropFilter: "blur(4px)",
-			}}
+			style={modalBackdropStyle}
 			onClick={onClose}
 		>
-			<div
-				ref={dialogRef}
-				onClick={(e) => e.stopPropagation()}
-				style={{
-					width: 560,
-					background: "var(--bg-sidebar)",
-					border: "1px solid var(--border)",
-					borderRadius: 8,
-					overflow: "hidden",
-					boxShadow: "0 24px 48px rgba(0,0,0,0.6)",
-				}}
-			>
+			<div ref={dialogRef} onClick={(e) => e.stopPropagation()} style={modalDialogStyle}>
 				<Command value={value} onValueChange={setValue} style={{ background: "transparent" }}>
 					<div
 						style={{
@@ -167,7 +118,7 @@ function SessionItem({
 	session: ClaudeSession;
 	onSelect: (id: string) => void;
 }) {
-	const name = session.display_name || `${session.project_name}-${session.session_id.slice(0, 5)}`;
+	const name = sessionDisplayName(session);
 	return (
 		<Command.Item
 			value={`${name} ${session.cwd} ${session.git_branch ?? ""}`}

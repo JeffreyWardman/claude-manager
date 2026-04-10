@@ -41,39 +41,45 @@ fn save(store: &MetadataStore) {
     }
 }
 
+fn with_metadata(f: impl FnOnce(&mut MetadataStore)) {
+    let mut store = load();
+    f(&mut store);
+    save(&store);
+}
+
 #[tauri::command]
 pub fn rename_session(session_id: String, name: String) -> Result<(), String> {
-    let mut store = load();
-    let entry = store.entry(session_id).or_default();
-    let value = {
-        let trimmed = name.trim();
-        if trimmed.is_empty() {
-            None
-        } else {
-            Some(trimmed.to_string())
-        }
-    };
-    entry.pending_rename = value.clone();
-    entry.display_name = value;
-    save(&store);
+    with_metadata(|store| {
+        let entry = store.entry(session_id).or_default();
+        let value = {
+            let trimmed = name.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        };
+        entry.pending_rename = value.clone();
+        entry.display_name = value;
+    });
     Ok(())
 }
 
 #[tauri::command]
 pub fn clear_pending_rename(session_id: String) -> Result<(), String> {
-    let mut store = load();
-    if let Some(entry) = store.get_mut(&session_id) {
-        entry.pending_rename = None;
-    }
-    save(&store);
+    with_metadata(|store| {
+        if let Some(entry) = store.get_mut(&session_id) {
+            entry.pending_rename = None;
+        }
+    });
     Ok(())
 }
 
 #[tauri::command]
 pub fn archive_session(session_id: String) -> Result<(), String> {
-    let mut store = load();
-    store.entry(session_id).or_default().archived = true;
-    save(&store);
+    with_metadata(|store| {
+        store.entry(session_id).or_default().archived = true;
+    });
     Ok(())
 }
 
@@ -94,9 +100,8 @@ pub fn delete_session(session_id: String) -> Result<(), String> {
         }
     }
 
-    // Remove from metadata too
-    let mut store = load();
-    store.remove(&session_id);
-    save(&store);
+    with_metadata(|store| {
+        store.remove(&session_id);
+    });
     Ok(())
 }

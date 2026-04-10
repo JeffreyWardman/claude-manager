@@ -12,6 +12,7 @@ import {
 	dropToSlot,
 	removeFromGroup,
 	removeFromSlot,
+	SLOT_COUNTS,
 	swapSlots,
 } from "./groupOps";
 import type { ActivityState } from "./hooks/usePtyActivity";
@@ -24,21 +25,6 @@ import { useDragDrop } from "./useDragDrop";
 
 const MIN_SIDEBAR_WIDTH = 160;
 const MAX_SIDEBAR_WIDTH = 480;
-
-const SLOT_COUNTS: Record<PaneLayout, number> = {
-	"1x1": 1,
-	"2x1": 2,
-	"1x2": 2,
-	"2x2": 4,
-	"3x1": 3,
-	"1x3": 3,
-	"3x2": 6,
-	"2x3": 6,
-	"2+1": 3,
-	"1+2": 3,
-	"3+1": 4,
-	"1+3": 4,
-};
 
 function genId() {
 	return Math.random().toString(36).slice(2, 10);
@@ -123,26 +109,12 @@ function AppInner() {
 	const [sidebarVisible, setSidebarVisible] = useState(
 		() => localStorage.getItem("sidebar-visible") !== "false",
 	);
-	const VALID_LAYOUTS: Set<string> = new Set([
-		"1x1",
-		"2x1",
-		"1x2",
-		"2x2",
-		"3x1",
-		"1x3",
-		"3x2",
-		"2x3",
-		"2+1",
-		"1+2",
-		"3+1",
-		"1+3",
-	]);
 	const [enabledLayouts, setEnabledLayouts] = useState<PaneLayout[]>(() => {
 		try {
 			const saved = localStorage.getItem("enabled-layouts");
 			if (saved) {
-				const parsed = (JSON.parse(saved) as string[]).filter((l) =>
-					VALID_LAYOUTS.has(l),
+				const parsed = (JSON.parse(saved) as string[]).filter(
+					(l) => l in SLOT_COUNTS,
 				) as PaneLayout[];
 				if (parsed.length > 0) {
 					return parsed;
@@ -196,7 +168,7 @@ function AppInner() {
 			}));
 			persistGroups(next);
 		}
-	}, [sessions, groups.some, persistGroups, groups.map]);
+	}, [sessions, groups, persistGroups]);
 
 	function persistGroups(next: PaneGroup[]) {
 		setGroups(next);
@@ -542,8 +514,6 @@ function AppInner() {
 		selectedId,
 		paletteOpen,
 		settingsOpen,
-		groups.length,
-		groups.findIndex,
 		groups,
 		refresh,
 		handleDeleteGroup,

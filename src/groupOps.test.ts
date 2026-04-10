@@ -48,6 +48,20 @@ describe("dropToSlot", () => {
 		expect(slots(result[0])).toEqual(["s2", "s1"]);
 	});
 
+	it("swap within group does not remove session from other groups", () => {
+		const groups = [makeGroup("A", ["s1", "s2"]), makeGroup("B", ["s1", null])];
+		const result = dropToSlot(groups, "A", 0, "s2");
+		expect(slots(result[0])).toEqual(["s2", "s1"]);
+		expect(slots(result[1])).toEqual(["s1", null]);
+	});
+
+	it("adding new session leaves other groups with unrelated sessions untouched", () => {
+		const groups = [makeGroup("A", [null, null]), makeGroup("B", ["s2", null])];
+		const result = dropToSlot(groups, "A", 0, "s1");
+		expect(slots(result[0])).toEqual(["s1", null]);
+		expect(slots(result[1])).toEqual(["s2", null]);
+	});
+
 	it("moves session from another group to an empty slot, removing it from source", () => {
 		const groups = [makeGroup("A", ["s1", null]), makeGroup("B", [null, null])];
 		const result = dropToSlot(groups, "B", 0, "s1");

@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { useFocusTrap } from "../hooks/useFocusTrap";
+import { formatCwd, modalBackdropStyle, modalDialogStyle } from "../utils";
 
 interface Props {
 	cwds: string[];
 	onConfirm: (dir: string) => void;
 	onClose: () => void;
-}
-
-function formatCwd(cwd: string): string {
-	return cwd.replace(/^\/Users\/[^/]+/, "~");
 }
 
 export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
@@ -20,32 +18,7 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 		inputRef.current?.focus();
 	}, []);
 
-	useEffect(() => {
-		const handleKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				onClose();
-			}
-			if (e.key === "Tab" && dialogRef.current) {
-				const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-					'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-				);
-				if (focusable.length === 0) {
-					return;
-				}
-				const first = focusable[0];
-				const last = focusable[focusable.length - 1];
-				if (e.shiftKey && document.activeElement === first) {
-					e.preventDefault();
-					last.focus();
-				} else if (!e.shiftKey && document.activeElement === last) {
-					e.preventDefault();
-					first.focus();
-				}
-			}
-		};
-		window.addEventListener("keydown", handleKey);
-		return () => window.removeEventListener("keydown", handleKey);
-	}, [onClose]);
+	useFocusTrap(dialogRef, onClose);
 
 	const uniqueCwds = [...new Set(cwds)];
 	const filtered = value.trim()
@@ -92,31 +65,10 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 			role="dialog"
 			aria-modal="true"
 			aria-label="New session"
-			style={{
-				position: "fixed",
-				inset: 0,
-				display: "flex",
-				alignItems: "flex-start",
-				justifyContent: "center",
-				paddingTop: 120,
-				background: "rgba(0,0,0,0.6)",
-				zIndex: 50,
-				backdropFilter: "blur(4px)",
-			}}
+			style={modalBackdropStyle}
 			onClick={onClose}
 		>
-			<div
-				ref={dialogRef}
-				onClick={(e) => e.stopPropagation()}
-				style={{
-					width: 560,
-					background: "var(--bg-sidebar)",
-					border: "1px solid var(--border)",
-					borderRadius: 8,
-					overflow: "hidden",
-					boxShadow: "0 24px 48px rgba(0,0,0,0.6)",
-				}}
-			>
+			<div ref={dialogRef} onClick={(e) => e.stopPropagation()} style={modalDialogStyle}>
 				<div
 					style={{
 						display: "flex",

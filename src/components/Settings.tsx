@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 import { applyTheme, useTheme } from "../ThemeContext";
 import type { PaneLayout } from "../types";
 
@@ -320,30 +321,7 @@ export function Settings({ onClose, enabledLayouts, onChangeEnabledLayouts }: Pr
 	}, []);
 
 	const dialogRef = useRef<HTMLDivElement>(null);
-
-	useEffect(() => {
-		const handleKey = (e: KeyboardEvent) => {
-			if (e.key === "Tab" && dialogRef.current) {
-				const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-					'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-				);
-				if (focusable.length === 0) {
-					return;
-				}
-				const first = focusable[0];
-				const last = focusable[focusable.length - 1];
-				if (e.shiftKey && document.activeElement === first) {
-					e.preventDefault();
-					last.focus();
-				} else if (!e.shiftKey && document.activeElement === last) {
-					e.preventDefault();
-					first.focus();
-				}
-			}
-		};
-		window.addEventListener("keydown", handleKey);
-		return () => window.removeEventListener("keydown", handleKey);
-	}, []);
+	useFocusTrap(dialogRef);
 
 	const handleClose = () => {
 		applyTheme(theme);

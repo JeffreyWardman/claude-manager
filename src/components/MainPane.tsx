@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ActivityState } from "../hooks/usePtyActivity";
 import type { ClaudeSession } from "../types";
+import { formatCwd, sessionDisplayName } from "../utils";
 import { StatusDot } from "./StatusDot";
 import { TerminalPane } from "./TerminalPane";
 
@@ -11,10 +12,6 @@ interface Props {
 	activityMap?: Map<string, ActivityState>;
 	unreadSessions?: Set<string>;
 	focused?: boolean;
-}
-
-function formatCwd(cwd: string): string {
-	return cwd.replace(/^\/Users\/[^/]+/, "~");
 }
 
 type View = "claude" | "terminal" | "split";
@@ -126,7 +123,7 @@ export function MainPane({
 							whiteSpace: "nowrap",
 						}}
 					>
-						{session.display_name || `${session.project_name}-${session.session_id.slice(0, 5)}`}
+						{sessionDisplayName(session)}
 					</span>
 					<span
 						style={{

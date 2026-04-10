@@ -1,6 +1,6 @@
 import type { ClaudeSession } from "./types";
 
-export interface SidebarGroup {
+interface SidebarGroup {
 	label: string;
 	sessions: ClaudeSession[];
 }
@@ -184,15 +184,7 @@ export function containsMatch(text: string, query: string): boolean {
 export function sessionMatchesFolder(session: ClaudeSession, query: string): boolean {
 	const cwd = session.cwd;
 	const cwdTilde = cwd.replace(/^\/Users\/[^/]+/, "~");
-	if (containsMatch(cwd, query) || containsMatch(cwdTilde, query)) {
-		return true;
-	}
-	if (!query.startsWith("~") && !query.startsWith("/")) {
-		if (containsMatch(cwdTilde, `~/${query}`)) {
-			return true;
-		}
-	}
-	return false;
+	return containsMatch(cwd, query) || containsMatch(cwdTilde, query);
 }
 
 export function sessionMatchesSearch(session: ClaudeSession, query: string): boolean {
@@ -204,16 +196,5 @@ export function sessionMatchesSearch(session: ClaudeSession, query: string): boo
 	const cwd = session.cwd;
 	const cwdTilde = cwd.replace(/^\/Users\/[^/]+/, "~");
 
-	if (containsMatch(cwd, query) || containsMatch(cwdTilde, query)) {
-		return true;
-	}
-
-	// Bare path like "repos/project" — also match as if prefixed with ~/
-	if (!query.startsWith("~") && !query.startsWith("/")) {
-		if (containsMatch(cwdTilde, `~/${query}`)) {
-			return true;
-		}
-	}
-
-	return false;
+	return containsMatch(cwd, query) || containsMatch(cwdTilde, query);
 }

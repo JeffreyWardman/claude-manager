@@ -1,6 +1,6 @@
 import type { PaneGroup, PaneLayout } from "./types";
 
-const SLOT_COUNTS: Record<PaneLayout, number> = {
+export const SLOT_COUNTS: Record<PaneLayout, number> = {
 	"1x1": 1,
 	"2x1": 2,
 	"1x2": 2,
@@ -37,13 +37,13 @@ const LAYOUT_ORDER: PaneLayout[] = [
  * - Session not in target group + target slot empty → add, remove from any source group
  * - Session not in target group + target slot occupied → do nothing
  */
-export function dropToSlot(
+function dropSessionToSlot(
 	groups: PaneGroup[],
-	activeGroupId: string,
+	targetGroupId: string,
 	slotIdx: number,
 	sessionId: string,
 ): PaneGroup[] {
-	const targetGroup = groups.find((g) => g.id === activeGroupId);
+	const targetGroup = groups.find((g) => g.id === targetGroupId);
 	if (!targetGroup) {
 		return groups;
 	}
@@ -70,7 +70,7 @@ export function dropToSlot(
 	const wasAlreadyHere = existingIdx >= 0;
 	return groups
 		.map((g) => {
-			if (g.id === activeGroupId) {
+			if (g.id === targetGroupId) {
 				return { ...g, slots: targetSlots };
 			}
 			if (wasAlreadyHere) {
@@ -87,58 +87,22 @@ export function dropToSlot(
 		.filter((g) => g.slots.some((s) => s !== null));
 }
 
-/**
- * Drop a session onto a specific group's slot (sidebar group-slot drop target).
- * Same rules as dropToSlot but the target group is identified by groupId, not activeGroupId.
- */
+export function dropToSlot(
+	groups: PaneGroup[],
+	activeGroupId: string,
+	slotIdx: number,
+	sessionId: string,
+): PaneGroup[] {
+	return dropSessionToSlot(groups, activeGroupId, slotIdx, sessionId);
+}
+
 export function dropToGroupSlot(
 	groups: PaneGroup[],
 	groupId: string,
 	slotIdx: number,
 	sessionId: string,
 ): PaneGroup[] {
-	const targetGroup = groups.find((g) => g.id === groupId);
-	if (!targetGroup) {
-		return groups;
-	}
-
-	const targetSlots = [...targetGroup.slots];
-	const existingIdx = targetSlots.indexOf(sessionId);
-
-	let added = false;
-	if (existingIdx >= 0) {
-		[targetSlots[existingIdx], targetSlots[slotIdx]] = [
-			targetSlots[slotIdx],
-			targetSlots[existingIdx],
-		];
-		added = true;
-	} else if (targetSlots[slotIdx] === null) {
-		targetSlots[slotIdx] = sessionId;
-		added = true;
-	}
-
-	if (!added) {
-		return groups;
-	}
-
-	const wasAlreadyHere = existingIdx >= 0;
-	return groups
-		.map((g) => {
-			if (g.id === groupId) {
-				return { ...g, slots: targetSlots };
-			}
-			if (wasAlreadyHere) {
-				return g;
-			}
-			const i = g.slots.indexOf(sessionId);
-			if (i < 0) {
-				return g;
-			}
-			const slots = [...g.slots];
-			slots[i] = null;
-			return { ...g, slots };
-		})
-		.filter((g) => g.slots.some((s) => s !== null));
+	return dropSessionToSlot(groups, groupId, slotIdx, sessionId);
 }
 
 /**
