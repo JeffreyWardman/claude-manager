@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::hash_map::DefaultHasher;
 use std::fs;
-use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -10,12 +8,6 @@ pub struct Profile {
     pub name: String,
     pub path: String,
     pub hidden: bool,
-}
-
-fn profile_id(path: &str) -> String {
-    let mut hasher = DefaultHasher::new();
-    path.hash(&mut hasher);
-    format!("{:x}", hasher.finish())
 }
 
 fn profiles_path() -> Option<PathBuf> {
@@ -73,7 +65,7 @@ pub fn discover_profiles() -> Vec<Profile> {
     let mut profiles: Vec<Profile> = vec![];
     for dir in &discovered {
         let path_str = dir.to_string_lossy().to_string();
-        let id = profile_id(&path_str);
+        let id = path_str.clone();
         if let Some(existing) = saved.iter().find(|p| p.id == id) {
             profiles.push(existing.clone());
         } else {
