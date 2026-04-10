@@ -110,24 +110,23 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 				onClick={(e) => e.stopPropagation()}
 				style={{
 					width: 560,
-					background: "#1a1a1a",
-					border: "1px solid #2a2a2a",
+					background: "var(--bg-sidebar)",
+					border: "1px solid var(--border)",
 					borderRadius: 8,
 					overflow: "hidden",
 					boxShadow: "0 24px 48px rgba(0,0,0,0.6)",
 				}}
 			>
-				{/* Input row */}
 				<div
 					style={{
 						display: "flex",
 						alignItems: "center",
 						gap: 8,
 						padding: "10px 14px",
-						borderBottom: filtered.length > 0 ? "1px solid #222" : undefined,
+						borderBottom: filtered.length > 0 ? "1px solid var(--border)" : undefined,
 					}}
 				>
-					<span style={{ color: "#8a8a8a", fontSize: 15 }}>⌕</span>
+					<span style={{ color: "var(--text-muted)", fontSize: 15 }}>⌕</span>
 					<input
 						ref={inputRef}
 						aria-label="Project path"
@@ -140,12 +139,12 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 							background: "none",
 							border: "none",
 							outline: "none",
-							color: "#ededef",
+							color: "var(--text-primary)",
 							fontSize: 14,
 							fontFamily: "inherit",
 						}}
 					/>
-					<span style={{ color: "#8a8a8a", fontSize: 11 }}>esc</span>
+					<span style={{ color: "var(--text-muted)", fontSize: 11 }}>esc</span>
 				</div>
 
 				{/* Suggestions */}
@@ -170,20 +169,20 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 									width: "100%",
 									padding: "7px 14px",
 									cursor: "pointer",
-									background: i === activeIdx ? "rgba(255,255,255,0.07)" : "none",
+									background: i === activeIdx ? "var(--item-selected)" : "none",
 									fontSize: 13,
-									color: i === activeIdx ? "#ededef" : "#9ca3af",
+									color: i === activeIdx ? "var(--text-primary)" : "var(--text-secondary)",
 									border: "none",
 									textAlign: "left",
 									fontFamily: "inherit",
 								}}
 							>
-								<span style={{ fontSize: 11, color: "#8a8a8a" }}>⌂</span>
+								<span style={{ fontSize: 11, color: "var(--text-muted)" }}>⌂</span>
 								<span style={{ flex: 1 }}>{formatCwd(cwd)}</span>
 								<span
 									style={{
 										fontSize: 11,
-										color: "#8a8a8a",
+										color: "var(--text-muted)",
 										fontFamily: "monospace",
 									}}
 								>
@@ -203,12 +202,16 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 							gap: 8,
 							padding: "10px 14px",
 							fontSize: 13,
-							color: "#8a8a8a",
+							color: "var(--text-muted)",
 						}}
 					>
 						<span>Open in</span>
-						<span style={{ color: "#9ca3af", fontFamily: "monospace" }}>{value.trim()}</span>
-						<span style={{ marginLeft: "auto", fontSize: 11, color: "#8a8a8a" }}>↵ enter</span>
+						<span style={{ color: "var(--text-secondary)", fontFamily: "monospace" }}>
+							{value.trim()}
+						</span>
+						<span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)" }}>
+							↵ enter
+						</span>
 					</div>
 				)}
 			</div>

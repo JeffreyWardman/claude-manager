@@ -10,7 +10,10 @@
 		"tauri": "tauri",
 		"start": "bunx tauri dev",
 		"test": "vitest run",
-		"test:watch": "vitest"
+		"test:watch": "vitest",
+		"lint": "biome check .",
+		"format": "biome check --write .",
+		"check": "tsc --noEmit && biome check . && vitest run"
 	},
 	"dependencies": {
 		"@tauri-apps/api": "^2",

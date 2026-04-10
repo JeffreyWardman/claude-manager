@@ -25,6 +25,7 @@
   --item-selected: rgba(255, 255, 255, 0.07);
   --item-hover: rgba(255, 255, 255, 0.04);
   --accent: #8a8fa0;
+  --danger: #f87171;
 }
 
 /* Tauri window drag region — use WebKit's native mechanism as the primary driver */

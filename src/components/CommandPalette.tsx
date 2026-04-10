@@ -85,8 +85,8 @@ export function CommandPalette({ sessions, onSelect, onClose }: Props) {
 				onClick={(e) => e.stopPropagation()}
 				style={{
 					width: 560,
-					background: "#1a1a1a",
-					border: "1px solid #888888",
+					background: "var(--bg-sidebar)",
+					border: "1px solid var(--border)",
 					borderRadius: 8,
 					overflow: "hidden",
 					boxShadow: "0 24px 48px rgba(0,0,0,0.6)",
@@ -99,10 +99,10 @@ export function CommandPalette({ sessions, onSelect, onClose }: Props) {
 							alignItems: "center",
 							gap: 8,
 							padding: "10px 14px",
-							borderBottom: "1px solid #222",
+							borderBottom: "1px solid var(--border)",
 						}}
 					>
-						<span style={{ color: "#8a8a8a", fontSize: 15 }}>⌕</span>
+						<span style={{ color: "var(--text-muted)", fontSize: 15 }}>⌕</span>
 						<Command.Input
 							ref={inputRef}
 							aria-label="Search sessions"
@@ -112,12 +112,12 @@ export function CommandPalette({ sessions, onSelect, onClose }: Props) {
 								background: "none",
 								border: "none",
 								outline: "none",
-								color: "#ededef",
+								color: "var(--text-primary)",
 								fontSize: 14,
 								fontFamily: "inherit",
 							}}
 						/>
-						<span style={{ color: "#8a8a8a", fontSize: 11 }}>esc</span>
+						<span style={{ color: "var(--text-muted)", fontSize: 11 }}>esc</span>
 					</div>
 
 					<Command.List
@@ -130,7 +130,7 @@ export function CommandPalette({ sessions, onSelect, onClose }: Props) {
 						<Command.Empty
 							style={{
 								padding: "24px 14px",
-								color: "#8a8a8a",
+								color: "var(--text-muted)",
 								fontSize: 13,
 								textAlign: "center",
 							}}
@@ -179,22 +179,22 @@ function SessionItem({
 				padding: "6px 14px",
 				cursor: "pointer",
 				fontSize: 13,
-				color: "#9ca3af",
+				color: "var(--text-secondary)",
 				outline: "none",
 			}}
 			data-selected-style={{
-				background: "rgba(255,255,255,0.07)",
-				color: "#ededef",
+				background: "var(--item-selected)",
+				color: "var(--text-primary)",
 			}}
 		>
 			<StatusDot status={session.status} size={7} />
-			<span style={{ flex: 1, fontWeight: 500, color: "#ededef" }}>{name}</span>
-			<span style={{ fontSize: 11, color: "#8a8a8a" }}>{formatCwd(session.cwd)}</span>
+			<span style={{ flex: 1, fontWeight: 500, color: "var(--text-primary)" }}>{name}</span>
+			<span style={{ fontSize: 11, color: "var(--text-muted)" }}>{formatCwd(session.cwd)}</span>
 			{session.git_branch && (
 				<span
 					style={{
 						fontSize: 10,
-						color: "#888888",
+						color: "var(--text-very-muted)",
 						maxWidth: 80,
 						overflow: "hidden",
 						textOverflow: "ellipsis",

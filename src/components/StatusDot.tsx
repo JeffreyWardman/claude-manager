@@ -22,7 +22,7 @@ export function StatusDot({ status, activity, unread, focused, size = 8 }: Props
 					width: size,
 					height: size,
 					borderRadius: "50%",
-					backgroundColor: "#f59e0b",
+					backgroundColor: "var(--status-computing, #f59e0b)",
 					flexShrink: 0,
 				}}
 			/>
@@ -40,9 +40,9 @@ export function StatusDot({ status, activity, unread, focused, size = 8 }: Props
 					width: size,
 					height: size,
 					borderRadius: "50%",
-					backgroundColor: "#3b82f6",
+					backgroundColor: "var(--status-unread, #3b82f6)",
 					flexShrink: 0,
-					boxShadow: "0 0 4px #3b82f688",
+					boxShadow: "0 0 4px color-mix(in srgb, var(--status-unread, #3b82f6) 50%, transparent)",
 				}}
 			/>
 		);
@@ -59,28 +59,27 @@ export function StatusDot({ status, activity, unread, focused, size = 8 }: Props
 					width: size,
 					height: size,
 					borderRadius: "50%",
-					backgroundColor: "#22c55e",
+					backgroundColor: "var(--status-waiting, #22c55e)",
 					flexShrink: 0,
-					boxShadow: "0 0 4px #22c55e88",
+					boxShadow: "0 0 4px color-mix(in srgb, var(--status-waiting, #22c55e) 50%, transparent)",
 				}}
 			/>
 		);
 	}
 
-	const color = status === "active" ? "#4ade80" : "#6b7280";
-	const label = status === "active" ? "Active" : "Offline";
+	const isActive = status === "active";
 
 	return (
 		<span
 			role="status"
-			aria-label={label}
-			title={label}
+			aria-label={isActive ? "Active" : "Offline"}
+			title={isActive ? "Active" : "Offline"}
 			style={{
 				display: "inline-block",
 				width: size,
 				height: size,
 				borderRadius: "50%",
-				backgroundColor: color,
+				backgroundColor: isActive ? "var(--status-active, #4ade80)" : "var(--text-very-muted)",
 				flexShrink: 0,
 			}}
 		/>

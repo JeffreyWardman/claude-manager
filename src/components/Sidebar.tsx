@@ -1042,7 +1042,7 @@ export function Sidebar({
 											}}
 											onMouseEnter={(e) => {
 												e.currentTarget.style.opacity = "1";
-												e.currentTarget.style.color = "#f87171";
+												e.currentTarget.style.color = "var(--danger)";
 											}}
 											onMouseLeave={(e) => {
 												e.currentTarget.style.opacity = "0";
@@ -1603,7 +1603,7 @@ export function Sidebar({
 										width: "100%",
 										background: "none",
 										border: "none",
-										color: action === "Delete" ? "#f87171" : "var(--text-secondary)",
+										color: action === "Delete" ? "var(--danger)" : "var(--text-secondary)",
 										fontSize: 13,
 										textAlign: "left",
 										padding: "6px 12px",
