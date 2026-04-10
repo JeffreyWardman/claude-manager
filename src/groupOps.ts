@@ -1,11 +1,32 @@
 import type { PaneGroup, PaneLayout } from "./types";
 
 const SLOT_COUNTS: Record<PaneLayout, number> = {
-  "1x1": 1, "2x1": 2, "1x2": 2, "2x2": 4, "3x1": 3, "1x3": 3, "3x2": 6, "2x3": 6,
-  "2+1": 3, "1+2": 3, "3+1": 4, "1+3": 4,
+	"1x1": 1,
+	"2x1": 2,
+	"1x2": 2,
+	"2x2": 4,
+	"3x1": 3,
+	"1x3": 3,
+	"3x2": 6,
+	"2x3": 6,
+	"2+1": 3,
+	"1+2": 3,
+	"3+1": 4,
+	"1+3": 4,
 };
 const LAYOUT_ORDER: PaneLayout[] = [
-  "1x1", "2x1", "1x2", "2+1", "1+2", "2x2", "3x1", "1x3", "3+1", "1+3", "3x2", "2x3",
+	"1x1",
+	"2x1",
+	"1x2",
+	"2+1",
+	"1+2",
+	"2x2",
+	"3x1",
+	"1x3",
+	"3+1",
+	"1+3",
+	"3x2",
+	"2x3",
 ];
 
 /**
@@ -17,38 +38,43 @@ const LAYOUT_ORDER: PaneLayout[] = [
  * - Session not in target group + target slot occupied → do nothing
  */
 export function dropToSlot(
-  groups: PaneGroup[],
-  activeGroupId: string,
-  slotIdx: number,
-  sessionId: string,
+	groups: PaneGroup[],
+	activeGroupId: string,
+	slotIdx: number,
+	sessionId: string,
 ): PaneGroup[] {
-  const targetGroup = groups.find((g) => g.id === activeGroupId);
-  if (!targetGroup) return groups;
+	const targetGroup = groups.find((g) => g.id === activeGroupId);
+	if (!targetGroup) return groups;
 
-  const targetSlots = [...targetGroup.slots];
-  const existingIdx = targetSlots.indexOf(sessionId);
+	const targetSlots = [...targetGroup.slots];
+	const existingIdx = targetSlots.indexOf(sessionId);
 
-  let added = false;
-  if (existingIdx >= 0) {
-    [targetSlots[existingIdx], targetSlots[slotIdx]] = [targetSlots[slotIdx], targetSlots[existingIdx]];
-    added = true;
-  } else if (targetSlots[slotIdx] === null) {
-    targetSlots[slotIdx] = sessionId;
-    added = true;
-  }
+	let added = false;
+	if (existingIdx >= 0) {
+		[targetSlots[existingIdx], targetSlots[slotIdx]] = [
+			targetSlots[slotIdx],
+			targetSlots[existingIdx],
+		];
+		added = true;
+	} else if (targetSlots[slotIdx] === null) {
+		targetSlots[slotIdx] = sessionId;
+		added = true;
+	}
 
-  if (!added) return groups;
+	if (!added) return groups;
 
-  const wasAlreadyHere = existingIdx >= 0;
-  return groups.map((g) => {
-    if (g.id === activeGroupId) return { ...g, slots: targetSlots };
-    if (wasAlreadyHere) return g;
-    const i = g.slots.indexOf(sessionId);
-    if (i < 0) return g;
-    const slots = [...g.slots];
-    slots[i] = null;
-    return { ...g, slots };
-  }).filter((g) => g.slots.some((s) => s !== null));
+	const wasAlreadyHere = existingIdx >= 0;
+	return groups
+		.map((g) => {
+			if (g.id === activeGroupId) return { ...g, slots: targetSlots };
+			if (wasAlreadyHere) return g;
+			const i = g.slots.indexOf(sessionId);
+			if (i < 0) return g;
+			const slots = [...g.slots];
+			slots[i] = null;
+			return { ...g, slots };
+		})
+		.filter((g) => g.slots.some((s) => s !== null));
 }
 
 /**
@@ -56,65 +82,75 @@ export function dropToSlot(
  * Same rules as dropToSlot but the target group is identified by groupId, not activeGroupId.
  */
 export function dropToGroupSlot(
-  groups: PaneGroup[],
-  groupId: string,
-  slotIdx: number,
-  sessionId: string,
+	groups: PaneGroup[],
+	groupId: string,
+	slotIdx: number,
+	sessionId: string,
 ): PaneGroup[] {
-  const targetGroup = groups.find((g) => g.id === groupId);
-  if (!targetGroup) return groups;
+	const targetGroup = groups.find((g) => g.id === groupId);
+	if (!targetGroup) return groups;
 
-  const targetSlots = [...targetGroup.slots];
-  const existingIdx = targetSlots.indexOf(sessionId);
+	const targetSlots = [...targetGroup.slots];
+	const existingIdx = targetSlots.indexOf(sessionId);
 
-  let added = false;
-  if (existingIdx >= 0) {
-    [targetSlots[existingIdx], targetSlots[slotIdx]] = [targetSlots[slotIdx], targetSlots[existingIdx]];
-    added = true;
-  } else if (targetSlots[slotIdx] === null) {
-    targetSlots[slotIdx] = sessionId;
-    added = true;
-  }
+	let added = false;
+	if (existingIdx >= 0) {
+		[targetSlots[existingIdx], targetSlots[slotIdx]] = [
+			targetSlots[slotIdx],
+			targetSlots[existingIdx],
+		];
+		added = true;
+	} else if (targetSlots[slotIdx] === null) {
+		targetSlots[slotIdx] = sessionId;
+		added = true;
+	}
 
-  if (!added) return groups;
+	if (!added) return groups;
 
-  const wasAlreadyHere = existingIdx >= 0;
-  return groups.map((g) => {
-    if (g.id === groupId) return { ...g, slots: targetSlots };
-    if (wasAlreadyHere) return g;
-    const i = g.slots.indexOf(sessionId);
-    if (i < 0) return g;
-    const slots = [...g.slots];
-    slots[i] = null;
-    return { ...g, slots };
-  }).filter((g) => g.slots.some((s) => s !== null));
+	const wasAlreadyHere = existingIdx >= 0;
+	return groups
+		.map((g) => {
+			if (g.id === groupId) return { ...g, slots: targetSlots };
+			if (wasAlreadyHere) return g;
+			const i = g.slots.indexOf(sessionId);
+			if (i < 0) return g;
+			const slots = [...g.slots];
+			slots[i] = null;
+			return { ...g, slots };
+		})
+		.filter((g) => g.slots.some((s) => s !== null));
 }
 
 /**
  * Unconditional swap of two slots within the active group (pane-header drag).
  */
 export function swapSlots(
-  groups: PaneGroup[],
-  activeGroupId: string,
-  fromIdx: number,
-  toIdx: number,
+	groups: PaneGroup[],
+	activeGroupId: string,
+	fromIdx: number,
+	toIdx: number,
 ): PaneGroup[] {
-  return groups.map((g) => {
-    if (g.id !== activeGroupId) return g;
-    const slots = [...g.slots];
-    [slots[fromIdx], slots[toIdx]] = [slots[toIdx], slots[fromIdx]];
-    return { ...g, slots };
-  });
+	return groups.map((g) => {
+		if (g.id !== activeGroupId) return g;
+		const slots = [...g.slots];
+		[slots[fromIdx], slots[toIdx]] = [slots[toIdx], slots[fromIdx]];
+		return { ...g, slots };
+	});
 }
 
 /**
  * Remove a session from every group slot it occupies.
  */
-export function removeFromGroup(groups: PaneGroup[], sessionId: string): PaneGroup[] {
-  return groups.map((g) => ({
-    ...g,
-    slots: g.slots.map((s) => (s === sessionId ? null : s)),
-  })).filter((g) => g.slots.some((s) => s !== null));
+export function removeFromGroup(
+	groups: PaneGroup[],
+	sessionId: string,
+): PaneGroup[] {
+	return groups
+		.map((g) => ({
+			...g,
+			slots: g.slots.map((s) => (s === sessionId ? null : s)),
+		}))
+		.filter((g) => g.slots.some((s) => s !== null));
 }
 
 /**
@@ -124,49 +160,54 @@ export function removeFromGroup(groups: PaneGroup[], sessionId: string): PaneGro
  * Removes the session from any other group it was in.
  */
 export function addToGroup(
-  groups: PaneGroup[],
-  groupId: string,
-  sessionId: string,
-  enabledLayouts?: PaneLayout[],
+	groups: PaneGroup[],
+	groupId: string,
+	sessionId: string,
+	enabledLayouts?: PaneLayout[],
 ): PaneGroup[] {
-  const targetGroup = groups.find((g) => g.id === groupId);
-  if (!targetGroup) return groups;
-  if (targetGroup.slots.includes(sessionId)) return groups;
+	const targetGroup = groups.find((g) => g.id === groupId);
+	if (!targetGroup) return groups;
+	if (targetGroup.slots.includes(sessionId)) return groups;
 
-  let firstEmpty = targetGroup.slots.indexOf(null);
+	let firstEmpty = targetGroup.slots.indexOf(null);
 
-  if (firstEmpty < 0 && enabledLayouts) {
-    const currentSlots = SLOT_COUNTS[targetGroup.layout];
-    const nextLayout = LAYOUT_ORDER.find(
-      (l) => enabledLayouts.includes(l) && SLOT_COUNTS[l] > currentSlots
-    );
-    if (nextLayout) {
-      const newCount = SLOT_COUNTS[nextLayout];
-      const expanded = Array.from({ length: newCount }, (_, i) => targetGroup.slots[i] ?? null);
-      groups = groups.map((g) =>
-        g.id === groupId ? { ...g, layout: nextLayout, slots: expanded } : g
-      );
-      firstEmpty = expanded.indexOf(null);
-    }
-  }
+	if (firstEmpty < 0 && enabledLayouts) {
+		const currentSlots = SLOT_COUNTS[targetGroup.layout];
+		const nextLayout = LAYOUT_ORDER.find(
+			(l) => enabledLayouts.includes(l) && SLOT_COUNTS[l] > currentSlots,
+		);
+		if (nextLayout) {
+			const newCount = SLOT_COUNTS[nextLayout];
+			const expanded = Array.from(
+				{ length: newCount },
+				(_, i) => targetGroup.slots[i] ?? null,
+			);
+			groups = groups.map((g) =>
+				g.id === groupId ? { ...g, layout: nextLayout, slots: expanded } : g,
+			);
+			firstEmpty = expanded.indexOf(null);
+		}
+	}
 
-  if (firstEmpty < 0) return groups;
+	if (firstEmpty < 0) return groups;
 
-  return dropToGroupSlot(groups, groupId, firstEmpty, sessionId);
+	return dropToGroupSlot(groups, groupId, firstEmpty, sessionId);
 }
 
 /**
  * Null a specific slot index in the active group.
  */
 export function removeFromSlot(
-  groups: PaneGroup[],
-  activeGroupId: string,
-  slotIdx: number,
+	groups: PaneGroup[],
+	activeGroupId: string,
+	slotIdx: number,
 ): PaneGroup[] {
-  return groups.map((g) => {
-    if (g.id !== activeGroupId) return g;
-    const slots = [...g.slots];
-    slots[slotIdx] = null;
-    return { ...g, slots };
-  }).filter((g) => g.slots.some((s) => s !== null));
+	return groups
+		.map((g) => {
+			if (g.id !== activeGroupId) return g;
+			const slots = [...g.slots];
+			slots[slotIdx] = null;
+			return { ...g, slots };
+		})
+		.filter((g) => g.slots.some((s) => s !== null));
 }
