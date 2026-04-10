@@ -1,6 +1,7 @@
 mod commands;
 mod journal;
 mod metadata;
+mod profiles;
 mod pty_manager;
 mod sessions;
 mod utils;
@@ -35,6 +36,8 @@ pub fn run() {
             pty_manager::pty_write,
             pty_manager::pty_resize,
             pty_manager::pty_kill,
+            profiles::discover_profiles,
+            profiles::save_profile_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
