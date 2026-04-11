@@ -212,25 +212,6 @@ const HOTKEYS = [
 	{ keys: "⌘1–9", desc: "Jump to group" },
 ];
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-	return (
-		<div style={{ marginBottom: 16 }}>
-			<div
-				style={{
-					fontSize: 10,
-					fontWeight: 600,
-					letterSpacing: "0.06em",
-					color: "var(--text-muted)",
-					marginBottom: 6,
-				}}
-			>
-				{title.toUpperCase()}
-			</div>
-			{children}
-		</div>
-	);
-}
-
 function P({ children }: { children: React.ReactNode }) {
 	return <p style={{ margin: "4px 0" }}>{children}</p>;
 }
@@ -300,6 +281,73 @@ function Table({ rows }: { rows: [string, string][] }) {
 	);
 }
 
+type PrefSection = "layouts" | "general" | "sound" | "ignore" | "profiles";
+type GuideSection =
+	| "filtering"
+	| "activity"
+	| "actions"
+	| "ignore"
+	| "groups"
+	| "multiwindow"
+	| "multiprofile"
+	| "themes";
+
+function SectionNav<T extends string>({
+	items,
+	active,
+	onSelect,
+}: {
+	items: { key: T; label: string; hidden?: boolean }[];
+	active: T;
+	onSelect: (key: T) => void;
+}) {
+	return (
+		<div
+			style={{
+				width: 120,
+				flexShrink: 0,
+				borderRight: "1px solid var(--border)",
+				overflowY: "auto",
+				padding: "8px 0",
+			}}
+		>
+			{items
+				.filter((item) => !item.hidden)
+				.map((item) => (
+					<button
+						type="button"
+						key={item.key}
+						onClick={() => onSelect(item.key)}
+						style={{
+							display: "block",
+							width: "100%",
+							background: active === item.key ? "var(--item-selected)" : "none",
+							border: "none",
+							color: active === item.key ? "var(--text-primary)" : "var(--text-muted)",
+							fontSize: 12,
+							textAlign: "left",
+							padding: "6px 12px",
+							cursor: "pointer",
+							fontFamily: "inherit",
+						}}
+						onMouseEnter={(e) => {
+							if (active !== item.key) {
+								e.currentTarget.style.background = "var(--item-hover)";
+							}
+						}}
+						onMouseLeave={(e) => {
+							if (active !== item.key) {
+								e.currentTarget.style.background = "none";
+							}
+						}}
+					>
+						{item.label}
+					</button>
+				))}
+		</div>
+	);
+}
+
 export function Settings({
 	onClose,
 	enabledLayouts,
@@ -310,6 +358,8 @@ export function Settings({
 }: Props) {
 	const { theme, allThemes, setThemeId, previewTheme, clearPreview } = useTheme();
 	const [tab, setTab] = useState<Tab>("preferences");
+	const [prefSection, setPrefSection] = useState<PrefSection>("layouts");
+	const [guideSection, setGuideSection] = useState<GuideSection>("filtering");
 	const [skipPermissions, setSkipPermissions] = useState(
 		() => localStorage.getItem("skip-permissions") === "true",
 	);
@@ -453,466 +503,499 @@ export function Settings({
 				</div>
 
 				{/* Content */}
-				<div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+				<div
+					style={{
+						flex: 1,
+						overflow: "hidden",
+						minHeight: 0,
+						display: "flex",
+						flexDirection: "column",
+					}}
+				>
 					{tab === "preferences" && (
-						<div>
-							{/* Tiling section */}
-							<div
-								style={{
-									fontSize: 10,
-									fontWeight: 600,
-									letterSpacing: "0.06em",
-									color: "var(--text-muted)",
-									marginBottom: 10,
-								}}
-							>
-								TILING LAYOUTS
-							</div>
-							<div
-								style={{
-									display: "grid",
-									gridTemplateColumns: "repeat(4, 1fr)",
-									gap: 6,
-								}}
-							>
-								{TILING_OPTIONS.map((layout) => {
-									const enabled = enabledLayouts.includes(layout);
-									const { cols, rows } = LAYOUT_GRID[layout];
-									const cells = LAYOUT_CELLS[layout];
-									return (
-										<button
-											type="button"
-											key={layout}
-											onClick={() => {
-												if (layout === "1x1") {
-													return;
-												}
-												const next = enabled
-													? enabledLayouts.filter((l) => l !== layout)
-													: [...enabledLayouts, layout];
-												onChangeEnabledLayouts(next);
-											}}
+						<div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+							<SectionNav
+								items={[
+									{ key: "layouts" as PrefSection, label: "Layouts" },
+									{ key: "general" as PrefSection, label: "General" },
+									{ key: "sound" as PrefSection, label: "Sound" },
+									{ key: "ignore" as PrefSection, label: "Ignore Patterns" },
+									{
+										key: "profiles" as PrefSection,
+										label: "Profiles",
+										hidden: profiles.length < 2,
+									},
+								]}
+								active={prefSection}
+								onSelect={setPrefSection}
+							/>
+							<div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+								{prefSection === "layouts" && (
+									<>
+										<div
 											style={{
-												background: enabled ? "var(--bg-main)" : "transparent",
-												border: `1.5px solid ${enabled ? "var(--accent)" : "var(--border)"}`,
-												borderRadius: 6,
-												padding: "8px 4px",
-												cursor: layout === "1x1" ? "default" : "pointer",
-												display: "flex",
-												flexDirection: "column",
-												alignItems: "center",
-												gap: 4,
-												opacity: enabled ? 1 : 0.4,
-												transition: "all 0.1s",
+												fontSize: 10,
+												fontWeight: 600,
+												letterSpacing: "0.06em",
+												color: "var(--text-muted)",
+												marginBottom: 10,
 											}}
 										>
+											TILING LAYOUTS
+										</div>
+										<div
+											style={{
+												display: "grid",
+												gridTemplateColumns: "repeat(4, 1fr)",
+												gap: 6,
+											}}
+										>
+											{TILING_OPTIONS.map((layout) => {
+												const enabled = enabledLayouts.includes(layout);
+												const { cols, rows } = LAYOUT_GRID[layout];
+												const cells = LAYOUT_CELLS[layout];
+												return (
+													<button
+														type="button"
+														key={layout}
+														onClick={() => {
+															if (layout === "1x1") {
+																return;
+															}
+															const next = enabled
+																? enabledLayouts.filter((l) => l !== layout)
+																: [...enabledLayouts, layout];
+															onChangeEnabledLayouts(next);
+														}}
+														style={{
+															background: enabled ? "var(--bg-main)" : "transparent",
+															border: `1.5px solid ${enabled ? "var(--accent)" : "var(--border)"}`,
+															borderRadius: 6,
+															padding: "8px 4px",
+															cursor: layout === "1x1" ? "default" : "pointer",
+															display: "flex",
+															flexDirection: "column",
+															alignItems: "center",
+															gap: 4,
+															opacity: enabled ? 1 : 0.4,
+															transition: "all 0.1s",
+														}}
+													>
+														<div
+															style={{
+																display: "grid",
+																gridTemplateColumns: `repeat(${cols}, 1fr)`,
+																gridTemplateRows: `repeat(${rows}, 1fr)`,
+																gap: 1,
+																color: enabled ? "var(--text-primary)" : "var(--text-muted)",
+															}}
+														>
+															{cells.map(([gc, gr], i) => (
+																<div
+																	key={i}
+																	style={{
+																		gridColumn: gc,
+																		gridRow: gr,
+																		width: "100%",
+																		height: 5,
+																		background: "currentColor",
+																		borderRadius: 1,
+																		minWidth: 6,
+																	}}
+																/>
+															))}
+														</div>
+														<span
+															style={{
+																fontSize: 8,
+																fontWeight: 600,
+																letterSpacing: "0.02em",
+																color: enabled ? "var(--text-secondary)" : "var(--text-muted)",
+															}}
+														>
+															{layout}
+														</span>
+													</button>
+												);
+											})}
+										</div>
+									</>
+								)}
+								{prefSection === "general" && (
+									<>
+										<div
+											style={{
+												fontSize: 10,
+												fontWeight: 600,
+												letterSpacing: "0.06em",
+												color: "var(--text-muted)",
+												marginBottom: 10,
+											}}
+										>
+											SESSION DEFAULTS
+										</div>
+										<label
+											style={{
+												display: "flex",
+												alignItems: "center",
+												gap: 8,
+												cursor: "pointer",
+												fontSize: 12,
+												color: "var(--text-secondary)",
+											}}
+										>
+											<input
+												type="checkbox"
+												checked={skipPermissions}
+												onChange={(e) => {
+													const val = e.target.checked;
+													setSkipPermissions(val);
+													localStorage.setItem("skip-permissions", String(val));
+												}}
+												style={{ accentColor: "var(--accent)" }}
+											/>
+											Use --dangerously-skip-permissions
+										</label>
+										<div
+											style={{
+												fontSize: 10,
+												color: "var(--text-muted)",
+												marginTop: 4,
+												marginLeft: 24,
+											}}
+										>
+											Applies to newly spawned sessions only
+										</div>
+									</>
+								)}
+								{prefSection === "sound" && (
+									<>
+										<div
+											style={{
+												fontSize: 10,
+												fontWeight: 600,
+												letterSpacing: "0.06em",
+												color: "var(--text-muted)",
+												marginBottom: 10,
+											}}
+										>
+											COMPLETION SOUND
+										</div>
+										<label
+											style={{
+												display: "flex",
+												alignItems: "center",
+												gap: 8,
+												cursor: "pointer",
+												fontSize: 12,
+												color: "var(--text-secondary)",
+											}}
+										>
+											<input
+												type="checkbox"
+												checked={notifSound}
+												onChange={(e) => {
+													const val = e.target.checked;
+													setNotifSound(val);
+													localStorage.setItem("notif-sound-enabled", String(val));
+												}}
+												style={{ accentColor: "var(--accent)" }}
+											/>
+											Play sound when a session completes
+										</label>
+										{notifSound && (
 											<div
 												style={{
-													display: "grid",
-													gridTemplateColumns: `repeat(${cols}, 1fr)`,
-													gridTemplateRows: `repeat(${rows}, 1fr)`,
-													gap: 1,
-													color: enabled ? "var(--text-primary)" : "var(--text-muted)",
+													marginTop: 8,
+													marginLeft: 24,
+													display: "flex",
+													flexDirection: "column",
+													gap: 6,
 												}}
 											>
-												{cells.map(([gc, gr], i) => (
-													<div
-														key={i}
-														style={{
-															gridColumn: gc,
-															gridRow: gr,
-															width: "100%",
-															height: 5,
-															background: "currentColor",
-															borderRadius: 1,
-															minWidth: 6,
+												<div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+													{(platform === "linux"
+														? [
+																["Complete", "/usr/share/sounds/freedesktop/stereo/complete.oga"],
+																["Bell", "/usr/share/sounds/freedesktop/stereo/bell.oga"],
+																["Message", "/usr/share/sounds/freedesktop/stereo/message.oga"],
+																[
+																	"Dialog Info",
+																	"/usr/share/sounds/freedesktop/stereo/dialog-information.oga",
+																],
+																[
+																	"Service Login",
+																	"/usr/share/sounds/freedesktop/stereo/service-login.oga",
+																],
+															]
+														: [
+																["Glass", "/System/Library/Sounds/Glass.aiff"],
+																["Ping", "/System/Library/Sounds/Ping.aiff"],
+																["Pop", "/System/Library/Sounds/Pop.aiff"],
+																["Purr", "/System/Library/Sounds/Purr.aiff"],
+																["Tink", "/System/Library/Sounds/Tink.aiff"],
+																["Hero", "/System/Library/Sounds/Hero.aiff"],
+																["Blow", "/System/Library/Sounds/Blow.aiff"],
+																["Bottle", "/System/Library/Sounds/Bottle.aiff"],
+																["Frog", "/System/Library/Sounds/Frog.aiff"],
+																["Funk", "/System/Library/Sounds/Funk.aiff"],
+																["Morse", "/System/Library/Sounds/Morse.aiff"],
+																["Sosumi", "/System/Library/Sounds/Sosumi.aiff"],
+																["Submarine", "/System/Library/Sounds/Submarine.aiff"],
+																["Basso", "/System/Library/Sounds/Basso.aiff"],
+															]
+													).map(([name, path]) => {
+														const isSelected = notifSoundPath === path;
+														return (
+															<button
+																type="button"
+																key={name}
+																onClick={() => {
+																	setNotifSoundPath(path);
+																	localStorage.setItem("notif-sound-path", path);
+																	invoke("play_sound", { path });
+																}}
+																style={{
+																	background: isSelected ? "var(--accent)" : "var(--bg-main)",
+																	border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+																	borderRadius: 4,
+																	color: isSelected ? "var(--bg-main)" : "var(--text-muted)",
+																	fontSize: 10,
+																	padding: "2px 6px",
+																	cursor: "pointer",
+																	fontFamily: "inherit",
+																}}
+															>
+																{name}
+															</button>
+														);
+													})}
+												</div>
+												<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+													<button
+														type="button"
+														onClick={async () => {
+															const { open } = await import("@tauri-apps/plugin-dialog");
+															const path = await open({
+																title: "Select notification sound",
+																filters: [
+																	{
+																		name: "Audio",
+																		extensions: ["mp3", "wav", "ogg", "m4a", "aac", "aiff"],
+																	},
+																],
+															});
+															if (typeof path === "string") {
+																setNotifSoundPath(path);
+																localStorage.setItem("notif-sound-path", path);
+																import("@tauri-apps/api/core").then(({ convertFileSrc }) => {
+																	new Audio(convertFileSrc(path)).play().catch(() => {});
+																});
+															}
 														}}
-													/>
-												))}
+														style={{
+															background: "var(--bg-main)",
+															border: "1px solid var(--border)",
+															borderRadius: 4,
+															color: "var(--text-secondary)",
+															fontSize: 10,
+															padding: "2px 6px",
+															cursor: "pointer",
+															fontFamily: "inherit",
+														}}
+													>
+														Custom file...
+													</button>
+													{notifSoundPath && !notifSoundPath.startsWith("/System/") && (
+														<span
+															style={{
+																fontSize: 10,
+																color: "var(--text-muted)",
+																overflow: "hidden",
+																textOverflow: "ellipsis",
+																whiteSpace: "nowrap",
+																flex: 1,
+															}}
+														>
+															{notifSoundPath.split("/").pop()}
+														</span>
+													)}
+												</div>
 											</div>
-											<span
-												style={{
-													fontSize: 8,
-													fontWeight: 600,
-													letterSpacing: "0.02em",
-													color: enabled ? "var(--text-secondary)" : "var(--text-muted)",
-												}}
-											>
-												{layout}
-											</span>
-										</button>
-									);
-								})}
-							</div>
-
-							{/* Session defaults */}
-							<div
-								style={{
-									fontSize: 10,
-									fontWeight: 600,
-									letterSpacing: "0.06em",
-									color: "var(--text-muted)",
-									marginTop: 20,
-									marginBottom: 10,
-								}}
-							>
-								SESSION DEFAULTS
-							</div>
-							<label
-								style={{
-									display: "flex",
-									alignItems: "center",
-									gap: 8,
-									cursor: "pointer",
-									fontSize: 12,
-									color: "var(--text-secondary)",
-								}}
-							>
-								<input
-									type="checkbox"
-									checked={skipPermissions}
-									onChange={(e) => {
-										const val = e.target.checked;
-										setSkipPermissions(val);
-										localStorage.setItem("skip-permissions", String(val));
-									}}
-									style={{ accentColor: "var(--accent)" }}
-								/>
-								Use --dangerously-skip-permissions
-							</label>
-							<div
-								style={{
-									fontSize: 10,
-									color: "var(--text-muted)",
-									marginTop: 4,
-									marginLeft: 24,
-								}}
-							>
-								Applies to newly spawned sessions only
-							</div>
-
-							{/* Notification sound */}
-							<div
-								style={{
-									fontSize: 10,
-									fontWeight: 600,
-									letterSpacing: "0.06em",
-									color: "var(--text-muted)",
-									marginTop: 20,
-									marginBottom: 10,
-								}}
-							>
-								COMPLETION SOUND
-							</div>
-							<label
-								style={{
-									display: "flex",
-									alignItems: "center",
-									gap: 8,
-									cursor: "pointer",
-									fontSize: 12,
-									color: "var(--text-secondary)",
-								}}
-							>
-								<input
-									type="checkbox"
-									checked={notifSound}
-									onChange={(e) => {
-										const val = e.target.checked;
-										setNotifSound(val);
-										localStorage.setItem("notif-sound-enabled", String(val));
-									}}
-									style={{ accentColor: "var(--accent)" }}
-								/>
-								Play sound when a session completes
-							</label>
-							{notifSound && (
-								<div
-									style={{
-										marginTop: 8,
-										marginLeft: 24,
-										display: "flex",
-										flexDirection: "column",
-										gap: 6,
-									}}
-								>
-									<div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-										{(platform === "linux"
-											? [
-													["Complete", "/usr/share/sounds/freedesktop/stereo/complete.oga"],
-													["Bell", "/usr/share/sounds/freedesktop/stereo/bell.oga"],
-													["Message", "/usr/share/sounds/freedesktop/stereo/message.oga"],
-													[
-														"Dialog Info",
-														"/usr/share/sounds/freedesktop/stereo/dialog-information.oga",
-													],
-													[
-														"Service Login",
-														"/usr/share/sounds/freedesktop/stereo/service-login.oga",
-													],
-												]
-											: [
-													["Glass", "/System/Library/Sounds/Glass.aiff"],
-													["Ping", "/System/Library/Sounds/Ping.aiff"],
-													["Pop", "/System/Library/Sounds/Pop.aiff"],
-													["Purr", "/System/Library/Sounds/Purr.aiff"],
-													["Tink", "/System/Library/Sounds/Tink.aiff"],
-													["Hero", "/System/Library/Sounds/Hero.aiff"],
-													["Blow", "/System/Library/Sounds/Blow.aiff"],
-													["Bottle", "/System/Library/Sounds/Bottle.aiff"],
-													["Frog", "/System/Library/Sounds/Frog.aiff"],
-													["Funk", "/System/Library/Sounds/Funk.aiff"],
-													["Morse", "/System/Library/Sounds/Morse.aiff"],
-													["Sosumi", "/System/Library/Sounds/Sosumi.aiff"],
-													["Submarine", "/System/Library/Sounds/Submarine.aiff"],
-													["Basso", "/System/Library/Sounds/Basso.aiff"],
-												]
-										).map(([name, path]) => {
-											const isSelected = notifSoundPath === path;
-											return (
-												<button
-													type="button"
-													key={name}
-													onClick={() => {
-														setNotifSoundPath(path);
-														localStorage.setItem("notif-sound-path", path);
-														invoke("play_sound", { path });
-													}}
-													style={{
-														background: isSelected ? "var(--accent)" : "var(--bg-main)",
-														border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
-														borderRadius: 4,
-														color: isSelected ? "var(--bg-main)" : "var(--text-muted)",
-														fontSize: 10,
-														padding: "2px 6px",
-														cursor: "pointer",
-														fontFamily: "inherit",
-													}}
-												>
-													{name}
-												</button>
-											);
-										})}
-									</div>
-									<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-										<button
-											type="button"
-											onClick={async () => {
-												const { open } = await import("@tauri-apps/plugin-dialog");
-												const path = await open({
-													title: "Select notification sound",
-													filters: [
-														{
-															name: "Audio",
-															extensions: ["mp3", "wav", "ogg", "m4a", "aac", "aiff"],
-														},
-													],
-												});
-												if (typeof path === "string") {
-													setNotifSoundPath(path);
-													localStorage.setItem("notif-sound-path", path);
-													import("@tauri-apps/api/core").then(({ convertFileSrc }) => {
-														new Audio(convertFileSrc(path)).play().catch(() => {});
-													});
+										)}
+									</>
+								)}
+								{prefSection === "ignore" && (
+									<>
+										<div
+											style={{
+												fontSize: 10,
+												fontWeight: 600,
+												letterSpacing: "0.06em",
+												color: "var(--text-muted)",
+												marginBottom: 6,
+											}}
+										>
+											IGNORE PATTERNS
+										</div>
+										<div
+											style={{
+												fontSize: 10,
+												color: "var(--text-muted)",
+												marginBottom: 6,
+											}}
+										>
+											One pattern per line. Matches against session name and path (relative to home
+											directory). Supports globs (<Code>*</Code>, <Code>**</Code>, <Code>?</Code>).
+											Prefix with <Code>!</Code> to un-ignore. Lines starting with <Code>#</Code>{" "}
+											are comments.
+										</div>
+										<textarea
+											aria-label="Ignore patterns"
+											ref={(el) => {
+												if (el) {
+													el.style.height = "auto";
+													el.style.height = `${Math.max(80, el.scrollHeight)}px`;
 												}
 											}}
+											value={ignorePatterns}
+											onChange={(e) => {
+												setIgnorePatterns(e.target.value);
+												localStorage.setItem("ignore-patterns", e.target.value);
+											}}
+											placeholder=""
+											autoCorrect="off"
+											autoCapitalize="off"
+											spellCheck={false}
 											style={{
+												width: "100%",
+												minHeight: 80,
+												overflow: "hidden",
 												background: "var(--bg-main)",
 												border: "1px solid var(--border)",
-												borderRadius: 4,
-												color: "var(--text-secondary)",
+												borderRadius: 5,
+												color: "var(--text-primary)",
+												fontSize: 11,
+												padding: "10px 8px",
+												outline: "none",
+												fontFamily: "Menlo, Monaco, 'Courier New', monospace",
+												resize: "vertical",
+												lineHeight: 1.5,
+											}}
+										/>
+									</>
+								)}
+								{prefSection === "profiles" && profiles.length > 1 && (
+									<>
+										<div
+											style={{
 												fontSize: 10,
-												padding: "2px 6px",
+												fontWeight: 600,
+												letterSpacing: "0.06em",
+												color: "var(--text-muted)",
+												marginBottom: 10,
+											}}
+										>
+											PROFILES
+										</div>
+										<div
+											style={{
+												display: "flex",
+												flexDirection: "column",
+												gap: 8,
+											}}
+										>
+											{profiles.map((profile) => (
+												<div
+													key={profile.id}
+													style={{
+														display: "flex",
+														alignItems: "center",
+														gap: 8,
+														padding: "6px 8px",
+														borderRadius: 6,
+														background: "var(--item-hover)",
+														opacity: profile.hidden ? 0.5 : 1,
+													}}
+												>
+													<button
+														type="button"
+														aria-label={profile.hidden ? "Show profile" : "Hide profile"}
+														onClick={() => {
+															const updated = profiles.map((p) =>
+																p.id === profile.id ? { ...p, hidden: !p.hidden } : p,
+															);
+															onSaveProfiles(updated);
+														}}
+														style={{
+															background: "none",
+															border: "none",
+															cursor: "pointer",
+															color: profile.hidden
+																? "var(--text-very-muted)"
+																: "var(--text-muted)",
+															fontSize: 14,
+															padding: "2px 4px",
+															flexShrink: 0,
+														}}
+													>
+														{profile.hidden ? "\u25E1" : "\u25E0"}
+													</button>
+													<input
+														value={profile.name}
+														onChange={(e) => {
+															const updated = profiles.map((p) =>
+																p.id === profile.id ? { ...p, name: e.target.value } : p,
+															);
+															onSaveProfiles(updated);
+														}}
+														style={{
+															flex: 1,
+															background: "none",
+															border: "none",
+															color: "var(--text-primary)",
+															fontSize: 13,
+															fontFamily: "inherit",
+															outline: "none",
+														}}
+													/>
+													<span
+														style={{
+															fontSize: 10,
+															color: "var(--text-very-muted)",
+															flexShrink: 0,
+														}}
+													>
+														{profile.path.replace(/^\/Users\/[^/]+/, "~")}
+													</span>
+												</div>
+											))}
+										</div>
+										<button
+											type="button"
+											onClick={onRefreshProfiles}
+											style={{
+												marginTop: 8,
+												background: "none",
+												border: "1px solid var(--border)",
+												borderRadius: 6,
+												color: "var(--text-secondary)",
 												cursor: "pointer",
+												fontSize: 11,
+												padding: "4px 12px",
 												fontFamily: "inherit",
 											}}
 										>
-											Custom file...
+											Rescan directories
 										</button>
-										{notifSoundPath && !notifSoundPath.startsWith("/System/") && (
-											<span
-												style={{
-													fontSize: 10,
-													color: "var(--text-muted)",
-													overflow: "hidden",
-													textOverflow: "ellipsis",
-													whiteSpace: "nowrap",
-													flex: 1,
-												}}
-											>
-												{notifSoundPath.split("/").pop()}
-											</span>
-										)}
-									</div>
-								</div>
-							)}
-
-							{/* Ignore patterns */}
-							<div
-								style={{
-									fontSize: 10,
-									fontWeight: 600,
-									letterSpacing: "0.06em",
-									color: "var(--text-muted)",
-									marginTop: 20,
-									marginBottom: 6,
-								}}
-							>
-								IGNORE PATTERNS
+									</>
+								)}
 							</div>
-							<div
-								style={{
-									fontSize: 10,
-									color: "var(--text-muted)",
-									marginBottom: 6,
-								}}
-							>
-								One pattern per line. Matches against session name and path (relative to home
-								directory). Supports globs (<Code>*</Code>, <Code>**</Code>, <Code>?</Code>). Prefix
-								with <Code>!</Code> to un-ignore. Lines starting with <Code>#</Code> are comments.
-							</div>
-							<textarea
-								aria-label="Ignore patterns"
-								ref={(el) => {
-									if (el) {
-										el.style.height = "auto";
-										el.style.height = `${Math.max(80, el.scrollHeight)}px`;
-									}
-								}}
-								value={ignorePatterns}
-								onChange={(e) => {
-									setIgnorePatterns(e.target.value);
-									localStorage.setItem("ignore-patterns", e.target.value);
-								}}
-								placeholder=""
-								autoCorrect="off"
-								autoCapitalize="off"
-								spellCheck={false}
-								style={{
-									width: "100%",
-									minHeight: 80,
-									overflow: "hidden",
-									background: "var(--bg-main)",
-									border: "1px solid var(--border)",
-									borderRadius: 5,
-									color: "var(--text-primary)",
-									fontSize: 11,
-									padding: "10px 8px",
-									outline: "none",
-									fontFamily: "Menlo, Monaco, 'Courier New', monospace",
-									resize: "vertical",
-									lineHeight: 1.5,
-								}}
-							/>
-							{profiles.length > 1 && (
-								<>
-									<div
-										style={{
-											fontSize: 10,
-											fontWeight: 600,
-											letterSpacing: "0.06em",
-											color: "var(--text-muted)",
-											marginTop: 20,
-											marginBottom: 10,
-										}}
-									>
-										PROFILES
-									</div>
-									<div
-										style={{
-											display: "flex",
-											flexDirection: "column",
-											gap: 8,
-										}}
-									>
-										{profiles.map((profile) => (
-											<div
-												key={profile.id}
-												style={{
-													display: "flex",
-													alignItems: "center",
-													gap: 8,
-													padding: "6px 8px",
-													borderRadius: 6,
-													background: "var(--item-hover)",
-													opacity: profile.hidden ? 0.5 : 1,
-												}}
-											>
-												<button
-													type="button"
-													aria-label={profile.hidden ? "Show profile" : "Hide profile"}
-													onClick={() => {
-														const updated = profiles.map((p) =>
-															p.id === profile.id ? { ...p, hidden: !p.hidden } : p,
-														);
-														onSaveProfiles(updated);
-													}}
-													style={{
-														background: "none",
-														border: "none",
-														cursor: "pointer",
-														color: profile.hidden ? "var(--text-very-muted)" : "var(--text-muted)",
-														fontSize: 14,
-														padding: "2px 4px",
-														flexShrink: 0,
-													}}
-												>
-													{profile.hidden ? "\u25E1" : "\u25E0"}
-												</button>
-												<input
-													value={profile.name}
-													onChange={(e) => {
-														const updated = profiles.map((p) =>
-															p.id === profile.id ? { ...p, name: e.target.value } : p,
-														);
-														onSaveProfiles(updated);
-													}}
-													style={{
-														flex: 1,
-														background: "none",
-														border: "none",
-														color: "var(--text-primary)",
-														fontSize: 13,
-														fontFamily: "inherit",
-														outline: "none",
-													}}
-												/>
-												<span
-													style={{
-														fontSize: 10,
-														color: "var(--text-very-muted)",
-														flexShrink: 0,
-													}}
-												>
-													{profile.path.replace(/^\/Users\/[^/]+/, "~")}
-												</span>
-											</div>
-										))}
-									</div>
-									<button
-										type="button"
-										onClick={onRefreshProfiles}
-										style={{
-											marginTop: 8,
-											background: "none",
-											border: "1px solid var(--border)",
-											borderRadius: 6,
-											color: "var(--text-secondary)",
-											cursor: "pointer",
-											fontSize: 11,
-											padding: "4px 12px",
-											fontFamily: "inherit",
-										}}
-									>
-										Rescan directories
-									</button>
-								</>
-							)}
 						</div>
 					)}
 
 					{tab === "theme" && (
-						<div>
+						<div style={{ flex: 1, overflowY: "auto" }}>
 							<div
 								style={{
 									display: "flex",
@@ -1053,7 +1136,7 @@ export function Settings({
 					)}
 
 					{tab === "hotkeys" && (
-						<div>
+						<div style={{ flex: 1, overflowY: "auto" }}>
 							{HOTKEYS.map(({ keys, desc }) => (
 								<div
 									key={keys}
@@ -1085,131 +1168,161 @@ export function Settings({
 					)}
 
 					{tab === "guide" && (
-						<div
-							style={{
-								color: "var(--text-secondary)",
-								fontSize: 12,
-								lineHeight: 1.7,
-							}}
-						>
-							<Section title="Filtering and sorting">
-								<P>The sidebar header has clickable controls for filtering and sorting:</P>
-								<Table
-									rows={[
-										["ALL / LIVE / OFF", "Filter by status"],
-										["Sort/Group dropdown", "Sort by date or name; group by status or location"],
-									]}
-								/>
-								<P>
-									The search bar filters groups and sessions by name, path, or ID. Scope with a
-									prefix:
-								</P>
-								<Table
-									rows={[
-										["@group:", "Search group names only"],
-										["@tab:", "Search sessions/tabs only"],
-										["@folder:", "Search by folder/path"],
-										["(no prefix)", "Search everything"],
-									]}
-								/>
-								<P>Folder search accepts full paths, ~/paths, or bare names (assumes ~/).</P>
-							</Section>
-
-							<Section title="Activity indicators">
-								<P>Each session shows a coloured status dot:</P>
-								<Table
-									rows={[
-										["Amber (pulsing)", "Claude is computing"],
-										["Blue (glow)", "Completed — unread"],
-										["Green (glow)", "Waiting for input"],
-										["Grey", "Offline"],
-									]}
-								/>
-								<P>
-									Unread is cleared when you click the pane, click the session in the sidebar, or
-									type in it.
-								</P>
-								<P>
-									Enable a completion sound in Preferences to get an audio notification when a
-									session finishes.
-								</P>
-							</Section>
-
-							<Section title="Session actions">
-								<P>Right-click a session in the sidebar for:</P>
-								<Table
-									rows={[
-										["Archive", "Hides from sidebar. File preserved on disk."],
-										["Delete", "Permanently removes conversation file. Cannot be undone."],
-									]}
-								/>
-							</Section>
-
-							<Section title="Ignore patterns">
-								<P>
-									Hide sessions from the sidebar via Preferences &gt; Ignore Patterns. One pattern
-									per line, matched against session name and path (relative to home directory).
-								</P>
-								<P>
-									Supports globs: <Code>*</Code> (any characters within a segment), <Code>**</Code>{" "}
-									(any characters across segments), <Code>?</Code> (single character). Prefix with{" "}
-									<Code>!</Code> to un-ignore. Lines starting with <Code>#</Code> are comments.
-								</P>
-							</Section>
-
-							<Section title="Groups and tiling">
-								<P>
-									Drag sessions onto a group header to add them. If the group is full, it
-									automatically expands to the next enabled layout.
-								</P>
-								<P>
-									Change tiling layouts from the layout icon in the group header. Enable or disable
-									layouts in Preferences.
-								</P>
-								<P>
-									Cycle between groups with <Kbd>Ctrl+Tab</Kbd> / <Kbd>Ctrl+Shift+Tab</Kbd>, or jump
-									directly with <Kbd>Cmd+1</Kbd>–<Kbd>9</Kbd>. Delete the active group with{" "}
-									<Kbd>Cmd+Delete</Kbd>.
-								</P>
-							</Section>
-
-							<Section title="Multi-window">
-								<P>
-									<Kbd>Cmd+N</Kbd> opens a new window. Windows share the same session pool but have
-									independent layouts. Session locking prevents two windows from resuming the same
-									Claude session. New windows inherit the active profile.
-								</P>
-							</Section>
-
-							<Section title="Multi-profile">
-								<P>
-									If you use multiple Claude accounts via <Code>CLAUDE_CONFIG_DIR</Code>, the app
-									auto-detects all <Code>~/.claude*</Code> directories. When 2+ profiles exist, a
-									profile pill appears in the sidebar footer — click to switch. Each window shows
-									one profile at a time. Rename or hide profiles in Preferences.
-								</P>
-							</Section>
-
-							<Section title="Custom themes">
-								<P>
-									Drop JSON theme files into <Code>~/.config/claude-manager/themes/</Code>. See the{" "}
-									<a
-										href="https://github.com/JeffreyWardman/claude-manager/blob/main/README.md#custom-themes"
-										target="_blank"
-										rel="noopener noreferrer"
-										style={{ color: "var(--accent)" }}
-									>
-										README
-									</a>{" "}
-									for the full JSON schema.
-								</P>
-							</Section>
+						<div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+							<SectionNav
+								items={[
+									{ key: "filtering" as GuideSection, label: "Search & Filter" },
+									{ key: "activity" as GuideSection, label: "Activity" },
+									{ key: "actions" as GuideSection, label: "Actions" },
+									{ key: "ignore" as GuideSection, label: "Ignore Patterns" },
+									{ key: "groups" as GuideSection, label: "Groups" },
+									{ key: "multiwindow" as GuideSection, label: "Multi-window" },
+									{ key: "multiprofile" as GuideSection, label: "Multi-profile" },
+									{ key: "themes" as GuideSection, label: "Themes" },
+								]}
+								active={guideSection}
+								onSelect={setGuideSection}
+							/>
+							<div
+								style={{
+									flex: 1,
+									overflowY: "auto",
+									padding: 16,
+									color: "var(--text-secondary)",
+									fontSize: 12,
+									lineHeight: 1.7,
+								}}
+							>
+								{guideSection === "filtering" && (
+									<>
+										<P>The sidebar header has clickable controls for filtering and sorting:</P>
+										<Table
+											rows={[
+												["ALL / LIVE / OFF", "Filter by status"],
+												[
+													"Sort/Group dropdown",
+													"Sort by date or name; group by status or location",
+												],
+											]}
+										/>
+										<P>
+											The search bar filters groups and sessions by name, path, or ID. Scope with a
+											prefix:
+										</P>
+										<Table
+											rows={[
+												["@group:", "Search group names only"],
+												["@tab:", "Search sessions/tabs only"],
+												["@folder:", "Search by folder/path"],
+												["(no prefix)", "Search everything"],
+											]}
+										/>
+										<P>Folder search accepts full paths, ~/paths, or bare names (assumes ~/).</P>
+									</>
+								)}
+								{guideSection === "activity" && (
+									<>
+										<P>Each session shows a coloured status dot:</P>
+										<Table
+											rows={[
+												["Amber (pulsing)", "Claude is computing"],
+												["Blue (glow)", "Completed — unread"],
+												["Green (glow)", "Waiting for input"],
+												["Grey", "Offline"],
+											]}
+										/>
+										<P>
+											Unread is cleared when you click the pane, click the session in the sidebar,
+											or type in it.
+										</P>
+										<P>
+											Enable a completion sound in Preferences to get an audio notification when a
+											session finishes.
+										</P>
+									</>
+								)}
+								{guideSection === "actions" && (
+									<>
+										<P>Right-click a session in the sidebar for:</P>
+										<Table
+											rows={[
+												["Archive", "Hides from sidebar. File preserved on disk."],
+												["Delete", "Permanently removes conversation file. Cannot be undone."],
+											]}
+										/>
+									</>
+								)}
+								{guideSection === "ignore" && (
+									<>
+										<P>
+											Hide sessions from the sidebar via Preferences &gt; Ignore Patterns. One
+											pattern per line, matched against session name and path (relative to home
+											directory).
+										</P>
+										<P>
+											Supports globs: <Code>*</Code> (any characters within a segment),{" "}
+											<Code>**</Code> (any characters across segments), <Code>?</Code> (single
+											character). Prefix with <Code>!</Code> to un-ignore. Lines starting with{" "}
+											<Code>#</Code> are comments.
+										</P>
+									</>
+								)}
+								{guideSection === "groups" && (
+									<>
+										<P>
+											Drag sessions onto a group header to add them. If the group is full, it
+											automatically expands to the next enabled layout.
+										</P>
+										<P>
+											Change tiling layouts from the layout icon in the group header. Enable or
+											disable layouts in Preferences.
+										</P>
+										<P>
+											Cycle between groups with <Kbd>Ctrl+Tab</Kbd> / <Kbd>Ctrl+Shift+Tab</Kbd>, or
+											jump directly with <Kbd>Cmd+1</Kbd>–<Kbd>9</Kbd>. Delete the active group with{" "}
+											<Kbd>Cmd+Delete</Kbd>.
+										</P>
+									</>
+								)}
+								{guideSection === "multiwindow" && (
+									<P>
+										<Kbd>Cmd+N</Kbd> opens a new window. Windows share the same session pool but
+										have independent layouts. Session locking prevents two windows from resuming the
+										same Claude session. New windows inherit the active profile.
+									</P>
+								)}
+								{guideSection === "multiprofile" && (
+									<P>
+										If you use multiple Claude accounts via <Code>CLAUDE_CONFIG_DIR</Code>, the app
+										auto-detects all <Code>~/.claude*</Code> directories. When 2+ profiles exist, a
+										profile pill appears in the sidebar footer — click to switch. Each window shows
+										one profile at a time. Rename or hide profiles in Preferences.
+									</P>
+								)}
+								{guideSection === "themes" && (
+									<P>
+										Drop JSON theme files into <Code>~/.config/claude-manager/themes/</Code>. See
+										the{" "}
+										<a
+											href="https://github.com/JeffreyWardman/claude-manager/blob/main/README.md#custom-themes"
+											target="_blank"
+											rel="noopener noreferrer"
+											style={{ color: "var(--accent)" }}
+										>
+											README
+										</a>{" "}
+										for the full JSON schema.
+									</P>
+								)}
+							</div>
 						</div>
 					)}
 
 					{tab === "about" && (
 						<div
 							style={{
+								flex: 1,
+								overflowY: "auto",
 								color: "var(--text-secondary)",
 								fontSize: 12,
 								lineHeight: 1.6,
