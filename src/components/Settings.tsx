@@ -838,6 +838,27 @@ export function Settings({
 													opacity: profile.hidden ? 0.5 : 1,
 												}}
 											>
+												<button
+													type="button"
+													aria-label={profile.hidden ? "Show profile" : "Hide profile"}
+													onClick={() => {
+														const updated = profiles.map((p) =>
+															p.id === profile.id ? { ...p, hidden: !p.hidden } : p,
+														);
+														onSaveProfiles(updated);
+													}}
+													style={{
+														background: "none",
+														border: "none",
+														cursor: "pointer",
+														color: profile.hidden ? "var(--text-very-muted)" : "var(--text-muted)",
+														fontSize: 14,
+														padding: "2px 4px",
+														flexShrink: 0,
+													}}
+												>
+													{profile.hidden ? "\u25E1" : "\u25E0"}
+												</button>
 												<input
 													value={profile.name}
 													onChange={(e) => {
@@ -865,26 +886,6 @@ export function Settings({
 												>
 													{profile.path.replace(/^\/Users\/[^/]+/, "~")}
 												</span>
-												<button
-													type="button"
-													aria-label={profile.hidden ? "Show profile" : "Hide profile"}
-													onClick={() => {
-														const updated = profiles.map((p) =>
-															p.id === profile.id ? { ...p, hidden: !p.hidden } : p,
-														);
-														onSaveProfiles(updated);
-													}}
-													style={{
-														background: "none",
-														border: "none",
-														cursor: "pointer",
-														color: profile.hidden ? "var(--text-very-muted)" : "var(--text-muted)",
-														fontSize: 14,
-														padding: "2px 4px",
-													}}
-												>
-													{profile.hidden ? "\u25E1" : "\u25E0"}
-												</button>
 											</div>
 										))}
 									</div>

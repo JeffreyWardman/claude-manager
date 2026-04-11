@@ -1551,7 +1551,7 @@ export function Sidebar({
 					⌘K
 				</button>
 				{profiles.length > 1 && activeProfile && (
-					<div style={{ position: "relative" }}>
+					<div style={{ position: "relative", marginLeft: "auto" }}>
 						<button
 							type="button"
 							aria-label={`Profile: ${activeProfile.name}`}
@@ -1582,7 +1582,7 @@ export function Sidebar({
 								style={{
 									position: "absolute",
 									bottom: "100%",
-									left: 0,
+									right: 0,
 									marginBottom: 4,
 									background: "var(--bg-sidebar)",
 									border: "1px solid var(--border)",
@@ -1625,7 +1625,7 @@ export function Sidebar({
 					onClick={onOpenSettings}
 					title="Preferences (⌘P)"
 					style={{
-						marginLeft: "auto",
+						marginLeft: profiles.length > 1 ? undefined : "auto",
 						background: "none",
 						border: "none",
 						color: "var(--text-muted)",

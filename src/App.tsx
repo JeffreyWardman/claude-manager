@@ -31,19 +31,26 @@ function genId() {
 	return Math.random().toString(36).slice(2, 10);
 }
 
-function loadGroups(): PaneGroup[] {
+function groupsKey(profilePath: string): string {
+	return profilePath ? `pane-groups:${profilePath}` : "pane-groups";
+}
+
+function activeGroupKey(profilePath: string): string {
+	return profilePath ? `active-group-id:${profilePath}` : "active-group-id";
+}
+
+function loadGroups(profilePath: string): PaneGroup[] {
 	try {
-		const saved = localStorage.getItem("pane-groups");
+		const saved = localStorage.getItem(groupsKey(profilePath));
 		if (saved) {
 			return JSON.parse(saved);
 		}
-		// Migrate from old grid-sessions format
-		const old: string[] = JSON.parse(localStorage.getItem("grid-sessions") ?? "[]");
-		if (old.length > 0) {
-			const layout: PaneLayout = old.length <= 1 ? "1x1" : old.length <= 2 ? "2x1" : "2x2";
-			const count = SLOT_COUNTS[layout];
-			const slots = Array.from({ length: count }, (_, i) => old[i] ?? null);
-			return [{ id: genId(), name: "Group 1", layout, slots }];
+		// Migrate from old unscoped key on first load
+		if (profilePath) {
+			const old = localStorage.getItem("pane-groups");
+			if (old) {
+				return JSON.parse(old);
+			}
 		}
 	} catch {}
 	return [];
@@ -73,13 +80,16 @@ function AppInner() {
 			return next;
 		});
 	}, []);
+	const configDirRef = useRef(configDir);
+	configDirRef.current = configDir;
+
 	const handlePtyExit = useCallback((sessionId: string) => {
 		setGroups((prev) => {
 			const next = prev.map((g) => ({
 				...g,
 				slots: g.slots.map((s) => (s === sessionId ? null : s)),
 			}));
-			localStorage.setItem("pane-groups", JSON.stringify(next));
+			localStorage.setItem(groupsKey(configDirRef.current), JSON.stringify(next));
 			return next;
 		});
 		setStandaloneSelectedId((prev) => (prev === sessionId ? null : prev));
@@ -108,10 +118,16 @@ function AppInner() {
 		[sessions, activityMap, ignorePatterns],
 	);
 
-	const [groups, setGroups] = useState<PaneGroup[]>(loadGroups);
+	const [groups, setGroups] = useState<PaneGroup[]>(() => loadGroups(configDir));
 	const [activeGroupId, setActiveGroupId] = useState<string | null>(
-		() => localStorage.getItem("active-group-id") ?? null,
+		() => localStorage.getItem(activeGroupKey(configDir)) ?? null,
 	);
+
+	// Reload groups when profile changes
+	useEffect(() => {
+		setGroups(loadGroups(configDir));
+		setActiveGroupId(localStorage.getItem(activeGroupKey(configDir)) ?? null);
+	}, [configDir]);
 	const [focusedSlotIdx, setFocusedSlotIdx] = useState(0);
 	const [hoveredSlotIdx, setHoveredSlotIdx] = useState<number | null>(null);
 	const [standaloneSelectedId, setStandaloneSelectedId] = useState<string | null>(null);
@@ -154,7 +170,7 @@ function AppInner() {
 	useEffect(() => {
 		if (activeGroupId && !groups.find((g) => g.id === activeGroupId)) {
 			setActiveGroupId(null);
-			localStorage.removeItem("active-group-id");
+			localStorage.removeItem(activeGroupKey(configDir));
 		}
 	}, [groups, activeGroupId]);
 
@@ -184,19 +200,19 @@ function AppInner() {
 
 	function persistGroups(next: PaneGroup[]) {
 		setGroups(next);
-		localStorage.setItem("pane-groups", JSON.stringify(next));
+		localStorage.setItem(groupsKey(configDir), JSON.stringify(next));
 	}
 
 	function activateGroup(id: string) {
 		setActiveGroupId(id);
-		localStorage.setItem("active-group-id", id);
+		localStorage.setItem(activeGroupKey(configDir), id);
 		setFocusedSlotIdx(0);
 		setStandaloneSelectedId(null);
 	}
 
 	const handleActivateGroupAtSlot = useCallback((groupId: string, slotIdx: number) => {
 		setActiveGroupId(groupId);
-		localStorage.setItem("active-group-id", groupId);
+		localStorage.setItem(activeGroupKey(configDir), groupId);
 		setStandaloneSelectedId(null);
 		setFocusedSlotIdx(slotIdx);
 	}, []);
@@ -221,9 +237,9 @@ function AppInner() {
 				const newActive = next[0]?.id ?? null;
 				setActiveGroupId(newActive);
 				if (newActive) {
-					localStorage.setItem("active-group-id", newActive);
+					localStorage.setItem(activeGroupKey(configDir), newActive);
 				} else {
-					localStorage.removeItem("active-group-id");
+					localStorage.removeItem(activeGroupKey(configDir));
 				}
 			}
 		},
@@ -363,7 +379,7 @@ function AppInner() {
 			}
 			// Session not in any group — just visually select it
 			setActiveGroupId(null);
-			localStorage.removeItem("active-group-id");
+			localStorage.removeItem(activeGroupKey(configDir));
 			setFocusedSlotIdx(0);
 			setStandaloneSelectedId(s.session_id);
 		},
