@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { applyTheme, useTheme } from "../ThemeContext";
-import type { PaneLayout } from "../types";
+import type { PaneLayout, Profile } from "../types";
 
 const TILING_OPTIONS: PaneLayout[] = [
 	"1x1",
@@ -105,6 +105,9 @@ interface Props {
 	onClose: () => void;
 	enabledLayouts: PaneLayout[];
 	onChangeEnabledLayouts: (layouts: PaneLayout[]) => void;
+	profiles: Profile[];
+	onSaveProfiles: (profiles: Profile[]) => void;
+	onRefreshProfiles: () => void;
 }
 
 type Tab = "preferences" | "theme" | "hotkeys" | "guide" | "about";
@@ -297,7 +300,14 @@ function Table({ rows }: { rows: [string, string][] }) {
 	);
 }
 
-export function Settings({ onClose, enabledLayouts, onChangeEnabledLayouts }: Props) {
+export function Settings({
+	onClose,
+	enabledLayouts,
+	onChangeEnabledLayouts,
+	profiles,
+	onSaveProfiles,
+	onRefreshProfiles,
+}: Props) {
 	const { theme, allThemes, setThemeId, previewTheme, clearPreview } = useTheme();
 	const [tab, setTab] = useState<Tab>("preferences");
 	const [skipPermissions, setSkipPermissions] = useState(
@@ -794,6 +804,109 @@ export function Settings({ onClose, enabledLayouts, onChangeEnabledLayouts }: Pr
 									lineHeight: 1.5,
 								}}
 							/>
+							{profiles.length > 1 && (
+								<>
+									<div
+										style={{
+											fontSize: 10,
+											fontWeight: 600,
+											letterSpacing: "0.06em",
+											color: "var(--text-muted)",
+											marginTop: 20,
+											marginBottom: 10,
+										}}
+									>
+										PROFILES
+									</div>
+									<div
+										style={{
+											display: "flex",
+											flexDirection: "column",
+											gap: 8,
+										}}
+									>
+										{profiles.map((profile) => (
+											<div
+												key={profile.id}
+												style={{
+													display: "flex",
+													alignItems: "center",
+													gap: 8,
+													padding: "6px 8px",
+													borderRadius: 6,
+													background: "var(--item-hover)",
+													opacity: profile.hidden ? 0.5 : 1,
+												}}
+											>
+												<input
+													value={profile.name}
+													onChange={(e) => {
+														const updated = profiles.map((p) =>
+															p.id === profile.id ? { ...p, name: e.target.value } : p,
+														);
+														onSaveProfiles(updated);
+													}}
+													style={{
+														flex: 1,
+														background: "none",
+														border: "none",
+														color: "var(--text-primary)",
+														fontSize: 13,
+														fontFamily: "inherit",
+														outline: "none",
+													}}
+												/>
+												<span
+													style={{
+														fontSize: 10,
+														color: "var(--text-very-muted)",
+														flexShrink: 0,
+													}}
+												>
+													{profile.path.replace(/^\/Users\/[^/]+/, "~")}
+												</span>
+												<button
+													type="button"
+													aria-label={profile.hidden ? "Show profile" : "Hide profile"}
+													onClick={() => {
+														const updated = profiles.map((p) =>
+															p.id === profile.id ? { ...p, hidden: !p.hidden } : p,
+														);
+														onSaveProfiles(updated);
+													}}
+													style={{
+														background: "none",
+														border: "none",
+														cursor: "pointer",
+														color: profile.hidden ? "var(--text-very-muted)" : "var(--text-muted)",
+														fontSize: 14,
+														padding: "2px 4px",
+													}}
+												>
+													{profile.hidden ? "\u25E1" : "\u25E0"}
+												</button>
+											</div>
+										))}
+									</div>
+									<button
+										type="button"
+										onClick={onRefreshProfiles}
+										style={{
+											marginTop: 8,
+											background: "none",
+											border: "1px solid var(--border)",
+											borderRadius: 6,
+											color: "var(--text-secondary)",
+											cursor: "pointer",
+											fontSize: 11,
+											padding: "4px 12px",
+											fontFamily: "inherit",
+										}}
+									>
+										Rescan directories
+									</button>
+								</>
+							)}
 						</div>
 					)}
 
