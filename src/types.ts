@@ -31,3 +31,10 @@ export interface ClaudeSession {
 	git_branch: string | null;
 	pending_rename: string | null;
 }
+
+export interface Profile {
+	id: string;
+	name: string;
+	path: string;
+	hidden: boolean;
+}
