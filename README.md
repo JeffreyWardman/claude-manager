@@ -11,6 +11,7 @@ A macOS desktop app for managing multiple [Claude Code](https://claude.ai/code) 
 - **Sidebar search** — filter groups and sessions with optional scoped search
 - **Command palette** — `Cmd+K` to jump to any session
 - **Multi-window** — open multiple windows within the same app
+- **Multi-profile** — auto-detects `~/.claude*` directories for users with multiple Claude accounts
 - **20+ built-in themes** with custom theme support
 - **Configurable defaults** — optional `--dangerously-skip-permissions` for new sessions
 
@@ -113,7 +114,20 @@ Right-click a session in the sidebar to access these actions:
 
 ### Multi-window
 
-`Cmd+N` opens a new window within the same app process. Each window has independent groups and focused sessions but shares the same session pool. Session locking prevents two windows from resuming the same Claude session simultaneously.
+`Cmd+N` opens a new window within the same app process. Each window has independent groups and focused sessions but shares the same session pool. Session locking prevents two windows from resuming the same Claude session simultaneously. New windows inherit the active profile from the window that created them.
+
+### Multi-profile
+
+If you use multiple Claude Code accounts via `CLAUDE_CONFIG_DIR` (e.g. `~/.claude` for personal, `~/.claude-work` for work), the app auto-detects all `~/.claude*` directories on startup.
+
+When 2+ profiles are detected:
+- A profile pill appears in the sidebar footer — click to switch profiles
+- Each window shows sessions from one profile at a time
+- Settings > Preferences shows a Profiles section to rename or hide profiles
+
+Single-account users see no UI changes.
+
+Profile configuration is stored in `~/.config/claude-manager/profiles.json`.
 
 ## Custom themes
 

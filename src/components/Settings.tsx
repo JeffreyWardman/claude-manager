@@ -1176,7 +1176,16 @@ export function Settings({
 								<P>
 									<Kbd>Cmd+N</Kbd> opens a new window. Windows share the same session pool but have
 									independent layouts. Session locking prevents two windows from resuming the same
-									Claude session.
+									Claude session. New windows inherit the active profile.
+								</P>
+							</Section>
+
+							<Section title="Multi-profile">
+								<P>
+									If you use multiple Claude accounts via <Code>CLAUDE_CONFIG_DIR</Code>, the app
+									auto-detects all <Code>~/.claude*</Code> directories. When 2+ profiles exist, a
+									profile pill appears in the sidebar footer — click to switch. Each window shows
+									one profile at a time. Rename or hide profiles in Preferences.
 								</P>
 							</Section>
 
