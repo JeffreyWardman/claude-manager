@@ -49,3 +49,9 @@ export function menuItemHover(e: React.MouseEvent<HTMLButtonElement>) {
 export function menuItemUnhover(e: React.MouseEvent<HTMLButtonElement>) {
 	e.currentTarget.style.background = "none";
 }
+
+export const noAutocorrect = {
+	autoCorrect: "off",
+	autoCapitalize: "off",
+	spellCheck: false,
+} as const;

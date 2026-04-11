@@ -12,7 +12,13 @@ import {
 	sortSessions,
 } from "../sidebarUtils";
 import type { ClaudeSession, PaneGroup, PaneLayout, Profile } from "../types";
-import { menuItemHover, menuItemStyle, menuItemUnhover, sessionDisplayName } from "../utils";
+import {
+	menuItemHover,
+	menuItemStyle,
+	menuItemUnhover,
+	noAutocorrect,
+	sessionDisplayName,
+} from "../utils";
 import { StatusDot } from "./StatusDot";
 
 interface Props {
@@ -263,6 +269,11 @@ export function Sidebar({
 	const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null);
 	const [renameGroupValue, setRenameGroupValue] = useState("");
 	const [layoutPickerGroupId, setLayoutPickerGroupId] = useState<string | null>(null);
+	const [groupContextMenu, setGroupContextMenu] = useState<{
+		groupId: string;
+		x: number;
+		y: number;
+	} | null>(null);
 	const [groupSlotContextMenu, setGroupSlotContextMenu] = useState<{
 		sessionId: string;
 		x: number;
@@ -294,6 +305,7 @@ export function Sidebar({
 			!contextMenu &&
 			!layoutPickerGroupId &&
 			!groupSlotContextMenu &&
+			!groupContextMenu &&
 			!filterDropdownOpen &&
 			!profileDropdownOpen
 		)
@@ -302,6 +314,7 @@ export function Sidebar({
 			setContextMenu(null);
 			setLayoutPickerGroupId(null);
 			setGroupSlotContextMenu(null);
+			setGroupContextMenu(null);
 			setFilterDropdownOpen(false);
 			setProfileDropdownOpen(false);
 		};
@@ -315,6 +328,7 @@ export function Sidebar({
 		contextMenu,
 		layoutPickerGroupId,
 		groupSlotContextMenu,
+		groupContextMenu,
 		filterDropdownOpen,
 		profileDropdownOpen,
 	]);
@@ -775,6 +789,7 @@ export function Sidebar({
 					aria-label="Search sessions and groups"
 					value={sidebarSearch}
 					onChange={(e) => setSidebarSearch(e.target.value)}
+					{...noAutocorrect}
 					onKeyDown={(e) => {
 						if (e.key === "Escape") {
 							setSidebarSearch("");
@@ -896,6 +911,15 @@ export function Sidebar({
 											}
 										}}
 										onDoubleClick={() => startRenameGroup(group)}
+										onContextMenu={(e) => {
+											e.preventDefault();
+											e.stopPropagation();
+											setGroupContextMenu({
+												groupId: group.id,
+												x: e.clientX,
+												y: e.clientY,
+											});
+										}}
 									>
 										<button
 											type="button"
@@ -935,6 +959,7 @@ export function Sidebar({
 												ref={renameGroupInputRef}
 												value={renameGroupValue}
 												onChange={(e) => setRenameGroupValue(e.target.value)}
+												{...noAutocorrect}
 												onKeyDown={(e) => {
 													if (e.key === "Enter") {
 														e.preventDefault();
@@ -1426,6 +1451,7 @@ export function Sidebar({
 													<input
 														ref={renameInputRef}
 														value={renameValue}
+														{...noAutocorrect}
 														onChange={(e) => setRenameValue(e.target.value)}
 														onKeyDown={(e) => {
 															if (e.key === "Enter") {
@@ -1643,6 +1669,58 @@ export function Sidebar({
 					?
 				</button>
 			</div>
+
+			{/* Group context menu */}
+			{groupContextMenu && (
+				<div
+					role="menu"
+					aria-label="Group actions"
+					onMouseDown={(e) => e.stopPropagation()}
+					style={{
+						position: "fixed",
+						left: groupContextMenu.x,
+						top: groupContextMenu.y,
+						background: "var(--bg-sidebar)",
+						border: "1px solid var(--border)",
+						borderRadius: 6,
+						boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+						zIndex: 1000,
+						minWidth: 140,
+						padding: "4px 0",
+					}}
+				>
+					<button
+						type="button"
+						role="menuitem"
+						onClick={() => {
+							const g = groups.find((g) => g.id === groupContextMenu.groupId);
+							if (g) {
+								startRenameGroup(g);
+							}
+							setGroupContextMenu(null);
+						}}
+						style={menuItemStyle}
+						onMouseEnter={menuItemHover}
+						onMouseLeave={menuItemUnhover}
+					>
+						Rename
+					</button>
+					<div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />
+					<button
+						type="button"
+						role="menuitem"
+						onClick={() => {
+							onDeleteGroup(groupContextMenu.groupId);
+							setGroupContextMenu(null);
+						}}
+						style={{ ...menuItemStyle, color: "var(--danger)" }}
+						onMouseEnter={menuItemHover}
+						onMouseLeave={menuItemUnhover}
+					>
+						Delete group
+					</button>
+				</div>
+			)}
 
 			{/* Group slot context menu */}
 			{groupSlotContextMenu && (

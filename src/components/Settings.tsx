@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { applyTheme, useTheme } from "../ThemeContext";
 import type { PaneLayout, Profile } from "../types";
+import { noAutocorrect } from "../utils";
 
 const TILING_OPTIONS: PaneLayout[] = [
 	"1x1",
@@ -943,6 +944,7 @@ export function Settings({
 													</button>
 													<input
 														value={profile.name}
+														{...noAutocorrect}
 														onChange={(e) => {
 															const updated = profiles.map((p) =>
 																p.id === profile.id ? { ...p, name: e.target.value } : p,
@@ -1018,6 +1020,7 @@ export function Settings({
 									aria-label="Search themes"
 									value={themeSearch}
 									onChange={(e) => setThemeSearch(e.target.value)}
+									{...noAutocorrect}
 									placeholder="Search..."
 									style={{
 										flex: 1,

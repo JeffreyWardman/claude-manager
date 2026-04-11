@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useFocusTrap } from "../hooks/useFocusTrap";
-import { formatCwd, modalBackdropStyle, modalDialogStyle } from "../utils";
+import { formatCwd, modalBackdropStyle, modalDialogStyle, noAutocorrect } from "../utils";
 
 interface Props {
 	cwds: string[];
@@ -79,6 +79,7 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 						aria-label="Project path"
 						value={value}
 						onChange={(e) => setValue(e.target.value)}
+						{...noAutocorrect}
 						onKeyDown={handleKeyDown}
 						placeholder="~/path/to/project"
 						style={{

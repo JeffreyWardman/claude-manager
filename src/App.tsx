@@ -687,7 +687,13 @@ function AppInner() {
 			{paletteOpen && (
 				<CommandPalette
 					sessions={liveSessions}
+					groups={groups}
 					onSelect={selectSession}
+					onClearEmptyGroups={() => {
+						const next = groups.filter((g) => g.slots.some((s) => s !== null));
+						persistGroups(next);
+					}}
+					onDeleteAllGroups={() => persistGroups([])}
 					onClose={() => setPaletteOpen(false)}
 				/>
 			)}
