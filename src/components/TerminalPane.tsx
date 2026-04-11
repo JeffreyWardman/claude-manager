@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { FitAddon } from "@xterm/addon-fit";
+import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Terminal } from "@xterm/xterm";
 import { useEffect, useRef } from "react";
 import { useTheme } from "../ThemeContext";
@@ -51,7 +52,13 @@ export function TerminalPane({ ptyId, cwd, cmd, configDir }: Props) {
 		termRef.current = term;
 
 		const fitAddon = new FitAddon();
+		const webLinksAddon = new WebLinksAddon((_event, uri) => {
+			import("@tauri-apps/plugin-opener").then(({ openUrl }) => openUrl(uri)).catch(() => {
+				window.open(uri, "_blank");
+			});
+		});
 		term.loadAddon(fitAddon);
+		term.loadAddon(webLinksAddon);
 		term.open(container);
 
 		let unlistenData: (() => void) | undefined;
