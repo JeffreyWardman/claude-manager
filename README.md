@@ -2,6 +2,10 @@
 
 A macOS desktop app for managing multiple [Claude Code](https://claude.ai/code) sessions side by side. View terminals in a grid, organise sessions into named groups, and drag to rearrange — all from a single window.
 
+### Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=jeffreywardman/claude-manager&type=Date)](https://www.star-history.com/#jeffreywardman/claude-manager&Date)
+
 ## Features
 
 - **Multi-pane grid** — tiling layouts from 1x1 up to 3x2

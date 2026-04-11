@@ -249,10 +249,11 @@ export function Sidebar({
 	onSwitchProfile,
 	configDir,
 }: Props) {
-	const [sidebarSearch, setSidebarSearch] = useState("");
+	const [sidebarSearch, setSidebarSearch] = useState<string>("");
 	const searchRef = useRef<HTMLInputElement>(null);
 	const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-	const [groupsCollapsed, setGroupsCollapsed] = useState(false);
+	const [groupsCollapsed, setGroupsCollapsed] = useState<boolean>(false);
+	const [focusActiveGroup, setFocusActiveGroup] = useState<boolean>(true);
 	const [groupMode, setGroupMode] = useState<GroupMode>(
 		() => (localStorage.getItem("sidebar-group-mode") as GroupMode | null) ?? "status",
 	);
@@ -263,11 +264,11 @@ export function Sidebar({
 		() => (localStorage.getItem("sidebar-sort-mode") as SortMode | null) ?? "date",
 	);
 	const [renamingId, setRenamingId] = useState<string | null>(null);
-	const [renameValue, setRenameValue] = useState("");
+	const [renameValue, setRenameValue] = useState<string>("");
 	const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
 	// Group-level state
 	const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null);
-	const [renameGroupValue, setRenameGroupValue] = useState("");
+	const [renameGroupValue, setRenameGroupValue] = useState<string>("");
 	const [layoutPickerGroupId, setLayoutPickerGroupId] = useState<string | null>(null);
 	const [groupContextMenu, setGroupContextMenu] = useState<{
 		groupId: string;
@@ -279,8 +280,8 @@ export function Sidebar({
 		x: number;
 		y: number;
 	} | null>(null);
-	const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
-	const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+	const [filterDropdownOpen, setFilterDropdownOpen] = useState<boolean>(false);
+	const [profileDropdownOpen, setProfileDropdownOpen] = useState<boolean>(false);
 
 	const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 	const renameInputRef = useRef<HTMLInputElement>(null);
@@ -378,6 +379,10 @@ export function Sidebar({
 				});
 			})
 		: groups;
+
+	const visibleGroups = focusActiveGroup && activeGroupId
+		? filteredGroups.filter((g) => g.id === activeGroupId)
+		: filteredGroups;
 
 	const searchFilteredSessions = searchQuery
 		? searchMode === "group"
@@ -521,7 +526,7 @@ export function Sidebar({
 
 	// Sessions assigned to any group are shown in the groups section — hide from sessions list
 	const sessionsInGroups = new Set(
-		groupsCollapsed ? [] : filteredGroups.flatMap((g) => g.slots.filter(Boolean) as string[]),
+		groupsCollapsed ? [] : visibleGroups.flatMap((g) => g.slots.filter(Boolean) as string[]),
 	);
 	const unassignedSessions = searchFilteredSessions.filter(
 		(s) => !sessionsInGroups.has(s.session_id),
@@ -742,6 +747,45 @@ export function Sidebar({
 										{label}
 									</button>
 								))}
+
+								<div
+									style={{
+										borderTop: "1px solid var(--border)",
+										margin: "4px 0",
+									}}
+								/>
+								<button
+									type="button"
+									onClick={() => setFocusActiveGroup((f) => !f)}
+									style={{
+										display: "flex",
+										alignItems: "center",
+										gap: 6,
+										width: "100%",
+										background: "none",
+										border: "none",
+										color: "var(--text-secondary)",
+										fontSize: 12,
+										textAlign: "left",
+										padding: "5px 12px",
+										cursor: "pointer",
+										fontFamily: "inherit",
+									}}
+									onMouseEnter={(e) => (e.currentTarget.style.background = "var(--item-hover)")}
+									onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+								>
+									<span
+										style={{
+											width: 6,
+											height: 6,
+											borderRadius: "50%",
+											background: focusActiveGroup ? "var(--accent)" : "transparent",
+											border: `1.5px solid ${focusActiveGroup ? "var(--accent)" : "var(--text-very-muted)"}`,
+											flexShrink: 0,
+										}}
+									/>
+									Hide unselected groups
+								</button>
 							</div>
 						)}
 					</div>
@@ -872,7 +916,7 @@ export function Sidebar({
 					</div>
 
 					{!groupsCollapsed &&
-						filteredGroups.map((group) => {
+						visibleGroups.map((group) => {
 							const isActive = group.id === activeGroupId;
 							const isCollapsedGroup = collapsed[group.id];
 							const isRenamingGroup = renamingGroupId === group.id;
@@ -894,9 +938,11 @@ export function Sidebar({
 											padding: "0 8px",
 											cursor: "pointer",
 											gap: 4,
+											userSelect: "none",
+											WebkitUserSelect: "none",
 										}}
 										onClick={() => {
-											if (!isRenamingGroup) {
+											if (!isRenamingGroup && !groupContextMenu) {
 												onActivateGroup(group.id);
 											}
 										}}
