@@ -108,13 +108,17 @@ pub fn pty_spawn(
 
     let mut cmd_builder = if let Some(ref explicit_cmd) = cmd {
         // Plain shell: run directly as a login shell
-        let mut c = CommandBuilder::new(explicit_cmd);
-        c.args(["-l"]);
-        c
+        if cfg!(target_os = "windows") {
+            let mut c = CommandBuilder::new("cmd.exe");
+            c.args(["/C", explicit_cmd]);
+            c
+        } else {
+            let mut c = CommandBuilder::new(explicit_cmd);
+            c.args(["-l"]);
+            c
+        }
     } else {
-        // Claude session — use $SHELL (login shell resolves PATH for `claude`)
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| String::from("/bin/sh"));
-        let mut c = CommandBuilder::new(&shell);
+        // Claude session — use a shell to resolve PATH for `claude`
         let skip = if skip_permissions.unwrap_or(false) {
             " --dangerously-skip-permissions"
         } else {
@@ -125,8 +129,16 @@ pub fn pty_spawn(
         } else {
             format!("claude{skip}")
         };
-        c.args(["-l", "-c", &claude_cmd]);
-        c
+        if cfg!(target_os = "windows") {
+            let mut c = CommandBuilder::new("cmd.exe");
+            c.args(["/C", &claude_cmd]);
+            c
+        } else {
+            let shell = std::env::var("SHELL").unwrap_or_else(|_| String::from("/bin/sh"));
+            let mut c = CommandBuilder::new(&shell);
+            c.args(["-l", "-c", &claude_cmd]);
+            c
+        }
     };
     cmd_builder.cwd(&cwd);
     cmd_builder.env("TERM", "xterm-256color");

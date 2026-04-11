@@ -377,7 +377,14 @@ export function Settings({
 	const [platform, setPlatform] = useState<string>("macos");
 	useEffect(() => {
 		invoke<string>("get_platform")
-			.then(setPlatform)
+			.then((p) => {
+				setPlatform(p);
+				if (p === "windows" && !localStorage.getItem("notif-sound-path")) {
+					const defaultPath = "C:\\Windows\\Media\\Windows Ding.wav";
+					setNotifSoundPath(defaultPath);
+					localStorage.setItem("notif-sound-path", defaultPath);
+				}
+			})
 			.catch(() => {});
 	}, []);
 
@@ -717,34 +724,53 @@ export function Settings({
 												<div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
 													{(platform === "linux"
 														? [
-																["Complete", "/usr/share/sounds/freedesktop/stereo/complete.oga"],
 																["Bell", "/usr/share/sounds/freedesktop/stereo/bell.oga"],
-																["Message", "/usr/share/sounds/freedesktop/stereo/message.oga"],
+																["Complete", "/usr/share/sounds/freedesktop/stereo/complete.oga"],
 																[
 																	"Dialog Info",
 																	"/usr/share/sounds/freedesktop/stereo/dialog-information.oga",
 																],
+																["Message", "/usr/share/sounds/freedesktop/stereo/message.oga"],
 																[
 																	"Service Login",
 																	"/usr/share/sounds/freedesktop/stereo/service-login.oga",
 																],
 															]
-														: [
-																["Glass", "/System/Library/Sounds/Glass.aiff"],
-																["Ping", "/System/Library/Sounds/Ping.aiff"],
-																["Pop", "/System/Library/Sounds/Pop.aiff"],
-																["Purr", "/System/Library/Sounds/Purr.aiff"],
-																["Tink", "/System/Library/Sounds/Tink.aiff"],
-																["Hero", "/System/Library/Sounds/Hero.aiff"],
-																["Blow", "/System/Library/Sounds/Blow.aiff"],
-																["Bottle", "/System/Library/Sounds/Bottle.aiff"],
-																["Frog", "/System/Library/Sounds/Frog.aiff"],
-																["Funk", "/System/Library/Sounds/Funk.aiff"],
-																["Morse", "/System/Library/Sounds/Morse.aiff"],
-																["Sosumi", "/System/Library/Sounds/Sosumi.aiff"],
-																["Submarine", "/System/Library/Sounds/Submarine.aiff"],
-																["Basso", "/System/Library/Sounds/Basso.aiff"],
-															]
+														: platform === "windows"
+															? [
+																	["Balloon", "C:\\Windows\\Media\\Windows Balloon.wav"],
+																	["Chimes", "C:\\Windows\\Media\\chimes.wav"],
+																	["Chord", "C:\\Windows\\Media\\chord.wav"],
+																	["Ding", "C:\\Windows\\Media\\Windows Ding.wav"],
+																	["Foreground", "C:\\Windows\\Media\\Windows Foreground.wav"],
+																	["Notify", "C:\\Windows\\Media\\Windows Notify.wav"],
+																	[
+																		"Notify Calendar",
+																		"C:\\Windows\\Media\\Windows Notify Calendar.wav",
+																	],
+																	["Notify Email", "C:\\Windows\\Media\\Windows Notify Email.wav"],
+																	[
+																		"Print Complete",
+																		"C:\\Windows\\Media\\Windows Print complete.wav",
+																	],
+																	["Tada", "C:\\Windows\\Media\\tada.wav"],
+																]
+															: [
+																	["Basso", "/System/Library/Sounds/Basso.aiff"],
+																	["Blow", "/System/Library/Sounds/Blow.aiff"],
+																	["Bottle", "/System/Library/Sounds/Bottle.aiff"],
+																	["Frog", "/System/Library/Sounds/Frog.aiff"],
+																	["Funk", "/System/Library/Sounds/Funk.aiff"],
+																	["Glass", "/System/Library/Sounds/Glass.aiff"],
+																	["Hero", "/System/Library/Sounds/Hero.aiff"],
+																	["Morse", "/System/Library/Sounds/Morse.aiff"],
+																	["Ping", "/System/Library/Sounds/Ping.aiff"],
+																	["Pop", "/System/Library/Sounds/Pop.aiff"],
+																	["Purr", "/System/Library/Sounds/Purr.aiff"],
+																	["Sosumi", "/System/Library/Sounds/Sosumi.aiff"],
+																	["Submarine", "/System/Library/Sounds/Submarine.aiff"],
+																	["Tink", "/System/Library/Sounds/Tink.aiff"],
+																]
 													).map(([name, path]) => {
 														const isSelected = notifSoundPath === path;
 														return (
@@ -807,7 +833,10 @@ export function Settings({
 													>
 														Custom file...
 													</button>
-													{notifSoundPath && !notifSoundPath.startsWith("/System/") && (
+													{notifSoundPath &&
+																!notifSoundPath.startsWith("/System/") &&
+																!notifSoundPath.startsWith("/usr/share/sounds/") &&
+																!notifSoundPath.startsWith("C:\\Windows\\Media\\") && (
 														<span
 															style={{
 																fontSize: 10,
@@ -1308,9 +1337,15 @@ export function Settings({
 										the{" "}
 										<a
 											href="https://github.com/JeffreyWardman/claude-manager/blob/main/README.md#custom-themes"
-											target="_blank"
-											rel="noopener noreferrer"
-											style={{ color: "var(--accent)" }}
+											onClick={(e) => {
+												e.preventDefault();
+												import("@tauri-apps/plugin-opener").then(({ openUrl }) =>
+													openUrl(
+														"https://github.com/JeffreyWardman/claude-manager/blob/main/README.md#custom-themes",
+													),
+												);
+											}}
+											style={{ color: "var(--accent)", cursor: "pointer" }}
 										>
 											README
 										</a>{" "}
@@ -1350,10 +1385,14 @@ export function Settings({
 								</span>
 								<a
 									href="https://github.com/JeffreyWardman/claude-manager"
-									target="_blank"
-									rel="noopener noreferrer"
+									onClick={(e) => {
+										e.preventDefault();
+										import("@tauri-apps/plugin-opener").then(({ openUrl }) =>
+											openUrl("https://github.com/JeffreyWardman/claude-manager"),
+										);
+									}}
 									aria-label="GitHub repository"
-									style={{ color: "var(--text-muted)", lineHeight: 1 }}
+									style={{ color: "var(--text-muted)", lineHeight: 1, cursor: "pointer" }}
 									onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
 									onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
 								>
