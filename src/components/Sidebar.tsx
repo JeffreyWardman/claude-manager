@@ -11,7 +11,7 @@ import {
 	sessionMatchesSearch,
 	sortSessions,
 } from "../sidebarUtils";
-import type { ClaudeSession, PaneGroup, PaneLayout } from "../types";
+import type { ClaudeSession, PaneGroup, PaneLayout, Profile } from "../types";
 import { menuItemHover, menuItemStyle, menuItemUnhover, sessionDisplayName } from "../utils";
 import { StatusDot } from "./StatusDot";
 
@@ -38,6 +38,10 @@ interface Props {
 	enabledLayouts: PaneLayout[];
 	unreadSessions: Set<string>;
 	onHoverSlot: (idx: number | null) => void;
+	profiles: Profile[];
+	activeProfile: Profile | null;
+	onSwitchProfile: (id: string) => void;
+	configDir: string;
 }
 
 type GroupMode = "status" | "location";
@@ -234,6 +238,10 @@ export function Sidebar({
 	enabledLayouts,
 	unreadSessions,
 	onHoverSlot,
+	profiles,
+	activeProfile,
+	onSwitchProfile,
+	configDir,
 }: Props) {
 	const [sidebarSearch, setSidebarSearch] = useState("");
 	const searchRef = useRef<HTMLInputElement>(null);
@@ -261,6 +269,7 @@ export function Sidebar({
 		y: number;
 	} | null>(null);
 	const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+	const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
 	const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 	const renameInputRef = useRef<HTMLInputElement>(null);
@@ -281,13 +290,20 @@ export function Sidebar({
 	}, [renamingGroupId]);
 
 	useEffect(() => {
-		if (!contextMenu && !layoutPickerGroupId && !groupSlotContextMenu && !filterDropdownOpen)
+		if (
+			!contextMenu &&
+			!layoutPickerGroupId &&
+			!groupSlotContextMenu &&
+			!filterDropdownOpen &&
+			!profileDropdownOpen
+		)
 			return;
 		const close = () => {
 			setContextMenu(null);
 			setLayoutPickerGroupId(null);
 			setGroupSlotContextMenu(null);
 			setFilterDropdownOpen(false);
+			setProfileDropdownOpen(false);
 		};
 		window.addEventListener("mousedown", close);
 		window.addEventListener("blur", close);
@@ -295,7 +311,13 @@ export function Sidebar({
 			window.removeEventListener("mousedown", close);
 			window.removeEventListener("blur", close);
 		};
-	}, [contextMenu, layoutPickerGroupId, groupSlotContextMenu, filterDropdownOpen]);
+	}, [
+		contextMenu,
+		layoutPickerGroupId,
+		groupSlotContextMenu,
+		filterDropdownOpen,
+		profileDropdownOpen,
+	]);
 
 	const filteredSessions = sortSessions(
 		statusFilter === "all" ? sessions : sessions.filter((s) => s.status === statusFilter),
@@ -448,7 +470,7 @@ export function Sidebar({
 			return;
 		}
 		try {
-			await invoke("delete_session", { sessionId });
+			await invoke("delete_session", { configDir, sessionId });
 			onRefresh();
 		} catch (e) {
 			console.error(e);
@@ -744,10 +766,7 @@ export function Sidebar({
 					>
 						<span style={{ color: "var(--text-muted)" }}>Search</span>
 						{width > 200 && (
-							<span style={{ color: "var(--text-very-muted)" }}>
-								{" "}
-								(@group: @tab: @folder:)
-							</span>
+							<span style={{ color: "var(--text-very-muted)" }}> (@group: @tab: @folder:)</span>
 						)}
 					</div>
 				)}
@@ -1531,6 +1550,75 @@ export function Sidebar({
 				>
 					⌘K
 				</button>
+				{profiles.length > 1 && activeProfile && (
+					<div style={{ position: "relative" }}>
+						<button
+							type="button"
+							aria-label={`Profile: ${activeProfile.name}`}
+							aria-expanded={profileDropdownOpen}
+							onClick={(e) => {
+								e.stopPropagation();
+								setProfileDropdownOpen((o) => !o);
+							}}
+							style={{
+								background: "var(--item-hover)",
+								border: "none",
+								color: "var(--text-secondary)",
+								cursor: "pointer",
+								fontSize: 10,
+								padding: "2px 8px",
+								borderRadius: 4,
+								fontFamily: "inherit",
+								minHeight: 24,
+							}}
+							onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
+							onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
+						>
+							{activeProfile.name} ▾
+						</button>
+						{profileDropdownOpen && (
+							<div
+								onMouseDown={(e) => e.stopPropagation()}
+								style={{
+									position: "absolute",
+									bottom: "100%",
+									left: 0,
+									marginBottom: 4,
+									background: "var(--bg-sidebar)",
+									border: "1px solid var(--border)",
+									borderRadius: 6,
+									boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+									zIndex: 1000,
+									minWidth: 140,
+									padding: "4px 0",
+								}}
+							>
+								{profiles.map((profile) => (
+									<button
+										type="button"
+										key={profile.id}
+										onClick={() => {
+											onSwitchProfile(profile.id);
+											setProfileDropdownOpen(false);
+										}}
+										style={{
+											...menuItemStyle,
+											fontWeight: profile.id === activeProfile.id ? 500 : 400,
+											color:
+												profile.id === activeProfile.id
+													? "var(--text-primary)"
+													: "var(--text-secondary)",
+										}}
+										onMouseEnter={menuItemHover}
+										onMouseLeave={menuItemUnhover}
+									>
+										{profile.name}
+									</button>
+								))}
+							</div>
+						)}
+					</div>
+				)}
 				<button
 					type="button"
 					aria-label="Settings"
@@ -1587,12 +1675,8 @@ export function Sidebar({
 					</button>
 					<div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />
 					{(() => {
-						const session = sessions.find(
-							(s) => s.session_id === groupSlotContextMenu.sessionId,
-						);
-						return session
-							? sessionActions(session, () => setGroupSlotContextMenu(null))
-							: null;
+						const session = sessions.find((s) => s.session_id === groupSlotContextMenu.sessionId);
+						return session ? sessionActions(session, () => setGroupSlotContextMenu(null)) : null;
 					})()}
 				</div>
 			)}

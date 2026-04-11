@@ -46,7 +46,7 @@ pub fn play_sound(path: String) {
 }
 
 #[tauri::command]
-pub fn new_window(app: AppHandle) -> Result<(), String> {
+pub fn new_window(app: AppHandle, profile: Option<String>) -> Result<(), String> {
     let label = format!(
         "main-{}",
         std::time::SystemTime::now()
@@ -54,7 +54,11 @@ pub fn new_window(app: AppHandle) -> Result<(), String> {
             .unwrap_or_default()
             .as_millis()
     );
-    WebviewWindowBuilder::new(&app, &label, WebviewUrl::default())
+    let mut url = String::from("/");
+    if let Some(ref profile_id) = profile {
+        url = format!("/?profile={}", profile_id);
+    }
+    WebviewWindowBuilder::new(&app, &label, WebviewUrl::App(url.into()))
         .title("claude-manager")
         .inner_size(1200.0, 800.0)
         .min_inner_size(800.0, 500.0)

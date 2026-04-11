@@ -15,6 +15,7 @@ import {
 	SLOT_COUNTS,
 	swapSlots,
 } from "./groupOps";
+import { useProfiles } from "./hooks/useProfiles";
 import type { ActivityState } from "./hooks/usePtyActivity";
 import { usePtyActivity } from "./hooks/usePtyActivity";
 import { useSessions } from "./hooks/useSessions";
@@ -49,7 +50,18 @@ function loadGroups(): PaneGroup[] {
 }
 
 function AppInner() {
-	const { sessions, loading, refresh } = useSessions();
+	const { profiles, visibleProfiles, refresh: refreshProfiles, saveProfiles } = useProfiles();
+
+	const [activeProfileId, setActiveProfileId] = useState<string | null>(() => {
+		const params = new URLSearchParams(window.location.search);
+		return params.get("profile");
+	});
+
+	const activeProfile =
+		visibleProfiles.find((p) => p.id === activeProfileId) ?? visibleProfiles[0] ?? null;
+	const configDir = activeProfile?.path ?? "";
+
+	const { sessions, loading, refresh } = useSessions(configDir);
 	const [unreadSessions, setUnreadSessions] = useState<Set<string>>(new Set());
 	const clearUnread = useCallback((id: string) => {
 		setUnreadSessions((s) => {
@@ -397,11 +409,12 @@ function AppInner() {
 				resume: false,
 				cmd: null,
 				skipPermissions,
+				configDir,
 			})
 				.then(() => refresh())
 				.catch(console.error);
 		},
-		[refresh],
+		[refresh, configDir],
 	);
 
 	// Flush pending renames when a session transitions to "waiting"
@@ -457,7 +470,7 @@ function AppInner() {
 			}
 			if (mod && e.key === "n") {
 				e.preventDefault();
-				invoke("new_window").catch(console.error);
+				invoke("new_window", { profile: activeProfile?.id ?? null }).catch(console.error);
 				return;
 			}
 			if (mod && e.key === "w") {
@@ -519,6 +532,7 @@ function AppInner() {
 		handleDeleteGroup,
 		activeGroupId,
 		activateGroup,
+		activeProfile?.id,
 	]);
 
 	function startResize(e: React.MouseEvent) {
@@ -604,6 +618,10 @@ function AppInner() {
 					enabledLayouts={enabledLayouts}
 					unreadSessions={unreadSessions}
 					onHoverSlot={setHoveredSlotIdx}
+					profiles={visibleProfiles}
+					activeProfile={activeProfile}
+					onSwitchProfile={(id: string) => setActiveProfileId(id)}
+					configDir={configDir}
 				/>
 			)}
 			{sidebarVisible && (
@@ -633,6 +651,7 @@ function AppInner() {
 					activityMap={activityMap}
 					unreadSessions={unreadSessions}
 					focused
+					configDir={configDir}
 				/>
 			) : (
 				<GridLayout
@@ -645,6 +664,7 @@ function AppInner() {
 					dndActive={dndActive}
 					activityMap={activityMap}
 					unreadSessions={unreadSessions}
+					configDir={configDir}
 				/>
 			)}
 
@@ -670,6 +690,9 @@ function AppInner() {
 						setEnabledLayouts(layouts);
 						localStorage.setItem("enabled-layouts", JSON.stringify(layouts));
 					}}
+					profiles={profiles}
+					onSaveProfiles={saveProfiles}
+					onRefreshProfiles={refreshProfiles}
 				/>
 			)}
 		</div>

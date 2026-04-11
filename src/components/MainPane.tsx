@@ -12,6 +12,7 @@ interface Props {
 	activityMap?: Map<string, ActivityState>;
 	unreadSessions?: Set<string>;
 	focused?: boolean;
+	configDir?: string;
 }
 
 type View = "claude" | "terminal" | "split";
@@ -23,6 +24,7 @@ export function MainPane({
 	activityMap,
 	unreadSessions,
 	focused,
+	configDir,
 }: Props) {
 	const [view, setView] = useState<View>("claude");
 
@@ -237,12 +239,12 @@ export function MainPane({
 							borderRight: showShell ? "1px solid var(--border)" : undefined,
 						}}
 					>
-						<TerminalPane ptyId={session.session_id} cwd={session.cwd} />
+						<TerminalPane ptyId={session.session_id} cwd={session.cwd} configDir={configDir} />
 					</div>
 				)}
 				{showShell && (
 					<div style={{ flex: 1, minWidth: 0 }}>
-						<TerminalPane ptyId={shellId} cwd={session.cwd} cmd="/bin/zsh" />
+						<TerminalPane ptyId={shellId} cwd={session.cwd} cmd="/bin/zsh" configDir={configDir} />
 					</div>
 				)}
 			</div>

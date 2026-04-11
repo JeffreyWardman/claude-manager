@@ -10,6 +10,7 @@ interface Props {
 	ptyId: string;
 	cwd: string;
 	cmd?: string; // if set, spawn this instead of claude (e.g. "/bin/zsh")
+	configDir?: string;
 }
 
 function b64ToBytes(b64: string): Uint8Array {
@@ -19,7 +20,7 @@ function b64ToBytes(b64: string): Uint8Array {
 	return bytes;
 }
 
-export function TerminalPane({ ptyId, cwd, cmd }: Props) {
+export function TerminalPane({ ptyId, cwd, cmd, configDir }: Props) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const termRef = useRef<Terminal | null>(null);
 	const { theme } = useTheme();
@@ -105,6 +106,7 @@ export function TerminalPane({ ptyId, cwd, cmd }: Props) {
 					resume: !cmd,
 					cmd: cmd ?? null,
 					skipPermissions,
+					configDir: configDir ?? null,
 				}).catch((err: unknown) => {
 					term.writeln(`\r\n\x1b[31mFailed to start terminal: ${err}\x1b[0m`);
 				});

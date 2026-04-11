@@ -73,6 +73,7 @@ pub fn pty_spawn(
     resume: bool,
     cmd: Option<String>,
     skip_permissions: Option<bool>,
+    config_dir: Option<String>,
     state: State<'_, PtyState>,
     app: AppHandle,
 ) -> Result<(), String> {
@@ -130,6 +131,9 @@ pub fn pty_spawn(
     cmd_builder.cwd(&cwd);
     cmd_builder.env("TERM", "xterm-256color");
     cmd_builder.env("COLORTERM", "truecolor");
+    if let Some(ref dir) = config_dir {
+        cmd_builder.env("CLAUDE_CONFIG_DIR", dir);
+    }
 
     let mut child = slave
         .spawn_command(cmd_builder)
