@@ -141,3 +141,32 @@ jobs:
           tag_name: v${{ needs.bump.outputs.version }}
           generate_release_notes: true
           files: artifacts/**/*
+
+      - name: Update Homebrew cask
+        if: env.HOMEBREW_TAP_TOKEN != ''
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          VERSION="${{ needs.bump.outputs.version }}"
+          ARM64_DMG=$(find artifacts -name "*_${VERSION}_aarch64.dmg" | head -1)
+          X64_DMG=$(find artifacts -name "*_${VERSION}_x64.dmg" | head -1)
+          if [ -n "$ARM64_DMG" ] && [ -n "$X64_DMG" ]; then
+            ARM64_SHA=$(sha256sum "$ARM64_DMG" | awk '{print $1}')
+            X64_SHA=$(sha256sum "$X64_DMG" | awk '{print $1}')
+            git clone https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/JeffreyWardman/homebrew-tap.git /tmp/homebrew-tap
+            cd /tmp/homebrew-tap
+            VERSION="$VERSION" ARM64_SHA="$ARM64_SHA" X64_SHA="$X64_SHA" \
+              sed -i \
+                -e "s/version \".*\"/version \"${VERSION}\"/" \
+                Casks/claude-manager.rb
+            awk -v arm="$ARM64_SHA" -v x64="$X64_SHA" '
+              /sha256/ && !done_arm { sub(/sha256 ".*"/, "sha256 \"" arm "\""); done_arm=1; next }
+              /sha256/ && done_arm && !done_x64 { sub(/sha256 ".*"/, "sha256 \"" x64 "\""); done_x64=1 }
+              { print }
+            ' Casks/claude-manager.rb > Casks/claude-manager.rb.tmp && mv Casks/claude-manager.rb.tmp Casks/claude-manager.rb
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "Update claude-manager to v${VERSION}" || true
+            git push || true
+          fi

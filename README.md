@@ -21,14 +21,25 @@ A macOS desktop app for managing multiple [Claude Code](https://claude.ai/code) 
 
 ## Requirements
 
-- macOS (Apple Silicon or Intel)
+- macOS, Linux, or Windows
 - [Claude Code](https://claude.ai/code) installed
 
 ## Installation
 
-### Direct download
+For direct downloads and building from source, see [INSTALLATION.md](INSTALLATION.md).
 
-Download the latest `.dmg` from the [Releases](https://github.com/JeffreyWardman/claude-manager/releases) page, open it, and drag **claude-manager** to `/Applications`.
+### Homebrew (macOS)
+
+```sh
+brew tap JeffreyWardman/tap
+brew install --cask claude-manager
+```
+
+### Shell script (macOS / Linux)
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/JeffreyWardman/claude-manager/main/install.sh | sh
+```
 
 ## Usage
 
@@ -195,22 +206,6 @@ Each file must match this structure:
 | `item` | Sidebar item selection and hover backgrounds |
 | `accent` | Accent colour for active indicators and highlights |
 | `terminal` | [xterm.js ITheme](https://xtermjs.org/docs/api/terminal/interfaces/itheme/) — all 16 ANSI colour slots plus background, foreground, cursor, and selection. Names like `red` and `brightCyan` are slot names, not literal colours — set them to whatever fits your palette |
-
-## Building from source
-
-| Tool | Install |
-|------|---------|
-| Rust (stable) | `curl https://sh.rustup.rs -sSf \| sh` |
-| Bun | `curl -fsSL https://bun.sh/install \| bash` |
-| Xcode CLI Tools | `xcode-select --install` |
-
-```sh
-git clone https://github.com/JeffreyWardman/claude-manager.git
-cd claude-manager
-bun install
-bun run start          # dev mode with hot reload
-bunx tauri build       # production build → src-tauri/target/release/bundle/
-```
 
 ## Contributing
 

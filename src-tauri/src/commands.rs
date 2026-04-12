@@ -58,13 +58,14 @@ pub fn new_window(app: AppHandle, profile: Option<String>) -> Result<(), String>
     if let Some(ref profile_id) = profile {
         url = format!("/?profile={}", profile_id);
     }
-    WebviewWindowBuilder::new(&app, &label, WebviewUrl::App(url.into()))
+    let builder = WebviewWindowBuilder::new(&app, &label, WebviewUrl::App(url.into()))
         .title("claude-manager")
         .inner_size(1200.0, 800.0)
-        .min_inner_size(800.0, 500.0)
+        .min_inner_size(800.0, 500.0);
+    #[cfg(target_os = "macos")]
+    let builder = builder
         .title_bar_style(tauri::TitleBarStyle::Overlay)
-        .hidden_title(true)
-        .build()
-        .map_err(|e| e.to_string())?;
+        .hidden_title(true);
+    builder.build().map_err(|e: tauri::Error| e.to_string())?;
     Ok(())
 }
