@@ -83,6 +83,9 @@ function AppInner() {
 	const configDirRef = useRef(configDir);
 	configDirRef.current = configDir;
 
+	// Synthetic sessions for newly spawned PTYs not yet discovered by the backend
+	const [pendingSessions, setPendingSessions] = useState<Map<string, ClaudeSession>>(new Map());
+
 	const handlePtyExit = useCallback((sessionId: string) => {
 		setGroups((prev) => {
 			const next = prev.map((g) => ({
@@ -106,17 +109,18 @@ function AppInner() {
 	const ignorePatterns = useMemo(() => parseIgnorePatterns(ignorePatternsRaw), [ignorePatternsRaw]);
 
 	// Override session status based on local PTY state and filter ignored sessions.
-	const liveSessions = useMemo(
-		() =>
-			sessions
-				.map((s) =>
-					activityMap.has(s.session_id) && s.status === "offline"
-						? { ...s, status: "active" as const }
-						: s,
-				)
-				.filter((s) => !isSessionIgnored(s, ignorePatterns)),
-		[sessions, activityMap, ignorePatterns],
-	);
+	const liveSessions = useMemo(() => {
+		const discovered = sessions
+			.map((s) =>
+				activityMap.has(s.session_id) && s.status === "offline"
+					? { ...s, status: "active" as const }
+					: s,
+			)
+			.filter((s) => !isSessionIgnored(s, ignorePatterns));
+		const discoveredIds = new Set(discovered.map((s) => s.session_id));
+		const pending = [...pendingSessions.values()].filter((s) => !discoveredIds.has(s.session_id));
+		return [...pending, ...discovered];
+	}, [sessions, activityMap, ignorePatterns, pendingSessions]);
 
 	const [groups, setGroups] = useState<PaneGroup[]>(() => loadGroups(configDir));
 	const [activeGroupId, setActiveGroupId] = useState<string | null>(
@@ -413,10 +417,43 @@ function AppInner() {
 		}
 	}, [selectedId, clearUnread]);
 
+	// Clean up pending sessions once the backend discovers them
+	useEffect(() => {
+		if (pendingSessions.size === 0) {
+			return;
+		}
+		const discovered = new Set(sessions.map((s) => s.session_id));
+		let changed = false;
+		for (const tmpId of pendingSessions.keys()) {
+			if (discovered.has(tmpId)) {
+				pendingSessions.delete(tmpId);
+				changed = true;
+			}
+		}
+		if (changed) {
+			setPendingSessions(new Map(pendingSessions));
+		}
+	}, [sessions, pendingSessions]);
+
 	const handleNewSession = useCallback(
 		(cwd: string) => {
 			const tmpId = `new-${Date.now()}`;
 			const skipPermissions = localStorage.getItem("skip-permissions") === "true";
+
+			const synthetic: ClaudeSession = {
+				pid: 0,
+				session_id: tmpId,
+				cwd,
+				project_name: cwd.split("/").pop() ?? "",
+				started_at: Date.now(),
+				status: "active",
+				display_name: null,
+				git_branch: null,
+				pending_rename: null,
+			};
+			setPendingSessions((prev) => new Map(prev).set(tmpId, synthetic));
+			setStandaloneSelectedId(tmpId);
+
 			invoke("pty_spawn", {
 				id: tmpId,
 				cwd,
