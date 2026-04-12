@@ -158,12 +158,12 @@ jobs:
             VERSION="$VERSION" ARM64_SHA="$ARM64_SHA" X64_SHA="$X64_SHA" \
               sed -i \
                 -e "s/version \".*\"/version \"${VERSION}\"/" \
-                Casks/claude-manager.rb
+                casks/claude-manager.rb
             awk -v arm="$ARM64_SHA" -v x64="$X64_SHA" '
               /sha256/ && !done_arm { sub(/sha256 ".*"/, "sha256 \"" arm "\""); done_arm=1; next }
               /sha256/ && done_arm && !done_x64 { sub(/sha256 ".*"/, "sha256 \"" x64 "\""); done_x64=1 }
               { print }
-            ' Casks/claude-manager.rb > Casks/claude-manager.rb.tmp && mv Casks/claude-manager.rb.tmp Casks/claude-manager.rb
+            ' casks/claude-manager.rb > casks/claude-manager.rb.tmp && mv casks/claude-manager.rb.tmp casks/claude-manager.rb
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add -A
