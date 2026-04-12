@@ -13,6 +13,7 @@ interface Props {
 	unreadSessions?: Set<string>;
 	focused?: boolean;
 	configDir?: string;
+	ptyAliases?: Map<string, string>;
 }
 
 type View = "claude" | "terminal" | "split";
@@ -25,6 +26,7 @@ export function MainPane({
 	unreadSessions,
 	focused,
 	configDir,
+	ptyAliases,
 }: Props) {
 	const [view, setView] = useState<View>("claude");
 
@@ -55,7 +57,8 @@ export function MainPane({
 		);
 	}
 
-	const shellId = `${session.session_id}-shell`;
+	const ptyId = ptyAliases?.get(session.session_id) ?? session.session_id;
+	const shellId = `${ptyId}-shell`;
 
 	const tabStyle = (active: boolean) => ({
 		background: "none",
@@ -109,7 +112,7 @@ export function MainPane({
 				)}
 				<StatusDot
 					status={session.status}
-					activity={activityMap?.get(session.session_id)}
+					activity={activityMap?.get(session.session_id) ?? activityMap?.get(ptyId)}
 					unread={unreadSessions?.has(session.session_id)}
 					focused={focused}
 					size={8}
@@ -239,7 +242,7 @@ export function MainPane({
 							borderRight: showShell ? "1px solid var(--border)" : undefined,
 						}}
 					>
-						<TerminalPane ptyId={session.session_id} cwd={session.cwd} configDir={configDir} />
+						<TerminalPane ptyId={ptyId} cwd={session.cwd} configDir={configDir} />
 					</div>
 				)}
 				{showShell && (

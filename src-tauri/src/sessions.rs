@@ -28,6 +28,10 @@ pub enum SessionStatus {
 struct SessionFile {
     pid: u32,
     cwd: String,
+    #[serde(rename = "sessionId")]
+    session_id: Option<String>,
+    #[serde(rename = "startedAt")]
+    started_at: Option<i64>,
 }
 
 // First line of a conversation JSONL file
@@ -110,11 +114,11 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
     let config_path = PathBuf::from(config_dir);
     let metadata = crate::metadata::load();
 
-    // Step 1: Scan pid files for alive processes. Build cwd → pid map.
-    // Pid files are NOT added directly to the session list — JSONL files are the
-    // source of truth for session identity. Pid files only tell us what's running.
+    // Step 1: Scan pid files for alive processes. Build cwd → pid map and
+    // collect pid-file-only sessions (alive processes with no JSONL yet).
     let mut alive_cwd_pids: std::collections::HashMap<String, u32> =
         std::collections::HashMap::new();
+    let mut pid_only_sessions: Vec<(String, String, u32, i64)> = Vec::new(); // (session_id, cwd, pid, started_at)
     let sessions_dir = config_path.join("sessions");
     if let Ok(entries) = fs::read_dir(&sessions_dir) {
         for entry in entries.flatten() {
@@ -125,7 +129,16 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
             if let Ok(content) = fs::read_to_string(&path) {
                 if let Ok(session_file) = serde_json::from_str::<SessionFile>(&content) {
                     if crate::utils::is_pid_alive(session_file.pid) {
-                        alive_cwd_pids.insert(session_file.cwd, session_file.pid);
+                        alive_cwd_pids
+                            .insert(session_file.cwd.clone(), session_file.pid);
+                        if let Some(ref sid) = session_file.session_id {
+                            pid_only_sessions.push((
+                                sid.clone(),
+                                session_file.cwd,
+                                session_file.pid,
+                                session_file.started_at.unwrap_or(0),
+                            ));
+                        }
                     }
                 }
             }
@@ -187,6 +200,37 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
                         ));
                     }
                 }
+            }
+        }
+    }
+
+    // Step 2b: Add pid-only sessions (alive process, no JSONL yet — freshly spawned).
+    {
+        let jsonl_ids: std::collections::HashSet<String> =
+            candidates.iter().map(|(_, s)| s.session_id.clone()).collect();
+        for (session_id, cwd, pid, started_at) in &pid_only_sessions {
+            if !jsonl_ids.contains(session_id) {
+                let meta = metadata.get(session_id);
+                if meta.map(|m| m.archived).unwrap_or(false) {
+                    continue;
+                }
+                let project_name = project_name_from_cwd(cwd);
+                let display_name = meta.and_then(|m| m.display_name.clone());
+                let pending_rename = meta.and_then(|m| m.pending_rename.clone());
+                candidates.push((
+                    *started_at,
+                    ClaudeSession {
+                        pid: *pid,
+                        session_id: session_id.clone(),
+                        project_name,
+                        cwd: cwd.clone(),
+                        started_at: *started_at,
+                        status: SessionStatus::Active,
+                        display_name,
+                        git_branch: None,
+                        pending_rename,
+                    },
+                ));
             }
         }
     }

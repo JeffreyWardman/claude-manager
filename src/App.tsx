@@ -82,9 +82,17 @@ function AppInner() {
 	}, []);
 	const configDirRef = useRef(configDir);
 	configDirRef.current = configDir;
-
-	// Synthetic sessions for newly spawned PTYs not yet discovered by the backend
-	const [pendingSessions, setPendingSessions] = useState<Map<string, ClaudeSession>>(new Map());
+	const sessionsRef = useRef(sessions);
+	sessionsRef.current = sessions;
+	// Maps real session ID → PTY ID for sessions spawned via "New Session".
+	// The PTY is registered under a temporary ID; the real Claude session gets a different ID.
+	const [ptyAliases, setPtyAliases] = useState<Map<string, string>>(new Map());
+	// Synthetic session shown immediately while waiting for the real session to appear.
+	const [pendingSpawn, setPendingSpawn] = useState<{
+		tmpId: string;
+		cwd: string;
+		existingIds: Set<string>;
+	} | null>(null);
 
 	const handlePtyExit = useCallback((sessionId: string) => {
 		setGroups((prev) => {
@@ -96,12 +104,33 @@ function AppInner() {
 			return next;
 		});
 		setStandaloneSelectedId((prev) => (prev === sessionId ? null : prev));
+		setPendingSpawn((prev) => (prev?.tmpId === sessionId ? null : prev));
+		// Clean up PTY alias when the PTY exits
+		setPtyAliases((prev) => {
+			for (const [realId, tmpId] of prev) {
+				if (tmpId === sessionId) {
+					const next = new Map(prev);
+					next.delete(realId);
+					return next;
+				}
+			}
+			return prev;
+		});
 	}, []);
-	const activityMap = usePtyActivity(
-		sessions.map((s) => s.session_id),
-		clearUnread,
-		handlePtyExit,
-	);
+	// Include PTY alias IDs and pending tmpId so activity tracking works
+	const trackedIds = useMemo(() => {
+		const ids = sessions.map((s) => s.session_id);
+		for (const tmpId of ptyAliases.values()) {
+			if (!ids.includes(tmpId)) {
+				ids.push(tmpId);
+			}
+		}
+		if (pendingSpawn && !ids.includes(pendingSpawn.tmpId)) {
+			ids.push(pendingSpawn.tmpId);
+		}
+		return ids;
+	}, [sessions, ptyAliases, pendingSpawn]);
+	const activityMap = usePtyActivity(trackedIds, clearUnread, handlePtyExit);
 
 	const [ignorePatternsRaw, setIgnorePatternsRaw] = useState(
 		() => localStorage.getItem("ignore-patterns") ?? "",
@@ -111,16 +140,29 @@ function AppInner() {
 	// Override session status based on local PTY state and filter ignored sessions.
 	const liveSessions = useMemo(() => {
 		const discovered = sessions
-			.map((s) =>
-				activityMap.has(s.session_id) && s.status === "offline"
-					? { ...s, status: "active" as const }
-					: s,
-			)
+			.map((s) => {
+				const alias = ptyAliases.get(s.session_id);
+				const hasPty = activityMap.has(s.session_id) || (alias && activityMap.has(alias));
+				return hasPty && s.status === "offline" ? { ...s, status: "active" as const } : s;
+			})
 			.filter((s) => !isSessionIgnored(s, ignorePatterns));
-		const discoveredIds = new Set(discovered.map((s) => s.session_id));
-		const pending = [...pendingSessions.values()].filter((s) => !discoveredIds.has(s.session_id));
-		return [...pending, ...discovered];
-	}, [sessions, activityMap, ignorePatterns, pendingSessions]);
+		// Inject synthetic entry while waiting for the real session to be discovered
+		if (pendingSpawn && !discovered.some((s) => s.session_id === pendingSpawn.tmpId)) {
+			const folderName = pendingSpawn.cwd.split("/").pop() ?? "new";
+			discovered.unshift({
+				pid: 0,
+				session_id: pendingSpawn.tmpId,
+				cwd: pendingSpawn.cwd,
+				project_name: folderName,
+				started_at: Date.now(),
+				status: "active",
+				display_name: `${folderName}-{pending-id}`,
+				git_branch: null,
+				pending_rename: null,
+			});
+		}
+		return discovered;
+	}, [sessions, activityMap, ptyAliases, ignorePatterns, pendingSpawn]);
 
 	const [groups, setGroups] = useState<PaneGroup[]>(() => loadGroups(configDir));
 	const [activeGroupId, setActiveGroupId] = useState<string | null>(
@@ -417,41 +459,12 @@ function AppInner() {
 		}
 	}, [selectedId, clearUnread]);
 
-	// Clean up pending sessions once the backend discovers them
-	useEffect(() => {
-		if (pendingSessions.size === 0) {
-			return;
-		}
-		const discovered = new Set(sessions.map((s) => s.session_id));
-		let changed = false;
-		for (const tmpId of pendingSessions.keys()) {
-			if (discovered.has(tmpId)) {
-				pendingSessions.delete(tmpId);
-				changed = true;
-			}
-		}
-		if (changed) {
-			setPendingSessions(new Map(pendingSessions));
-		}
-	}, [sessions, pendingSessions]);
-
 	const handleNewSession = useCallback(
 		(cwd: string) => {
 			const tmpId = `new-${Date.now()}`;
 			const skipPermissions = localStorage.getItem("skip-permissions") === "true";
-
-			const synthetic: ClaudeSession = {
-				pid: 0,
-				session_id: tmpId,
-				cwd,
-				project_name: cwd.split("/").pop() ?? "",
-				started_at: Date.now(),
-				status: "active",
-				display_name: null,
-				git_branch: null,
-				pending_rename: null,
-			};
-			setPendingSessions((prev) => new Map(prev).set(tmpId, synthetic));
+			const existingIds = new Set(sessionsRef.current.map((s) => s.session_id));
+			setPendingSpawn({ tmpId, cwd, existingIds });
 			setStandaloneSelectedId(tmpId);
 
 			invoke("pty_spawn", {
@@ -469,6 +482,30 @@ function AppInner() {
 		},
 		[refresh, configDir],
 	);
+
+	// When a new session is spawned, detect the real session once it appears.
+	// Transition: synthetic (tmpId) → real session. ptyAliases bridges the PTY connection.
+	// Polls every 200ms and stops as soon as the real session is found.
+	useEffect(() => {
+		if (!pendingSpawn) {
+			return;
+		}
+		const realSession = sessions.find(
+			(s) => !pendingSpawn.existingIds.has(s.session_id),
+		);
+		if (realSession) {
+			setPtyAliases((prev) => {
+				const next = new Map(prev);
+				next.set(realSession.session_id, pendingSpawn.tmpId);
+				return next;
+			});
+			setStandaloneSelectedId(realSession.session_id);
+			setPendingSpawn(null);
+			return;
+		}
+		const poll = setInterval(refresh, 200);
+		return () => clearInterval(poll);
+	}, [sessions, pendingSpawn, refresh]);
 
 	// Flush pending renames when a session transitions to "waiting"
 	const prevActivityRef = useRef<Map<string, ActivityState>>(new Map());
@@ -705,6 +742,7 @@ function AppInner() {
 					unreadSessions={unreadSessions}
 					focused
 					configDir={configDir}
+					ptyAliases={ptyAliases}
 				/>
 			) : (
 				<GridLayout
@@ -718,6 +756,7 @@ function AppInner() {
 					activityMap={activityMap}
 					unreadSessions={unreadSessions}
 					configDir={configDir}
+					ptyAliases={ptyAliases}
 				/>
 			)}
 
