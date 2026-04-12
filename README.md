@@ -1,6 +1,24 @@
 # Claude Manager
 
-A macOS desktop app for managing multiple [Claude Code](https://claude.ai/code) sessions side by side. View terminals in a grid, organise sessions into named groups, and drag to rearrange — all from a single window.
+The session manager for Claude Code. Manage multiple sessions in one window with live status, named groups, and persistent workspaces.
+
+## Why Claude Manager?
+
+**Organise by role.** Name sessions "planner", "implementer", "reviewer" and group them together. Drag to rearrange, switch between project contexts in one click.
+
+**See everything at once.** View 2, 4, or 6 Claude sessions in a tiling grid. No more cycling through terminal tabs to check which one finished.
+
+**Manage context, not windows.** When you're running a planner in one pane and an implementer in another, you need to see both and know which is which. Groups let you define these roles spatially and keep related sessions together.
+
+**Know what's happening.** Live activity indicators show which sessions are computing, done, or waiting. Optional sound alerts when a session completes.
+
+**Find and resume anything.** Every session from every repo, active or inactive, in one place. Search, filter, and resume old sessions with ease.
+
+**Pick up where you left off.** Groups and layouts persist across restarts. Reopen the app and your workspace is exactly how you left it.
+
+**Multiple accounts.** Auto-detects `~/.claude*` directories. Switch between personal and work profiles without restarting.
+
+**Your terminal, your way.** 20+ built-in themes, custom theme support, configurable layouts, and full keyboard-driven workflow.
 
 ### Star History
 
