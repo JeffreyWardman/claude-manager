@@ -84,10 +84,8 @@ function AppInner() {
 	configDirRef.current = configDir;
 	const sessionsRef = useRef(sessions);
 	sessionsRef.current = sessions;
-	// Maps real session ID → PTY ID for sessions spawned via "New Session".
-	// The PTY is registered under a temporary ID; the real Claude session gets a different ID.
-	const [ptyAliases, setPtyAliases] = useState<Map<string, string>>(new Map());
-	// Synthetic session shown immediately while waiting for the real session to appear.
+	// Tracks a newly spawned session. The PTY runs under tmpId.
+	// liveSessions matches the real Claude session by existingIds + cwd to pull its name.
 	const [pendingSpawn, setPendingSpawn] = useState<{
 		tmpId: string;
 		cwd: string;
@@ -105,31 +103,15 @@ function AppInner() {
 		});
 		setStandaloneSelectedId((prev) => (prev === sessionId ? null : prev));
 		setPendingSpawn((prev) => (prev?.tmpId === sessionId ? null : prev));
-		// Clean up PTY alias when the PTY exits
-		setPtyAliases((prev) => {
-			for (const [realId, tmpId] of prev) {
-				if (tmpId === sessionId) {
-					const next = new Map(prev);
-					next.delete(realId);
-					return next;
-				}
-			}
-			return prev;
-		});
 	}, []);
-	// Include PTY alias IDs and pending tmpId so activity tracking works
+	// Include pending tmpId so activity tracking works for the synthetic session
 	const trackedIds = useMemo(() => {
 		const ids = sessions.map((s) => s.session_id);
-		for (const tmpId of ptyAliases.values()) {
-			if (!ids.includes(tmpId)) {
-				ids.push(tmpId);
-			}
-		}
 		if (pendingSpawn && !ids.includes(pendingSpawn.tmpId)) {
 			ids.push(pendingSpawn.tmpId);
 		}
 		return ids;
-	}, [sessions, ptyAliases, pendingSpawn]);
+	}, [sessions, pendingSpawn]);
 	const activityMap = usePtyActivity(trackedIds, clearUnread, handlePtyExit);
 
 	const [ignorePatternsRaw, setIgnorePatternsRaw] = useState(
@@ -140,29 +122,41 @@ function AppInner() {
 	// Override session status based on local PTY state and filter ignored sessions.
 	const liveSessions = useMemo(() => {
 		const discovered = sessions
-			.map((s) => {
-				const alias = ptyAliases.get(s.session_id);
-				const hasPty = activityMap.has(s.session_id) || (alias && activityMap.has(alias));
-				return hasPty && s.status === "offline" ? { ...s, status: "active" as const } : s;
-			})
+			.map((s) =>
+				activityMap.has(s.session_id) && s.status === "offline"
+					? { ...s, status: "active" as const }
+					: s,
+			)
 			.filter((s) => !isSessionIgnored(s, ignorePatterns));
-		// Inject synthetic entry while waiting for the real session to be discovered
+		// Inject synthetic entry that stays under tmpId for the PTY's lifetime
 		if (pendingSpawn && !discovered.some((s) => s.session_id === pendingSpawn.tmpId)) {
 			const folderName = pendingSpawn.cwd.split("/").pop() ?? "new";
+			const spawnFolder = pendingSpawn.cwd.replace(/\/$/, "").split("/").pop();
+			// Find the real session inline — no effect needed, no intermediate render
+			const real = discovered.find(
+				(s) =>
+					!pendingSpawn.existingIds.has(s.session_id) &&
+					s.cwd.replace(/\/$/, "").split("/").pop() === spawnFolder,
+			);
+			if (real) {
+				discovered.splice(discovered.indexOf(real), 1);
+			}
 			discovered.unshift({
-				pid: 0,
+				pid: real?.pid ?? 0,
 				session_id: pendingSpawn.tmpId,
 				cwd: pendingSpawn.cwd,
 				project_name: folderName,
-				started_at: Date.now(),
+				started_at: real?.started_at ?? Date.now(),
 				status: "active",
-				display_name: `${folderName}-{pending-id}`,
-				git_branch: null,
+				display_name: real
+					? (real.display_name || `${real.project_name}-${real.session_id.slice(0, 5)}`)
+					: `${folderName}-{pending-id}`,
+				git_branch: real?.git_branch ?? null,
 				pending_rename: null,
 			});
 		}
 		return discovered;
-	}, [sessions, activityMap, ptyAliases, ignorePatterns, pendingSpawn]);
+	}, [sessions, activityMap, ignorePatterns, pendingSpawn]);
 
 	const [groups, setGroups] = useState<PaneGroup[]>(() => loadGroups(configDir));
 	const [activeGroupId, setActiveGroupId] = useState<string | null>(
@@ -483,24 +477,19 @@ function AppInner() {
 		[refresh, configDir],
 	);
 
-	// When a new session is spawned, detect the real session once it appears.
-	// Transition: synthetic (tmpId) → real session. ptyAliases bridges the PTY connection.
-	// Polls every 200ms and stops as soon as the real session is found.
+	// Poll aggressively until the real session is discovered by liveSessions
 	useEffect(() => {
 		if (!pendingSpawn) {
 			return;
 		}
-		const realSession = sessions.find(
-			(s) => !pendingSpawn.existingIds.has(s.session_id),
+		// Check if the real session has been found (liveSessions handles matching)
+		const spawnFolder = pendingSpawn.cwd.replace(/\/$/, "").split("/").pop();
+		const found = sessions.some(
+			(s) =>
+				!pendingSpawn.existingIds.has(s.session_id) &&
+				s.cwd.replace(/\/$/, "").split("/").pop() === spawnFolder,
 		);
-		if (realSession) {
-			setPtyAliases((prev) => {
-				const next = new Map(prev);
-				next.set(realSession.session_id, pendingSpawn.tmpId);
-				return next;
-			});
-			setStandaloneSelectedId(realSession.session_id);
-			setPendingSpawn(null);
+		if (found) {
 			return;
 		}
 		const poll = setInterval(refresh, 200);
@@ -742,7 +731,6 @@ function AppInner() {
 					unreadSessions={unreadSessions}
 					focused
 					configDir={configDir}
-					ptyAliases={ptyAliases}
 				/>
 			) : (
 				<GridLayout
@@ -756,7 +744,6 @@ function AppInner() {
 					activityMap={activityMap}
 					unreadSessions={unreadSessions}
 					configDir={configDir}
-					ptyAliases={ptyAliases}
 				/>
 			)}
 
