@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { applyTheme, useTheme } from "../ThemeContext";
 import type { PaneLayout, Profile } from "../types";
-import { defaultShell, noAutocorrect } from "../utils";
+import { defaultShell, noAutocorrect, pathBasename } from "../utils";
 
 const TILING_OPTIONS: PaneLayout[] = [
 	"1x1",
@@ -891,7 +891,7 @@ export function Settings({
 																flex: 1,
 															}}
 														>
-															{notifSoundPath.split("/").pop()}
+															{pathBasename(notifSoundPath)}
 														</span>
 													)}
 												</div>

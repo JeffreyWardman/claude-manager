@@ -1,7 +1,18 @@
 import type { ClaudeSession } from "./types";
 
+const isWindows = navigator.platform?.toLowerCase().includes("win") ?? false;
+const sep = isWindows ? "\\" : "/";
+
 export function formatCwd(cwd: string): string {
+	if (isWindows) {
+		return cwd.replace(/^C:\\Users\\[^\\]+/, "~");
+	}
 	return cwd.replace(/^\/Users\/[^/]+/, "~");
+}
+
+export function pathBasename(filepath: string): string {
+	const trimmed = isWindows ? filepath.replace(/\\+$/, "") : filepath.replace(/\/+$/, "");
+	return trimmed.split(sep).pop() ?? "";
 }
 
 export function sessionDisplayName(session: ClaudeSession): string {

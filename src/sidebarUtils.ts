@@ -39,7 +39,9 @@ export function sortSessions(sessions: ClaudeSession[], mode: SortMode): ClaudeS
 }
 
 export function projectLabel(cwd: string): string {
-	const parts = cwd.replace(/\/$/, "").split("/");
+	const isWin = navigator.platform?.toLowerCase().includes("win") ?? false;
+	const sep = isWin ? "\\" : "/";
+	const parts = cwd.replace(isWin ? /\\+$/ : /\/+$/, "").split(sep);
 	if (parts.length >= 2) {
 		return parts.slice(-2).join("/");
 	}

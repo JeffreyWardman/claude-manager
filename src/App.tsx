@@ -23,6 +23,7 @@ import { isSessionIgnored, parseIgnorePatterns } from "./sidebarUtils";
 import { ThemeProvider } from "./ThemeContext";
 import type { ClaudeSession, PaneGroup, PaneLayout } from "./types";
 import { useDragDrop } from "./useDragDrop";
+import { pathBasename } from "./utils";
 
 const MIN_SIDEBAR_WIDTH = 160;
 const MAX_SIDEBAR_WIDTH = 480;
@@ -130,13 +131,13 @@ function AppInner() {
 			.filter((s) => !isSessionIgnored(s, ignorePatterns));
 		// Inject synthetic entry that stays under tmpId for the PTY's lifetime
 		if (pendingSpawn && !discovered.some((s) => s.session_id === pendingSpawn.tmpId)) {
-			const folderName = pendingSpawn.cwd.split("/").pop() ?? "new";
-			const spawnFolder = pendingSpawn.cwd.replace(/\/$/, "").split("/").pop();
+			const folderName = pathBasename(pendingSpawn.cwd) || "new";
+			const spawnFolder = pathBasename(pendingSpawn.cwd);
 			// Find the real session inline — no effect needed, no intermediate render
 			const real = discovered.find(
 				(s) =>
 					!pendingSpawn.existingIds.has(s.session_id) &&
-					s.cwd.replace(/\/$/, "").split("/").pop() === spawnFolder,
+					pathBasename(s.cwd) === spawnFolder,
 			);
 			if (real) {
 				discovered.splice(discovered.indexOf(real), 1);
@@ -483,11 +484,11 @@ function AppInner() {
 			return;
 		}
 		// Check if the real session has been found (liveSessions handles matching)
-		const spawnFolder = pendingSpawn.cwd.replace(/\/$/, "").split("/").pop();
+		const spawnFolder = pathBasename(pendingSpawn.cwd);
 		const found = sessions.some(
 			(s) =>
 				!pendingSpawn.existingIds.has(s.session_id) &&
-				s.cwd.replace(/\/$/, "").split("/").pop() === spawnFolder,
+				pathBasename(s.cwd) === spawnFolder,
 		);
 		if (found) {
 			return;

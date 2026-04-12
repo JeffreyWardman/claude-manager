@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useFocusTrap } from "../hooks/useFocusTrap";
-import { formatCwd, modalBackdropStyle, modalDialogStyle, noAutocorrect } from "../utils";
+import { formatCwd, modalBackdropStyle, modalDialogStyle, noAutocorrect, pathBasename } from "../utils";
 
 interface Props {
 	cwds: string[];
@@ -134,7 +134,7 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 										fontFamily: "monospace",
 									}}
 								>
-									{cwd.split("/").pop()}
+									{pathBasename(cwd)}
 								</span>
 							</button>
 						))}
