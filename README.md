@@ -35,7 +35,7 @@ The session manager for Claude Code. Manage multiple sessions in one window with
 - **Multi-window** — open multiple windows within the same app
 - **Multi-profile** — auto-detects `~/.claude*` directories for users with multiple Claude accounts
 - **20+ built-in themes** with custom theme support
-- **Configurable defaults** — optional `--dangerously-skip-permissions` for new sessions
+- **Configurable defaults** — optional `--dangerously-skip-permissions` for new sessions, customisable default shell
 
 ## Requirements
 
@@ -118,6 +118,10 @@ Each session shows a status dot:
 Unread sessions are marked as read when you click the pane, click the session in the sidebar, or start typing in it.
 
 Optionally play a sound when a session completes — enable in Settings > Preferences > Completion Sound and choose an audio file.
+
+### Default shell
+
+The Terminal tab defaults to `/bin/zsh` on macOS, `/bin/bash` on Linux, and `powershell` on Windows. Change it in Settings > Preferences > General > Default Shell (e.g. `/usr/bin/fish`). Leave blank for the platform default.
 
 ### Ignore patterns
 

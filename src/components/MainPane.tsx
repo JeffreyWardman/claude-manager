@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ActivityState } from "../hooks/usePtyActivity";
 import type { ClaudeSession } from "../types";
-import { formatCwd, sessionDisplayName } from "../utils";
+import { defaultShell, formatCwd, sessionDisplayName } from "../utils";
 import { StatusDot } from "./StatusDot";
 import { TerminalPane } from "./TerminalPane";
 
@@ -244,7 +244,7 @@ export function MainPane({
 				)}
 				{showShell && (
 					<div style={{ flex: 1, minWidth: 0 }}>
-						<TerminalPane ptyId={shellId} cwd={session.cwd} cmd="/bin/zsh" configDir={configDir} />
+						<TerminalPane ptyId={shellId} cwd={session.cwd} cmd={localStorage.getItem("default-shell") || defaultShell()} configDir={configDir} />
 					</div>
 				)}
 			</div>

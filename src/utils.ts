@@ -50,6 +50,17 @@ export function menuItemUnhover(e: React.MouseEvent<HTMLButtonElement>) {
 	e.currentTarget.style.background = "none";
 }
 
+export function defaultShell(): string {
+	const platform = navigator.platform?.toLowerCase() ?? "";
+	if (platform.includes("win")) {
+		return "powershell";
+	}
+	if (platform.includes("mac")) {
+		return "/bin/zsh";
+	}
+	return "/bin/bash";
+}
+
 export const noAutocorrect = {
 	autoCorrect: "off",
 	autoCapitalize: "off",

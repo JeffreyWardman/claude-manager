@@ -338,7 +338,7 @@ describe("sessionMatchesSearch", () => {
 	it("matches cwd with tilde form", () => {
 		const s = makeSession({
 			session_id: "abc",
-			cwd: "/Users/jeffrey/repos/frontend",
+			cwd: "/Users/dummy-user/repos/frontend",
 		});
 		expect(sessionMatchesSearch(s, "~/repos")).toBe(true);
 	});
@@ -346,7 +346,7 @@ describe("sessionMatchesSearch", () => {
 	it("matches bare path as if prefixed with ~/", () => {
 		const s = makeSession({
 			session_id: "abc",
-			cwd: "/Users/jeffrey/repos/frontend",
+			cwd: "/Users/dummy-user/repos/frontend",
 		});
 		expect(sessionMatchesSearch(s, "repos/frontend")).toBe(true);
 	});
@@ -354,7 +354,7 @@ describe("sessionMatchesSearch", () => {
 	it("matches bare folder name", () => {
 		const s = makeSession({
 			session_id: "abc",
-			cwd: "/Users/jeffrey/repos/frontend",
+			cwd: "/Users/dummy-user/repos/frontend",
 		});
 		expect(sessionMatchesSearch(s, "frontend")).toBe(true);
 	});
@@ -362,9 +362,9 @@ describe("sessionMatchesSearch", () => {
 	it("matches full expanded path", () => {
 		const s = makeSession({
 			session_id: "abc",
-			cwd: "/Users/jeffrey/repos/frontend",
+			cwd: "/Users/dummy-user/repos/frontend",
 		});
-		expect(sessionMatchesSearch(s, "/users/jeffrey/repos")).toBe(true);
+		expect(sessionMatchesSearch(s, "/users/dummy-user/repos")).toBe(true);
 	});
 
 	it("returns false when nothing matches", () => {
@@ -380,7 +380,7 @@ describe("sessionMatchesSearch", () => {
 		const s = makeSession({
 			session_id: "abc",
 			project_name: "work",
-			cwd: "/Users/jeffrey/work",
+			cwd: "/Users/dummy-user/work",
 		});
 		expect(sessionMatchesSearch(s, "work")).toBe(true);
 	});
@@ -542,32 +542,32 @@ describe("projectLabel edge cases", () => {
 
 describe("sessionMatchesFolder", () => {
 	it("matches full cwd path", () => {
-		const s = makeSession({ session_id: "a", cwd: "/Users/jeffrey/repos/frontend" });
-		expect(sessionMatchesFolder(s, "/users/jeffrey/repos")).toBe(true);
+		const s = makeSession({ session_id: "a", cwd: "/Users/dummy-user/repos/frontend" });
+		expect(sessionMatchesFolder(s, "/users/dummy-user/repos")).toBe(true);
 	});
 
 	it("matches tilde path", () => {
-		const s = makeSession({ session_id: "a", cwd: "/Users/jeffrey/repos/frontend" });
+		const s = makeSession({ session_id: "a", cwd: "/Users/dummy-user/repos/frontend" });
 		expect(sessionMatchesFolder(s, "~/repos")).toBe(true);
 	});
 
 	it("matches bare path without ~ or / prefix via tilde expansion", () => {
-		const s = makeSession({ session_id: "a", cwd: "/Users/jeffrey/repos/frontend" });
+		const s = makeSession({ session_id: "a", cwd: "/Users/dummy-user/repos/frontend" });
 		expect(sessionMatchesFolder(s, "repos/frontend")).toBe(true);
 	});
 
 	it("matches bare path that only resolves via tilde prefix", () => {
-		const s = makeSession({ session_id: "a", cwd: "/Users/jeffrey/work" });
+		const s = makeSession({ session_id: "a", cwd: "/Users/dummy-user/work" });
 		expect(sessionMatchesFolder(s, "work")).toBe(true);
 	});
 
 	it("returns false for non-matching path", () => {
-		const s = makeSession({ session_id: "a", cwd: "/Users/jeffrey/repos/frontend" });
+		const s = makeSession({ session_id: "a", cwd: "/Users/dummy-user/repos/frontend" });
 		expect(sessionMatchesFolder(s, "desktop/other")).toBe(false);
 	});
 
 	it("matches case-insensitively", () => {
-		const s = makeSession({ session_id: "a", cwd: "/Users/jeffrey/Repos/Frontend" });
+		const s = makeSession({ session_id: "a", cwd: "/Users/dummy-user/Repos/Frontend" });
 		expect(sessionMatchesFolder(s, "repos/frontend")).toBe(true);
 	});
 });

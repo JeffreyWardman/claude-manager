@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { applyTheme, useTheme } from "../ThemeContext";
 import type { PaneLayout, Profile } from "../types";
-import { noAutocorrect } from "../utils";
+import { defaultShell, noAutocorrect } from "../utils";
 
 const TILING_OPTIONS: PaneLayout[] = [
 	"1x1",
@@ -359,13 +359,16 @@ export function Settings({
 }: Props) {
 	const { theme, allThemes, setThemeId, previewTheme, clearPreview } = useTheme();
 	const [tab, setTab] = useState<Tab>("preferences");
-	const [prefSection, setPrefSection] = useState<PrefSection>("layouts");
+	const [prefSection, setPrefSection] = useState<PrefSection>("general");
 	const [guideSection, setGuideSection] = useState<GuideSection>("filtering");
 	const [skipPermissions, setSkipPermissions] = useState(
 		() => localStorage.getItem("skip-permissions") === "true",
 	);
 	const [ignorePatterns, setIgnorePatterns] = useState(
 		() => localStorage.getItem("ignore-patterns") ?? "",
+	);
+	const [customShell, setCustomShell] = useState(
+		() => localStorage.getItem("default-shell") ?? "",
 	);
 	const [notifSound, setNotifSound] = useState(
 		() => localStorage.getItem("notif-sound-enabled") === "true",
@@ -524,8 +527,8 @@ export function Settings({
 						<div style={{ display: "flex", flex: 1, minHeight: 0 }}>
 							<SectionNav
 								items={[
-									{ key: "layouts" as PrefSection, label: "Layouts" },
 									{ key: "general" as PrefSection, label: "General" },
+									{ key: "layouts" as PrefSection, label: "Layouts" },
 									{ key: "sound" as PrefSection, label: "Sound" },
 									{ key: "ignore" as PrefSection, label: "Folders" },
 									{
@@ -673,6 +676,47 @@ export function Settings({
 											}}
 										>
 											Applies to newly spawned sessions only
+										</div>
+										<div
+											style={{
+												fontSize: 10,
+												fontWeight: 600,
+												letterSpacing: "0.06em",
+												color: "var(--text-muted)",
+												marginTop: 20,
+												marginBottom: 10,
+											}}
+										>
+											DEFAULT SHELL
+										</div>
+										<input
+											value={customShell}
+											onChange={(e) => {
+												setCustomShell(e.target.value);
+												localStorage.setItem("default-shell", e.target.value);
+											}}
+											placeholder={defaultShell()}
+											{...noAutocorrect}
+											style={{
+												background: "var(--bg-main)",
+												border: "1px solid var(--border)",
+												borderRadius: 4,
+												padding: "6px 8px",
+												color: "var(--text-primary)",
+												fontSize: 12,
+												fontFamily: "monospace",
+												width: "100%",
+												outline: "none",
+											}}
+										/>
+										<div
+											style={{
+												fontSize: 10,
+												color: "var(--text-muted)",
+												marginTop: 4,
+											}}
+										>
+											Shell used for the Terminal tab. Leave blank for system default.
 										</div>
 									</>
 								)}
