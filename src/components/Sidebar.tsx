@@ -1418,12 +1418,15 @@ export function Sidebar({
 										const isRenaming = renamingId === session.session_id;
 										const name = sessionDisplayName(session);
 										const activity = activityMap.get(session.session_id);
+										const isUnread = unreadSessions.has(session.session_id);
 										const rowTint =
 											activity === "computing"
 												? "rgba(245,158,11,0.07)"
-												: activity === "waiting"
-													? "rgba(34,197,94,0.07)"
-													: undefined;
+												: isUnread
+													? "rgba(59,130,246,0.07)"
+													: activity === "waiting"
+														? "rgba(34,197,94,0.07)"
+														: undefined;
 
 										return (
 											<div

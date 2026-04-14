@@ -252,11 +252,18 @@ pub fn pty_write(
     state: State<'_, PtyState>,
     app: AppHandle,
 ) -> Result<(), String> {
+    // xterm.js sends focus-in (\x1b[I) and focus-out (\x1b[O) sequences when
+    // the terminal gains/loses focus. Write them through so the app can respond,
+    // but don't emit the input event — they're not user input and would
+    // spuriously trigger the "computing" activity state.
+    let is_focus_seq = matches!(data.as_slice(), b"\x1b[I" | b"\x1b[O");
     let mut map = state.0.lock().unwrap();
     if let Some(e) = map.get_mut(&id) {
         e.writer.write_all(&data).map_err(|e| e.to_string())?;
         drop(map);
-        let _ = app.emit(&format!("pty-input-{}", id), ());
+        if !is_focus_seq {
+            let _ = app.emit(&format!("pty-input-{}", id), ());
+        }
     }
     Ok(())
 }

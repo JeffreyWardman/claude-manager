@@ -73,9 +73,16 @@ export function MainPane({
 	const showShell = view === "terminal" || view === "split";
 
 	const inGrid = gridSlotIdx !== undefined;
+	const isUnread = unreadSessions?.has(session.session_id) ?? false;
 
 	return (
-		<div className="flex flex-col flex-1 h-full" style={{ background: "var(--bg-main)" }}>
+		<div
+			className="flex flex-col flex-1 h-full"
+			style={{
+				background: "var(--bg-main)",
+				boxShadow: isUnread ? "inset 0 0 0 1px rgba(59,130,246,0.25)" : undefined,
+			}}
+		>
 			{/* Header */}
 			<div
 				{...(!inGrid ? { "data-tauri-drag-region": true } : {})}
@@ -93,6 +100,7 @@ export function MainPane({
 					borderBottom: "1px solid var(--border)",
 					flexShrink: 0,
 					cursor: inGrid ? "grab" : undefined,
+					background: isUnread ? "rgba(59,130,246,0.06)" : undefined,
 				}}
 			>
 				{inGrid && (
@@ -230,7 +238,19 @@ export function MainPane({
 			</div>
 
 			{/* Content */}
-			<div className="flex flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+			<div className="flex flex-1 overflow-hidden" style={{ minHeight: 0, position: "relative" }}>
+				{isUnread && (
+					<div
+						aria-hidden="true"
+						style={{
+							position: "absolute",
+							inset: 0,
+							background: "rgba(59,130,246,0.04)",
+							pointerEvents: "none",
+							zIndex: 1,
+						}}
+					/>
+				)}
 				{showClaude && (
 					<div
 						style={{

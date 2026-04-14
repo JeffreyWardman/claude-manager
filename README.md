@@ -16,7 +16,7 @@ The session manager for Claude Code. Manage multiple sessions in one window with
 
 **Pick up where you left off.** Groups and layouts persist across restarts. Reopen the app and your workspace is exactly how you left it.
 
-**Multiple accounts.** Auto-detects `~/.claude*` directories. Switch between personal and work profiles without restarting.
+**Multiple accounts and local models.** Auto-detects `~/.claude*` directories. Switch between personal, work, or local LLM profiles without restarting.
 
 **Your terminal, your way.** 20+ built-in themes, custom theme support, configurable layouts, and full keyboard-driven workflow.
 
@@ -157,6 +157,8 @@ Right-click a session in the sidebar to access these actions:
 
 If you use multiple Claude Code accounts via `CLAUDE_CONFIG_DIR` (e.g. `~/.claude` for personal, `~/.claude-work` for work), the app auto-detects all `~/.claude*` directories on startup.
 
+This also works with local LLM setups — if you have a profile configured to use a local model, you can switch to it from the sidebar without restarting.
+
 When 2+ profiles are detected:
 - A profile pill appears in the sidebar footer — click to switch profiles
 - Each window shows sessions from one profile at a time
@@ -165,6 +167,41 @@ When 2+ profiles are detected:
 Single-account users see no UI changes.
 
 Profile configuration is stored in `~/.config/claude-manager/profiles.json`.
+
+#### Local LLM setup
+
+You can use Claude Code with a local LLM by creating a dedicated profile directory and pointing it at your local server.
+
+**1. Start a local LLM server** that exposes an Anthropic-compatible API — [LM Studio](https://lmstudio.ai) (0.4.1+) has native support; others like Ollama or vLLM can work via a compatibility layer.
+
+**2. Create the profile directory and configure it:**
+
+```sh
+mkdir -p ~/.claude-local
+```
+
+Create `~/.claude-local/settings.json`:
+
+```json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://localhost:1234",
+    "ANTHROPIC_API_KEY": "local"
+  }
+}
+```
+
+Adjust the port to match your server (LM Studio defaults to `1234`, Ollama to `11434`).
+
+**3. Start Claude Code with the profile** to initialise the directory and create sessions:
+
+```sh
+CLAUDE_CONFIG_DIR=~/.claude-local claude /path/to/your/repo
+```
+
+**4. Claude Manager auto-detects `~/.claude-local`** on next launch and shows it as a switchable profile in the sidebar footer.
+
+> Your local server must expose the Anthropic Messages API (`/v1/messages`). LM Studio's built-in Anthropic compatibility mode is the easiest starting point.
 
 ## Custom themes
 

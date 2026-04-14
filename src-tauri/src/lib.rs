@@ -1,4 +1,5 @@
 mod commands;
+mod hook_server;
 mod journal;
 mod metadata;
 mod profiles;
@@ -17,6 +18,14 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             app.manage(pty_manager::PtyState::new());
+
+            let config_dirs: Vec<std::path::PathBuf> = profiles::discover_profiles()
+                .into_iter()
+                .map(|p| std::path::PathBuf::from(&p.path))
+                .collect();
+            hook_server::install_hooks(&config_dirs);
+            hook_server::start(app.handle().clone());
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
