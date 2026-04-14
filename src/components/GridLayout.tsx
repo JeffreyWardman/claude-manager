@@ -109,7 +109,9 @@ export function GridLayout({
 					color: "var(--text-very-muted)",
 				}}
 			>
-				<div style={{ fontSize: 32, pointerEvents: "none" }}>◆</div>
+				<div aria-hidden="true" style={{ fontSize: 32, pointerEvents: "none" }}>
+					◆
+				</div>
 				<div style={{ fontSize: 13, pointerEvents: "none" }}>No group selected</div>
 				<div style={{ fontSize: 11, pointerEvents: "none" }}>Create a group in the sidebar</div>
 			</div>

@@ -39,7 +39,9 @@ export function MainPane({
 				className="flex flex-col items-center justify-center flex-1 h-full"
 				style={{ color: "var(--text-very-muted)" }}
 			>
-				<div style={{ fontSize: 32, marginBottom: 12, pointerEvents: "none" }}>◆</div>
+				<div aria-hidden="true" style={{ fontSize: 32, marginBottom: 12, pointerEvents: "none" }}>
+					◆
+				</div>
 				<div style={{ fontSize: 13, pointerEvents: "none" }}>Select a session</div>
 				<div
 					style={{
@@ -67,6 +69,7 @@ export function MainPane({
 		padding: "4px 8px",
 		minHeight: 24,
 		letterSpacing: "0.04em",
+		transition: "color 0.1s",
 	});
 
 	const showClaude = view === "claude" || view === "split";
@@ -96,7 +99,7 @@ export function MainPane({
 				className="flex items-center gap-2 px-4"
 				style={{
 					height: inGrid ? 40 : 56,
-					paddingTop: inGrid ? 0 : 28,
+					paddingTop: inGrid ? 0 : 24,
 					borderBottom: "1px solid var(--border)",
 					flexShrink: 0,
 					cursor: inGrid ? "grab" : undefined,
@@ -197,7 +200,7 @@ export function MainPane({
 						role="tab"
 						aria-selected={view === "split"}
 						aria-label="Split view"
-						style={{ ...tabStyle(view === "split"), fontSize: 15 }}
+						style={{ ...tabStyle(view === "split"), fontSize: 16, minWidth: 24 }}
 						onClick={() => setView((v) => (v === "split" ? "claude" : "split"))}
 						title="Split view"
 						onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
@@ -264,7 +267,12 @@ export function MainPane({
 				)}
 				{showShell && (
 					<div style={{ flex: 1, minWidth: 0 }}>
-						<TerminalPane ptyId={shellId} cwd={session.cwd} cmd={localStorage.getItem("default-shell") || defaultShell()} configDir={configDir} />
+						<TerminalPane
+							ptyId={shellId}
+							cwd={session.cwd}
+							cmd={localStorage.getItem("default-shell") || defaultShell()}
+							configDir={configDir}
+						/>
 					</div>
 				)}
 			</div>

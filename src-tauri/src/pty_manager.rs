@@ -80,7 +80,7 @@ pub fn pty_spawn(
     // Expand ~ in cwd
     let cwd = if cwd.starts_with("~/") || cwd == "~" {
         dirs_next::home_dir()
-            .map(|h| cwd.replacen("~", h.to_str().unwrap_or("~"), 1))
+            .map(|h| cwd.replacen("~", &h.to_string_lossy(), 1))
             .unwrap_or(cwd)
     } else {
         cwd

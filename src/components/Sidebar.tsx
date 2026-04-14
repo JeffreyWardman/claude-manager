@@ -380,9 +380,10 @@ export function Sidebar({
 			})
 		: groups;
 
-	const visibleGroups = focusActiveGroup && activeGroupId
-		? filteredGroups.filter((g) => g.id === activeGroupId)
-		: filteredGroups;
+	const visibleGroups =
+		focusActiveGroup && activeGroupId
+			? filteredGroups.filter((g) => g.id === activeGroupId)
+			: filteredGroups;
 
 	const searchFilteredSessions = searchQuery
 		? searchMode === "group"
@@ -676,7 +677,7 @@ export function Sidebar({
 											color: "var(--text-secondary)",
 											fontSize: 12,
 											textAlign: "left",
-											padding: "5px 12px",
+											padding: "4px 12px",
 											cursor: "pointer",
 											fontFamily: "inherit",
 										}}
@@ -689,7 +690,7 @@ export function Sidebar({
 												height: 6,
 												borderRadius: "50%",
 												background: sortMode === val ? "var(--accent)" : "transparent",
-												border: `1.5px solid ${sortMode === val ? "var(--accent)" : "var(--text-very-muted)"}`,
+												border: `1.5px solid ${sortMode === val ? "var(--accent)" : "var(--border)"}`,
 												flexShrink: 0,
 											}}
 										/>
@@ -727,7 +728,7 @@ export function Sidebar({
 											color: "var(--text-secondary)",
 											fontSize: 12,
 											textAlign: "left",
-											padding: "5px 12px",
+											padding: "4px 12px",
 											cursor: "pointer",
 											fontFamily: "inherit",
 										}}
@@ -740,7 +741,7 @@ export function Sidebar({
 												height: 6,
 												borderRadius: "50%",
 												background: groupMode === val ? "var(--accent)" : "transparent",
-												border: `1.5px solid ${groupMode === val ? "var(--accent)" : "var(--text-very-muted)"}`,
+												border: `1.5px solid ${groupMode === val ? "var(--accent)" : "var(--border)"}`,
 												flexShrink: 0,
 											}}
 										/>
@@ -756,6 +757,7 @@ export function Sidebar({
 								/>
 								<button
 									type="button"
+									aria-pressed={focusActiveGroup}
 									onClick={() => setFocusActiveGroup((f) => !f)}
 									style={{
 										display: "flex",
@@ -767,7 +769,7 @@ export function Sidebar({
 										color: "var(--text-secondary)",
 										fontSize: 12,
 										textAlign: "left",
-										padding: "5px 12px",
+										padding: "4px 12px",
 										cursor: "pointer",
 										fontFamily: "inherit",
 									}}
@@ -780,7 +782,7 @@ export function Sidebar({
 											height: 6,
 											borderRadius: "50%",
 											background: focusActiveGroup ? "var(--accent)" : "transparent",
-											border: `1.5px solid ${focusActiveGroup ? "var(--accent)" : "var(--text-very-muted)"}`,
+											border: `1.5px solid ${focusActiveGroup ? "var(--accent)" : "var(--border)"}`,
 											flexShrink: 0,
 										}}
 									/>
@@ -794,7 +796,7 @@ export function Sidebar({
 						onClick={onOpenNewSession}
 						aria-label="New session"
 						title="New session (⌘⇧N)"
-						style={{ ...iconBtn, fontSize: 18, color: "var(--accent)" }}
+						style={{ ...iconBtn, fontSize: 20, color: "var(--accent)" }}
 						onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
 						onMouseLeave={(e) => (e.currentTarget.style.color = "var(--accent)")}
 					>
@@ -905,9 +907,9 @@ export function Sidebar({
 						</button>
 						<button
 							type="button"
+							aria-label="New group"
 							onClick={onCreateGroup}
-							title="New group"
-							style={{ ...iconBtn, fontSize: 15, color: "var(--text-muted)" }}
+							style={{ ...iconBtn, fontSize: 16, color: "var(--text-muted)" }}
 							onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
 							onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
 						>
@@ -1002,6 +1004,7 @@ export function Sidebar({
 
 										{isRenamingGroup ? (
 											<input
+												aria-label="Group name"
 												ref={renameGroupInputRef}
 												value={renameGroupValue}
 												onChange={(e) => setRenameGroupValue(e.target.value)}
@@ -1022,7 +1025,7 @@ export function Sidebar({
 													flex: 1,
 													background: "var(--bg-main)",
 													border: "1px solid var(--accent)",
-													borderRadius: 3,
+													borderRadius: 4,
 													color: "var(--text-primary)",
 													fontSize: 12,
 													padding: "1px 4px",
@@ -1058,13 +1061,13 @@ export function Sidebar({
 												title="Change layout"
 												style={{
 													...iconBtn,
-													fontSize: 9,
+													fontSize: 10,
 													fontWeight: 600,
 													letterSpacing: "0.04em",
 													color: "var(--text-very-muted)",
-													padding: "2px 5px",
+													padding: "2px 4px",
 													border: "1px solid var(--border)",
-													borderRadius: 3,
+													borderRadius: 4,
 												}}
 												onMouseEnter={(e) =>
 													(e.currentTarget.style.color = "var(--text-secondary)")
@@ -1119,7 +1122,7 @@ export function Sidebar({
 																		background: isActive ? "var(--accent)" : "var(--bg-main)",
 																		border: "1px solid var(--border)",
 																		borderRadius: 4,
-																		padding: "5px 6px",
+																		padding: "4px 6px",
 																		cursor: tooSmall ? "not-allowed" : "pointer",
 																		color: isActive
 																			? "var(--bg-main)"
@@ -1129,7 +1132,7 @@ export function Sidebar({
 																		display: "flex",
 																		flexDirection: "column",
 																		alignItems: "center",
-																		gap: 3,
+																		gap: 4,
 																		opacity: tooSmall ? 0.4 : 1,
 																		textDecoration: tooSmall ? "line-through" : "none",
 																	}}
@@ -1252,9 +1255,9 @@ export function Sidebar({
 													>
 														<span
 															style={{
-																fontSize: 9,
+																fontSize: 10,
 																color: "var(--accent)",
-																fontWeight: 700,
+																fontWeight: 600,
 																flexShrink: 0,
 																pointerEvents: "none",
 															}}
@@ -1460,7 +1463,7 @@ export function Sidebar({
 													padding: "0 12px",
 													cursor: "grab",
 													userSelect: "none",
-													transition: "background 0.05s",
+													transition: "background 0.1s",
 												}}
 												onMouseEnter={(e) => {
 													if (!isSelected)
@@ -1498,6 +1501,7 @@ export function Sidebar({
 												/>
 												{isRenaming ? (
 													<input
+														aria-label="Session name"
 														ref={renameInputRef}
 														value={renameValue}
 														{...noAutocorrect}
@@ -1518,7 +1522,7 @@ export function Sidebar({
 															flex: 1,
 															background: "var(--bg-main)",
 															border: "1px solid var(--accent)",
-															borderRadius: 3,
+															borderRadius: 4,
 															color: "var(--text-primary)",
 															fontSize: 13,
 															padding: "1px 4px",
@@ -1774,6 +1778,8 @@ export function Sidebar({
 			{/* Group slot context menu */}
 			{groupSlotContextMenu && (
 				<div
+					role="menu"
+					aria-label="Slot actions"
 					onMouseDown={(e) => e.stopPropagation()}
 					style={{
 						position: "fixed",
@@ -1790,6 +1796,7 @@ export function Sidebar({
 				>
 					<button
 						type="button"
+						role="menuitem"
 						onClick={() => {
 							onRemoveFromGroup(groupSlotContextMenu.sessionId);
 							setGroupSlotContextMenu(null);

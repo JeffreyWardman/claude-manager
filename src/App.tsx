@@ -135,9 +135,7 @@ function AppInner() {
 			const spawnFolder = pathBasename(pendingSpawn.cwd);
 			// Find the real session inline — no effect needed, no intermediate render
 			const real = discovered.find(
-				(s) =>
-					!pendingSpawn.existingIds.has(s.session_id) &&
-					pathBasename(s.cwd) === spawnFolder,
+				(s) => !pendingSpawn.existingIds.has(s.session_id) && pathBasename(s.cwd) === spawnFolder,
 			);
 			if (real) {
 				discovered.splice(discovered.indexOf(real), 1);
@@ -150,7 +148,7 @@ function AppInner() {
 				started_at: real?.started_at ?? Date.now(),
 				status: "active",
 				display_name: real
-					? (real.display_name || `${real.project_name}-${real.session_id.slice(0, 5)}`)
+					? real.display_name || `${real.project_name}-${real.session_id.slice(0, 5)}`
 					: `${folderName}-{pending-id}`,
 				git_branch: real?.git_branch ?? null,
 				pending_rename: null,
@@ -253,7 +251,7 @@ function AppInner() {
 
 	const handleActivateGroupAtSlot = useCallback((groupId: string, slotIdx: number) => {
 		setActiveGroupId(groupId);
-		localStorage.setItem(activeGroupKey(configDir), groupId);
+		localStorage.setItem(activeGroupKey(configDirRef.current), groupId);
 		setStandaloneSelectedId(null);
 		setFocusedSlotIdx(slotIdx);
 	}, []);
@@ -486,9 +484,7 @@ function AppInner() {
 		// Check if the real session has been found (liveSessions handles matching)
 		const spawnFolder = pathBasename(pendingSpawn.cwd);
 		const found = sessions.some(
-			(s) =>
-				!pendingSpawn.existingIds.has(s.session_id) &&
-				pathBasename(s.cwd) === spawnFolder,
+			(s) => !pendingSpawn.existingIds.has(s.session_id) && pathBasename(s.cwd) === spawnFolder,
 		);
 		if (found) {
 			return;
@@ -714,6 +710,18 @@ function AppInner() {
 					aria-valuemax={MAX_SIDEBAR_WIDTH}
 					aria-label="Resize sidebar"
 					onMouseDown={startResize}
+					onKeyDown={(e) => {
+						if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+							e.preventDefault();
+							const delta = e.key === "ArrowRight" ? 8 : -8;
+							const w = Math.max(
+								MIN_SIDEBAR_WIDTH,
+								Math.min(MAX_SIDEBAR_WIDTH, sidebarWidth + delta),
+							);
+							setSidebarWidth(w);
+							localStorage.setItem("sidebar-width", String(w));
+						}
+					}}
 					style={{
 						width: 4,
 						cursor: "col-resize",

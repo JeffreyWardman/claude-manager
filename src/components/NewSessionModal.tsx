@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useFocusTrap } from "../hooks/useFocusTrap";
-import { formatCwd, modalBackdropStyle, modalDialogStyle, noAutocorrect, pathBasename } from "../utils";
+import {
+	formatCwd,
+	modalBackdropStyle,
+	modalDialogStyle,
+	noAutocorrect,
+	pathBasename,
+} from "../utils";
 
 interface Props {
 	cwds: string[];
@@ -69,11 +75,11 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 						display: "flex",
 						alignItems: "center",
 						gap: 8,
-						padding: "10px 14px",
+						padding: "8px 12px",
 						borderBottom: filtered.length > 0 ? "1px solid var(--border)" : undefined,
 					}}
 				>
-					<span style={{ color: "var(--text-muted)", fontSize: 15 }}>⌕</span>
+					<span style={{ color: "var(--text-muted)", fontSize: 16 }}>⌕</span>
 					<input
 						ref={inputRef}
 						aria-label="Project path"
@@ -88,7 +94,7 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 							border: "none",
 							outline: "none",
 							color: "var(--text-primary)",
-							fontSize: 14,
+							fontSize: 13,
 							fontFamily: "inherit",
 						}}
 					/>
@@ -115,7 +121,7 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 									alignItems: "center",
 									gap: 8,
 									width: "100%",
-									padding: "7px 14px",
+									padding: "6px 12px",
 									cursor: "pointer",
 									background: i === activeIdx ? "var(--item-selected)" : "none",
 									fontSize: 13,
@@ -148,7 +154,7 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 							display: "flex",
 							alignItems: "center",
 							gap: 8,
-							padding: "10px 14px",
+							padding: "8px 12px",
 							fontSize: 13,
 							color: "var(--text-muted)",
 						}}

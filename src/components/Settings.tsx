@@ -226,7 +226,7 @@ function Kbd({ children }: { children: React.ReactNode }) {
 				background: "var(--bg-main)",
 				border: "1px solid var(--border)",
 				borderRadius: 4,
-				padding: "1px 5px",
+				padding: "2px 4px",
 				fontFamily: "inherit",
 			}}
 		>
@@ -242,8 +242,8 @@ function Code({ children }: { children: React.ReactNode }) {
 				fontSize: 11,
 				color: "var(--accent)",
 				background: "var(--bg-main)",
-				borderRadius: 3,
-				padding: "1px 4px",
+				borderRadius: 4,
+				padding: "2px 4px",
 			}}
 		>
 			{children}
@@ -260,7 +260,7 @@ function Table({ rows }: { rows: [string, string][] }) {
 					style={{
 						display: "flex",
 						gap: 12,
-						padding: "3px 0",
+						padding: "4px 0",
 						borderBottom: "1px solid var(--border)",
 					}}
 				>
@@ -367,9 +367,7 @@ export function Settings({
 	const [ignorePatterns, setIgnorePatterns] = useState(
 		() => localStorage.getItem("ignore-patterns") ?? "",
 	);
-	const [customShell, setCustomShell] = useState(
-		() => localStorage.getItem("default-shell") ?? "",
-	);
+	const [customShell, setCustomShell] = useState(() => localStorage.getItem("default-shell") ?? "");
 	const [notifSound, setNotifSound] = useState(
 		() => localStorage.getItem("notif-sound-enabled") === "true",
 	);
@@ -549,7 +547,7 @@ export function Settings({
 												fontWeight: 600,
 												letterSpacing: "0.06em",
 												color: "var(--text-muted)",
-												marginBottom: 10,
+												marginBottom: 8,
 											}}
 										>
 											TILING LAYOUTS
@@ -608,7 +606,7 @@ export function Settings({
 																		gridColumn: gc,
 																		gridRow: gr,
 																		width: "100%",
-																		height: 5,
+																		height: 4,
 																		background: "currentColor",
 																		borderRadius: 1,
 																		minWidth: 6,
@@ -640,7 +638,7 @@ export function Settings({
 												fontWeight: 600,
 												letterSpacing: "0.06em",
 												color: "var(--text-muted)",
-												marginBottom: 10,
+												marginBottom: 8,
 											}}
 										>
 											SESSION DEFAULTS
@@ -683,13 +681,14 @@ export function Settings({
 												fontWeight: 600,
 												letterSpacing: "0.06em",
 												color: "var(--text-muted)",
-												marginTop: 20,
-												marginBottom: 10,
+												marginTop: 16,
+												marginBottom: 8,
 											}}
 										>
 											DEFAULT SHELL
 										</div>
 										<input
+											aria-label="Default shell"
 											value={customShell}
 											onChange={(e) => {
 												setCustomShell(e.target.value);
@@ -728,7 +727,7 @@ export function Settings({
 												fontWeight: 600,
 												letterSpacing: "0.06em",
 												color: "var(--text-muted)",
-												marginBottom: 10,
+												marginBottom: 8,
 											}}
 										>
 											COMPLETION SOUND
@@ -833,6 +832,7 @@ export function Settings({
 																	color: isSelected ? "var(--bg-main)" : "var(--text-muted)",
 																	fontSize: 10,
 																	padding: "2px 6px",
+																	minHeight: 24,
 																	cursor: "pointer",
 																	fontFamily: "inherit",
 																}}
@@ -871,6 +871,7 @@ export function Settings({
 															color: "var(--text-secondary)",
 															fontSize: 10,
 															padding: "2px 6px",
+															minHeight: 24,
 															cursor: "pointer",
 															fontFamily: "inherit",
 														}}
@@ -878,22 +879,22 @@ export function Settings({
 														Custom file...
 													</button>
 													{notifSoundPath &&
-																!notifSoundPath.startsWith("/System/") &&
-																!notifSoundPath.startsWith("/usr/share/sounds/") &&
-																!notifSoundPath.startsWith("C:\\Windows\\Media\\") && (
-														<span
-															style={{
-																fontSize: 10,
-																color: "var(--text-muted)",
-																overflow: "hidden",
-																textOverflow: "ellipsis",
-																whiteSpace: "nowrap",
-																flex: 1,
-															}}
-														>
-															{pathBasename(notifSoundPath)}
-														</span>
-													)}
+														!notifSoundPath.startsWith("/System/") &&
+														!notifSoundPath.startsWith("/usr/share/sounds/") &&
+														!notifSoundPath.startsWith("C:\\Windows\\Media\\") && (
+															<span
+																style={{
+																	fontSize: 10,
+																	color: "var(--text-muted)",
+																	overflow: "hidden",
+																	textOverflow: "ellipsis",
+																	whiteSpace: "nowrap",
+																	flex: 1,
+																}}
+															>
+																{pathBasename(notifSoundPath)}
+															</span>
+														)}
 												</div>
 											</div>
 										)}
@@ -947,10 +948,10 @@ export function Settings({
 												overflow: "hidden",
 												background: "var(--bg-main)",
 												border: "1px solid var(--border)",
-												borderRadius: 5,
+												borderRadius: 4,
 												color: "var(--text-primary)",
 												fontSize: 11,
-												padding: "10px 8px",
+												padding: "8px",
 												outline: "none",
 												fontFamily: "Menlo, Monaco, 'Courier New', monospace",
 												resize: "vertical",
@@ -967,7 +968,7 @@ export function Settings({
 												fontWeight: 600,
 												letterSpacing: "0.06em",
 												color: "var(--text-muted)",
-												marginBottom: 10,
+												marginBottom: 8,
 											}}
 										>
 											PROFILES
@@ -1010,12 +1011,15 @@ export function Settings({
 																: "var(--text-muted)",
 															fontSize: 14,
 															padding: "2px 4px",
+															minHeight: 24,
+															minWidth: 24,
 															flexShrink: 0,
 														}}
 													>
 														{profile.hidden ? "\u25E1" : "\u25E0"}
 													</button>
 													<input
+														aria-label="Profile name"
 														value={profile.name}
 														{...noAutocorrect}
 														onChange={(e) => {
@@ -1058,6 +1062,7 @@ export function Settings({
 												cursor: "pointer",
 												fontSize: 11,
 												padding: "4px 12px",
+												minHeight: 24,
 												fontFamily: "inherit",
 											}}
 										>
@@ -1076,7 +1081,7 @@ export function Settings({
 									display: "flex",
 									alignItems: "center",
 									gap: 8,
-									marginBottom: 10,
+									marginBottom: 8,
 								}}
 							>
 								<div
@@ -1102,7 +1107,7 @@ export function Settings({
 										borderRadius: 4,
 										color: "var(--text-primary)",
 										fontSize: 11,
-										padding: "3px 8px",
+										padding: "4px 8px",
 										outline: "none",
 										fontFamily: "inherit",
 									}}
@@ -1141,7 +1146,7 @@ export function Settings({
 													background: t.bg.main,
 													border: `1.5px solid ${isActive ? t.accent : t.border}`,
 													borderRadius: 6,
-													padding: "10px 12px",
+													padding: "8px 12px",
 													cursor: "pointer",
 													textAlign: "left",
 													outline: "none",
@@ -1414,7 +1419,7 @@ export function Settings({
 								style={{
 									display: "flex",
 									alignItems: "center",
-									gap: 10,
+									gap: 8,
 									marginBottom: 8,
 								}}
 							>

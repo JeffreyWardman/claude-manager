@@ -101,6 +101,12 @@ pub fn archive_session(session_id: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn delete_session(config_dir: String, session_id: String) -> Result<(), String> {
+    if session_id
+        .chars()
+        .any(|c| !c.is_ascii_alphanumeric() && c != '-')
+    {
+        return Err("Invalid session ID".to_string());
+    }
     let projects_dir = PathBuf::from(&config_dir).join("projects");
 
     if let Ok(project_entries) = fs::read_dir(&projects_dir) {

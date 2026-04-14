@@ -53,27 +53,22 @@ export function TerminalPane({ ptyId, cwd, cmd, configDir }: Props) {
 
 		const fitAddon = new FitAddon();
 		const webLinksAddon = new WebLinksAddon((_event, uri) => {
-			import("@tauri-apps/plugin-opener").then(({ openUrl }) => openUrl(uri)).catch(() => {
-				window.open(uri, "_blank");
-			});
+			import("@tauri-apps/plugin-opener")
+				.then(({ openUrl }) => openUrl(uri))
+				.catch(() => {
+					window.open(uri, "_blank");
+				});
 		});
 		term.loadAddon(fitAddon);
 		term.loadAddon(webLinksAddon);
 		term.open(container);
 
-		let unlistenData: (() => void) | undefined;
-		let unlistenExit: (() => void) | undefined;
-
-		listen<string>(`pty-data-${ptyId}`, (e) => {
+		const unlistenDataPromise = listen<string>(`pty-data-${ptyId}`, (e) => {
 			term.write(b64ToBytes(e.payload));
-		}).then((fn) => {
-			unlistenData = fn;
 		});
 
-		listen<void>(`pty-exit-${ptyId}`, () => {
+		const unlistenExitPromise = listen<void>(`pty-exit-${ptyId}`, () => {
 			term.writeln("\r\n\x1b[2m[process exited]\x1b[0m");
-		}).then((fn) => {
-			unlistenExit = fn;
 		});
 
 		const inputDisposable = term.onData((data) => {
@@ -122,8 +117,8 @@ export function TerminalPane({ ptyId, cwd, cmd, configDir }: Props) {
 
 		return () => {
 			termRef.current = null;
-			unlistenData?.();
-			unlistenExit?.();
+			unlistenDataPromise.then((fn) => fn());
+			unlistenExitPromise.then((fn) => fn());
 			inputDisposable.dispose();
 			observer.disconnect();
 			term.dispose();

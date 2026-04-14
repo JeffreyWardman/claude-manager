@@ -112,9 +112,7 @@ fn install_for_dir(dir: &std::path::Path, command: &str) -> Option<()> {
     };
 
     let obj = settings.as_object_mut()?;
-    let hooks_val = obj
-        .entry("hooks")
-        .or_insert_with(|| serde_json::json!({}));
+    let hooks_val = obj.entry("hooks").or_insert_with(|| serde_json::json!({}));
     let hooks_map = hooks_val.as_object_mut()?;
 
     let mut changed = false;

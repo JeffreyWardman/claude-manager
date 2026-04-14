@@ -129,8 +129,7 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
             if let Ok(content) = fs::read_to_string(&path) {
                 if let Ok(session_file) = serde_json::from_str::<SessionFile>(&content) {
                     if crate::utils::is_pid_alive(session_file.pid) {
-                        alive_cwd_pids
-                            .insert(session_file.cwd.clone(), session_file.pid);
+                        alive_cwd_pids.insert(session_file.cwd.clone(), session_file.pid);
                         if let Some(ref sid) = session_file.session_id {
                             pid_only_sessions.push((
                                 sid.clone(),
@@ -206,8 +205,10 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
 
     // Step 2b: Add pid-only sessions (alive process, no JSONL yet — freshly spawned).
     {
-        let jsonl_ids: std::collections::HashSet<String> =
-            candidates.iter().map(|(_, s)| s.session_id.clone()).collect();
+        let jsonl_ids: std::collections::HashSet<String> = candidates
+            .iter()
+            .map(|(_, s)| s.session_id.clone())
+            .collect();
         for (session_id, cwd, pid, started_at) in &pid_only_sessions {
             if !jsonl_ids.contains(session_id) {
                 let meta = metadata.get(session_id);

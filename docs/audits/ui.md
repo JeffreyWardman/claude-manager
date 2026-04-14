@@ -1,8 +1,8 @@
 # UI Design & Accessibility Audit
 
-**Last audit:** 2026-04-10
+**Last audit:** 2026-04-14
 **Standard:** Visual design consistency + WCAG 2.2 Level AA
-**Status: PASS** -- all high-priority fixes applied
+**Status: PASS** -- all confirmed issues resolved
 
 ---
 
@@ -24,6 +24,225 @@ Modal:    width: 560px, maxWidth: 90vw, borderRadius: 8, padding: 24
 ---
 
 ## Audit log
+
+### 2026-04-14 (round 11)
+
+#### Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| "Rescan directories" button missing `minHeight` (height ~21px at fontSize:11, padding:4px) | WCAG 2.5.8 | `Settings.tsx:1064` | no `minHeight` | `minHeight: 24` |
+| Decorative ◆ icon in empty state missing `aria-hidden` | WCAG 1.1.1 | `MainPane.tsx:42` | no attribute | `aria-hidden="true"` |
+| Decorative ◆ icon in grid empty state missing `aria-hidden` | WCAG 1.1.1 | `GridLayout.tsx:112` | no attribute | `aria-hidden="true"` |
+
+#### Discarded (false positives, round 11)
+
+| Finding | Reason |
+|---------|--------|
+| Theme card palette swatches (width:9, height:9, gap:3, borderRadius:2) off token scale | Miniature decorative thumbnail — exempt same as LayoutIcon cells |
+| Theme card text-bar preview (borderRadius:1, marginBottom:3) off token scale | Miniature decorative element inside theme thumbnail card |
+| LayoutIcon minWidth:5 off scale | LayoutIcon internal value — already in accepted patterns |
+| MainPane split button missing `minHeight` | `tabStyle()` spread includes `minHeight: 24`; `...tabStyle(view === "split")` on line 201 covers it |
+| Sidebar `iconBtn` missing `minHeight`/`minWidth` | `iconBtn` constant at line 540 explicitly includes `minHeight: 24, minWidth: 24` |
+| GridLayout empty slot button target size | Fills entire grid pane area via CSS `gridArea` — always larger than 24×24px |
+| Settings sound preset buttons too narrow | `minHeight: 24` present; all sound names produce ≥24px width at text + padding |
+| Settings "Custom file…" button too narrow | `minHeight: 24` present; "Custom file…" text + padding yields ≥24px width |
+| Focus indicator contrast (`var(--accent)`) | #8a8fa0 vs #0f0f0f = ~6.1:1 contrast — well above 3:1 requirement |
+| Empty-slot inner "+" icon missing `aria-hidden` | Parent has `aria-label="Empty pane slot N"` — ARIA label replaces inner text for accessible name |
+| Status dot colors contrast | All status colors verified semantic at ≥3:1 on dark background |
+
+---
+
+### 2026-04-14 (round 10)
+
+#### Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| Sort/group/focus indicator circles: unselected border uses `--text-very-muted` (~2.45:1, below 3:1 required for UI component state) | WCAG 1.4.11 | `Sidebar.tsx:693,744,785` | `var(--text-very-muted)` | `var(--border)` |
+
+#### Discarded (false positives, round 10)
+
+| Finding | Reason |
+|---------|--------|
+| Layout preview cells (height:4, width:8) below 24px | Decorative thumbnails — non-interactive, convey layout shape only |
+| Theme preview swatches (width:12, height:12) below 24px | Decorative color swatches — parent theme card is the interactive target |
+
+---
+
+### 2026-04-14 (round 9)
+
+#### Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| CommandPalette tab buttons below 24px | WCAG 2.5.8 | `CommandPalette.tsx:103` | no `minHeight` | `minHeight: 24` (matches MainPane tabStyle) |
+
+---
+
+### 2026-04-14 (round 8)
+
+#### Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| Empty state padding off-scale | Spacing | `CommandPalette.tsx:240` | `"24px 14px"` | `"24px 12px"` |
+| Session item padding off-scale | Spacing | `CommandPalette.tsx:314` | `"6px 14px"` | `"6px 12px"` |
+| Header paddingTop off-scale | Spacing | `MainPane.tsx:100` | `paddingTop: 28` | `paddingTop: 24` |
+| Section header marginTop off-scale | Spacing | `Settings.tsx:684` | `marginTop: 20` | `marginTop: 16` |
+| About section gap off-scale | Spacing | `Settings.tsx:1421` | `gap: 10` | `gap: 8` |
+
+#### Discarded (false positives, round 8)
+
+| Finding | Reason |
+|---------|--------|
+| GridLayout empty slot target size | Slot fills entire grid pane area — always >>24px; auditor confused WCAG 2.5.8 (24px) with 2.5.5 (44px enhanced) |
+
+---
+
+### 2026-04-14 (round 7)
+
+#### Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| Sound preset buttons below 24px target | WCAG 2.5.8 | `Settings.tsx:834` | no `minHeight` | `minHeight: 24` |
+| Custom file button below 24px target | WCAG 2.5.8 | `Settings.tsx:872` | no `minHeight` | `minHeight: 24` |
+| Profile visibility toggle below 24px target | WCAG 2.5.8 | `Settings.tsx:1011` | no `minHeight`/`minWidth` | `minHeight: 24, minWidth: 24` |
+
+---
+
+### 2026-04-14 (round 6)
+
+**Result: ZERO VIOLATIONS — visual audit converged after round 6.**
+
+Visual auditor found zero issues. A11y auditor found 3 hit-target violations (fixed in round 7).
+
+---
+
+### 2026-04-14 (round 5)
+
+#### Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| Search icon fontSize off-scale | Typography | `CommandPalette.tsx:203`, `NewSessionModal.tsx:82` | `fontSize: 15` | `fontSize: 16` |
+| Split view button fontSize off-scale | Typography | `MainPane.tsx:201` | `fontSize: 15` | `fontSize: 16` |
+| New group button fontSize off-scale | Typography | `Sidebar.tsx:912` | `fontSize: 15` | `fontSize: 16` |
+| New session button fontSize off-scale | Typography | `Sidebar.tsx:799` | `fontSize: 18` | `fontSize: 20` |
+| Textarea (ignore patterns) padding off-scale | Spacing | `Settings.tsx:952` | `"10px 8px"` | `"8px"` |
+| Group slot context menu missing role | WCAG 4.1.2 | `Sidebar.tsx:1780` | no `role="menu"` | `role="menu" aria-label="Slot actions"` |
+| Group slot menu button missing role | WCAG 4.1.2 | `Sidebar.tsx:1795` | no `role="menuitem"` | `role="menuitem"` |
+
+#### Discarded (false positives, round 5)
+
+| Finding | Reason |
+|---------|--------|
+| `fontSize: 32` on "◆" decorative icons | Within `16+` (title/display) font scale range; purely decorative empty-state icon |
+| `GridLayout.tsx:184` `fontSize: 24` | 24 IS on the icon scale (10, 12, 14, 16, 20, 24) |
+| `Settings.tsx:834,872,1235` `padding: "2px 6px"` | 6 IS in the spacing scale; false positive |
+
+---
+
+### 2026-04-14 (round 4)
+
+#### Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| Section header marginBottom off-scale | Spacing | `Settings.tsx:550,641,685,730,969,1079` | `marginBottom: 10` | `marginBottom: 8` |
+| Ignore patterns input padding off-scale | Spacing | `Settings.tsx:1105` | `"3px 8px"` | `"4px 8px"` |
+| Theme card padding off-scale | Spacing | `Settings.tsx:1144` | `"10px 12px"` | `"8px 12px"` |
+| Group rename input borderRadius off-scale | Radius | `Sidebar.tsx:1027` | `borderRadius: 3` | `borderRadius: 4` |
+| Session rename input borderRadius off-scale | Radius | `Sidebar.tsx:1523` | `borderRadius: 3` | `borderRadius: 4` |
+| Slot number fontWeight off-scale | Typography | `Sidebar.tsx:1259` | `fontWeight: 700` | `fontWeight: 600` |
+| Group rename input missing label | WCAG 3.3.2 | `Sidebar.tsx:1006` | no `aria-label` | `aria-label="Group name"` |
+| Session rename input missing label | WCAG 3.3.2 | `Sidebar.tsx:1502` | no `aria-label` | `aria-label="Session name"` |
+
+#### Discarded (false positives, round 4)
+
+| Finding | Reason |
+|---------|--------|
+| `CommandPalette.tsx` tab bar `gap: 0` | Zero means no gap — intentional, not a spacing token violation |
+| `Sidebar.tsx:203` LayoutIcon `gap: 1` | Micro decorative grid cells (height 4px); gap:1 is optical separation between tiny cells — accepted exception |
+| `Sidebar.tsx:215` LayoutIcon `borderRadius: 1` | Same micro decorative exception as layout preview cells in Settings.tsx |
+| Theme card micro-elements (`gap:3`, `borderRadius:2/1`, `marginBottom:3`) | Elements are 2–9px decorative swatches/lines inside theme preview card — same rationale as layout preview exception |
+
+---
+
+### 2026-04-14 (round 3)
+
+#### Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| Sort mode button padding off-scale | Spacing | `Sidebar.tsx:680` | `"5px 12px"` | `"4px 12px"` |
+| Group mode button padding off-scale | Spacing | `Sidebar.tsx:731` | `"5px 12px"` | `"4px 12px"` |
+| Table row padding off-scale | Spacing | `Settings.tsx:263` | `"3px 0"` | `"4px 0"` |
+| Layout badge fontSize below minimum | Typography | `Sidebar.tsx:1063` | `fontSize: 9` | `fontSize: 10` |
+| Layout badge padding off-scale | Spacing | `Sidebar.tsx:1067` | `"2px 5px"` | `"2px 4px"` |
+| Layout badge borderRadius off-scale | Radius | `Sidebar.tsx:1069` | `borderRadius: 3` | `borderRadius: 4` |
+| Layout picker button padding off-scale | Spacing | `Sidebar.tsx:1124` | `"5px 6px"` | `"4px 6px"` |
+| Layout picker button gap off-scale | Spacing | `Sidebar.tsx:1134` | `gap: 3` | `gap: 4` |
+| Slot number fontSize below minimum | Typography | `Sidebar.tsx:1257` | `fontSize: 9` | `fontSize: 10` |
+| Session row transition non-standard | Interaction | `Sidebar.tsx:1465` | `"background 0.05s"` | `"background 0.1s"` |
+| cmdk heading padding off-scale | Spacing | `index.css:44` | `4px 14px 2px` | `4px 12px 2px` |
+| DEFAULT SHELL input missing label | WCAG 3.3.2 | `Settings.tsx:690` | no label | `aria-label="Default shell"` |
+| Profile name input missing label | WCAG 3.3.2 | `Settings.tsx:1016` | no label | `aria-label="Profile name"` |
+
+#### Discarded (false positives, round 3)
+
+| Finding | Reason |
+|---------|--------|
+| `Sidebar.tsx:928` marginBottom: 2 | 2 IS in the spacing scale (2, 4, 6, 8…); false positive |
+| `Sidebar.tsx:1149` gap: 3 | Auditor line number was off; line 1149 is closing `</button>` tag — same element as the confirmed gap: 3 at line 1134, already fixed |
+
+---
+
+### 2026-04-14 (rounds 1–2)
+
+#### Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| New group button missing aria-label | WCAG 4.1.2 | `Sidebar.tsx:911` | `title="New group"` only | Added `aria-label="New group"` |
+| Focus outline-offset too tight | WCAG 2.4.11 | `index.css:123` | `outline-offset: 1px` | `outline-offset: 2px` (clearer separation) |
+| Scrollbar thumb borderRadius off-scale | Radius | `index.css:132` | `border-radius: 3px` | `border-radius: 4px` |
+| Code badge borderRadius off-scale | Radius | `Settings.tsx:245` | `borderRadius: 3` | `borderRadius: 4` |
+| Tab bar padding off-scale | Spacing | `CommandPalette.tsx:154` | `"4px 10px 0"` | `"4px 8px 0"` |
+| Search row padding off-scale | Spacing | `CommandPalette.tsx:199` | `"10px 14px"` | `"8px 12px"` |
+| Search input font size off-scale | Typography | `CommandPalette.tsx:222` | `fontSize: 14` | `fontSize: 13` |
+| Hint text below minimum font size | Typography | `CommandPalette.tsx:184,269,327` | `fontSize: 9` | `fontSize: 10` |
+| Search row padding off-scale | Spacing | `NewSessionModal.tsx:78` | `"10px 14px"` | `"8px 12px"` |
+| Search input font size off-scale | Typography | `NewSessionModal.tsx:97` | `fontSize: 14` | `fontSize: 13` |
+| Suggestion item padding off-scale | Spacing | `NewSessionModal.tsx:124` | `"7px 14px"` | `"6px 12px"` |
+| Tab hover has no transition | Interaction | `MainPane.tsx:tabStyle` | no transition | `transition: "color 0.1s"` |
+| Empty state padding off-scale | Spacing | `NewSessionModal.tsx:157` | `"10px 14px"` | `"8px 12px"` |
+| Action item padding off-scale | Spacing | `CommandPalette.tsx:260` | `"6px 14px"` | `"6px 12px"` |
+| Layout preview cell height off-scale | Spacing | `Settings.tsx:609` | `height: 5` | `height: 4` |
+| Textarea borderRadius off-scale | Radius | `Settings.tsx:948` | `borderRadius: 5` | `borderRadius: 4` |
+| Kbd padding off-scale | Spacing | `Settings.tsx:229` | `"1px 5px"` | `"2px 4px"` |
+| Code padding off-scale | Spacing | `Settings.tsx:246` | `"1px 4px"` | `"2px 4px"` |
+| Toggle button missing aria-pressed | WCAG 4.1.2 | `Sidebar.tsx:759` | no `aria-pressed` | `aria-pressed={focusActiveGroup}` |
+| Toggle button padding off-scale | Spacing | `Sidebar.tsx:771` | `"5px 12px"` | `"4px 12px"` |
+| Resize separator not keyboard-operable | WCAG 2.1.1 | `App.tsx:712` | mouse-only | Added `onKeyDown` (ArrowLeft/Right ±8px) |
+| Split view button missing minWidth | WCAG 2.5.8 | `MainPane.tsx:201` | no `minWidth` | `minWidth: 24` |
+
+#### Discarded (false positives)
+
+| Finding | Reason |
+|---------|--------|
+| Split view button wrong role | Button IS inside a `role="tablist"` alongside CLAUDE/TERMINAL tabs — tab role is correct |
+| Session items lack role | Previously audited and accepted; keyboard access is via session click (alternative to drag) |
+| Group header lacks role | Contains interactive child buttons; outer click is convenience for mouse; keyboard users use the child collapse button |
+| Inline hover handlers obscure focus | Global `*:focus-visible` outline always rendered on top; color change doesn't obscure the outline border |
+| Context menus missing role="menu" | FALSE POSITIVE — both group and session context menus already have `role="menu"` and `role="menuitem"` on all items |
+| menuItemStyle hit target too small | FALSE POSITIVE — `padding: "6px 12px"` + `fontSize: 13` gives ~30px rendered height, exceeding 24px minimum |
+| Sidebar fontSize: 10 labels | On scale (10 = caption minimum); used for secondary decorative labels alongside primary content |
+| Code/Kbd 1px vertical padding | Inline text decoration elements; 1px prevents line-height disruption (fixed to 2px as a scale improvement) |
+| Layout cell borderRadius: 1 | Micro decorative element (4-5px fill block); 4px radius would make it pill-shaped; acceptable exception |
+
+---
 
 ### 2026-04-10
 
@@ -68,12 +287,13 @@ Full WCAG audit history in `docs/audits/wcag2-audit.md`. Summary:
 | Criterion | Status |
 |-----------|--------|
 | 1.4.3 Color contrast | PASS (6 rounds of fixes) |
-| 2.1.1 Keyboard accessible | PASS |
+| 2.1.1 Keyboard accessible | PASS (resize separator keyboard handler added) |
 | 2.4.7 Focus visible | PASS (outline-offset fixed) |
-| 2.4.11 Focus not obscured | PASS (outline-offset: 1px) |
+| 2.4.11 Focus not obscured | PASS (outline-offset: 2px) |
 | 2.5.7 Dragging movements | PASS (context menu alternatives) |
 | 2.5.8 Target size (24px min) | PASS (minHeight/minWidth on all buttons) |
 | 2.3.3 Animation | PASS (prefers-reduced-motion) |
 | 3.2.6 Consistent help | PASS (Settings > Guide) |
+| 3.3.2 Form labels | PASS (aria-labels added to DEFAULT SHELL and profile name inputs) |
 | 3.3.7 Redundant entry | PASS |
 | 4.1.2 ARIA labels | PASS |

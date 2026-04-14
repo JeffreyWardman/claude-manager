@@ -41,7 +41,7 @@
 
 /* cmdk */
 [cmdk-group-heading] {
-  padding: 4px 14px 2px;
+  padding: 4px 12px 2px;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -120,7 +120,7 @@ body.dragging * {
 
   *:focus-visible {
     outline: 2px solid var(--accent);
-    outline-offset: 1px;
+    outline-offset: 2px;
     border-radius: 4px;
   }
 
@@ -128,7 +128,7 @@ body.dragging * {
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
     background: var(--text-very-muted);
-    border-radius: 3px;
+    border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted);

@@ -44,8 +44,12 @@ pub fn play_sound(path: String) {
         }
         #[cfg(target_os = "windows")]
         {
+            let escaped = path.replace('\'', "''");
             let _ = std::process::Command::new("powershell")
-                .args(["-c", &format!("(New-Object Media.SoundPlayer '{}').PlaySync()", path)])
+                .args([
+                    "-c",
+                    &format!("(New-Object Media.SoundPlayer '{}').PlaySync()", escaped),
+                ])
                 .output();
         }
     });

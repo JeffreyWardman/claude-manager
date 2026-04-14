@@ -22,13 +22,13 @@ export function usePtyActivity(
 	onExit?: (sessionId: string) => void,
 ): Map<string, ActivityState> {
 	const [activityMap, setActivityMap] = useState<Map<string, ActivityState>>(new Map());
-	// biome-ignore lint/correctness/useExhaustiveDependencies: idsKey is intentionally the only dep to avoid re-subscribing on every render
 	const idsKey = sessionIds.slice().sort().join(",");
 	const onInputRef = { current: onInput };
 	onInputRef.current = onInput;
 	const onExitRef = { current: onExit };
 	onExitRef.current = onExit;
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: idsKey is intentionally the only dep to avoid re-subscribing on every render
 	useEffect(() => {
 		if (sessionIds.length === 0) {
 			return;

@@ -101,6 +101,7 @@ export function CommandPalette({
 		fontWeight: active ? 600 : 400,
 		color: active ? "var(--text-secondary)" : "var(--text-muted)",
 		padding: "4px 8px",
+		minHeight: 24,
 		letterSpacing: "0.04em",
 		fontFamily: "inherit",
 	});
@@ -114,30 +115,30 @@ export function CommandPalette({
 			onClick={onClose}
 		>
 			<div
-					ref={dialogRef}
-					onClick={(e) => e.stopPropagation()}
-					onKeyDown={(e) => {
-						if (e.key === "Tab") {
-							e.preventDefault();
-							e.stopPropagation();
-							setTab((t) => (t === "actions" ? "sessions" : "actions"));
-							return;
-						}
-						if ((e.metaKey || e.ctrlKey) && e.key >= "1" && e.key <= "9") {
-							e.preventDefault();
-							const idx = Number.parseInt(e.key) - 1;
-							if (tab === "actions") {
-								filteredActions[idx]?.onSelect();
-							} else {
-								const s = filteredSessions[idx];
-								if (s) {
-									handleSelect(s.session_id);
-								}
+				ref={dialogRef}
+				onClick={(e) => e.stopPropagation()}
+				onKeyDown={(e) => {
+					if (e.key === "Tab") {
+						e.preventDefault();
+						e.stopPropagation();
+						setTab((t) => (t === "actions" ? "sessions" : "actions"));
+						return;
+					}
+					if ((e.metaKey || e.ctrlKey) && e.key >= "1" && e.key <= "9") {
+						e.preventDefault();
+						const idx = Number.parseInt(e.key, 10) - 1;
+						if (tab === "actions") {
+							filteredActions[idx]?.onSelect();
+						} else {
+							const s = filteredSessions[idx];
+							if (s) {
+								handleSelect(s.session_id);
 							}
 						}
-					}}
-					style={modalDialogStyle}
-				>
+					}
+				}}
+				style={modalDialogStyle}
+			>
 				<Command
 					value={value}
 					onValueChange={setValue}
@@ -151,7 +152,7 @@ export function CommandPalette({
 						style={{
 							display: "flex",
 							alignItems: "center",
-							padding: "4px 10px 0",
+							padding: "4px 8px 0",
 							gap: 0,
 						}}
 					>
@@ -165,10 +166,7 @@ export function CommandPalette({
 						>
 							ACTIONS
 						</button>
-						<span
-							style={{ color: "var(--text-very-muted)", fontSize: 10 }}
-							aria-hidden="true"
-						>
+						<span style={{ color: "var(--text-very-muted)", fontSize: 10 }} aria-hidden="true">
 							|
 						</span>
 						<button
@@ -184,7 +182,7 @@ export function CommandPalette({
 						<span
 							style={{
 								marginLeft: "auto",
-								fontSize: 9,
+								fontSize: 10,
 								color: "var(--text-very-muted)",
 								letterSpacing: "0.02em",
 							}}
@@ -199,24 +197,18 @@ export function CommandPalette({
 							display: "flex",
 							alignItems: "center",
 							gap: 8,
-							padding: "10px 14px",
+							padding: "8px 12px",
 							borderBottom: "1px solid var(--border)",
 						}}
 					>
-						<span style={{ color: "var(--text-muted)", fontSize: 15 }}>⌕</span>
+						<span style={{ color: "var(--text-muted)", fontSize: 16 }}>⌕</span>
 						<input
 							ref={inputRef}
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							{...noAutocorrect}
-							aria-label={
-								tab === "actions" ? "Search actions" : "Search sessions"
-							}
-							placeholder={
-								tab === "actions"
-									? "Search actions..."
-									: "Search sessions..."
-							}
+							aria-label={tab === "actions" ? "Search actions" : "Search sessions"}
+							placeholder={tab === "actions" ? "Search actions..." : "Search sessions..."}
 							onKeyDown={(e) => {
 								if (e.key === "Escape") {
 									onClose();
@@ -228,7 +220,7 @@ export function CommandPalette({
 								border: "none",
 								outline: "none",
 								color: "var(--text-primary)",
-								fontSize: 14,
+								fontSize: 13,
 								fontFamily: "inherit",
 							}}
 						/>
@@ -246,15 +238,13 @@ export function CommandPalette({
 							(tab === "sessions" && filteredSessions.length === 0)) && (
 							<div
 								style={{
-									padding: "24px 14px",
+									padding: "24px 12px",
 									color: "var(--text-muted)",
 									fontSize: 13,
 									textAlign: "center",
 								}}
 							>
-								{tab === "actions"
-									? "No actions available."
-									: "No sessions found."}
+								{tab === "actions" ? "No actions available." : "No sessions found."}
 							</div>
 						)}
 
@@ -268,33 +258,34 @@ export function CommandPalette({
 										display: "flex",
 										alignItems: "center",
 										gap: 8,
-										padding: "6px 14px",
+										padding: "6px 12px",
 										cursor: "pointer",
 										fontSize: 13,
 										color: "var(--text-secondary)",
 										outline: "none",
 									}}
 								>
-									<span style={{ fontSize: 9, color: "var(--text-very-muted)", minWidth: 20, textAlign: "center", fontFamily: "inherit" }}>
+									<span
+										style={{
+											fontSize: 10,
+											color: "var(--text-very-muted)",
+											minWidth: 20,
+											textAlign: "center",
+											fontFamily: "inherit",
+										}}
+									>
 										{i < 9 ? `⌘${i + 1}` : ""}
 									</span>
 									<span style={{ flex: 1, fontWeight: 500, color: "var(--text-primary)" }}>
 										{action.label}
 									</span>
-									<span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-										{action.detail}
-									</span>
+									<span style={{ fontSize: 11, color: "var(--text-muted)" }}>{action.detail}</span>
 								</Command.Item>
 							))}
 
 						{tab === "sessions" &&
 							filteredSessions.map((s, i) => (
-								<SessionItem
-									key={s.session_id}
-									session={s}
-									onSelect={handleSelect}
-									idx={i}
-								/>
+								<SessionItem key={s.session_id} session={s} onSelect={handleSelect} idx={i} />
 							))}
 					</Command.List>
 				</Command>
@@ -321,7 +312,7 @@ function SessionItem({
 				display: "flex",
 				alignItems: "center",
 				gap: 8,
-				padding: "6px 14px",
+				padding: "6px 12px",
 				cursor: "pointer",
 				fontSize: 13,
 				color: "var(--text-secondary)",
@@ -332,7 +323,15 @@ function SessionItem({
 				color: "var(--text-primary)",
 			}}
 		>
-			<span style={{ fontSize: 9, color: "var(--text-very-muted)", minWidth: 20, textAlign: "center", fontFamily: "inherit" }}>
+			<span
+				style={{
+					fontSize: 10,
+					color: "var(--text-very-muted)",
+					minWidth: 20,
+					textAlign: "center",
+					fontFamily: "inherit",
+				}}
+			>
 				{idx < 9 ? `⌘${idx + 1}` : ""}
 			</span>
 			<StatusDot status={session.status} size={7} />
