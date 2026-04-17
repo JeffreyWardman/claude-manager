@@ -42,7 +42,7 @@ if [ "$PLATFORM" = "macos" ]; then
     curl -fSL -o "$DMG_PATH" "$URL"
 
     echo "Installing to /Applications..."
-    MOUNT=$(hdiutil attach "$DMG_PATH" -nobrowse -quiet | tail -1 | sed 's/.*\(\/Volumes\/.*\)/\1/')
+    MOUNT=$(hdiutil attach "$DMG_PATH" -nobrowse | awk -F'\t' '{print $NF}' | tail -1 | xargs)
     if [ -d "/Applications/$APP_NAME.app" ]; then
         rm -rf "/Applications/$APP_NAME.app"
     fi
