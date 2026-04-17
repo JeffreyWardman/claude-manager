@@ -61,6 +61,8 @@ brew install --cask claude-manager
 curl -fsSL https://raw.githubusercontent.com/JeffreyWardman/claude-manager/main/install.sh | sh
 ```
 
+On macOS and Linux, both install methods also create `claude-manager` and `cmanager` CLI commands so you can launch from the terminal.
+
 ## Usage
 
 ### Keyboard shortcuts
