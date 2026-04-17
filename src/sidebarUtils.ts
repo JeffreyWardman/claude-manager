@@ -1,4 +1,5 @@
 import type { ClaudeSession } from "./types";
+import { formatCwd, isWindows } from "./utils";
 
 interface SidebarGroup {
 	label: string;
@@ -11,12 +12,14 @@ export function sortActiveFirst(sessions: ClaudeSession[]): ClaudeSession[] {
 	return [...sessions].sort((a, b) => {
 		const ao = a.status === "active" ? 0 : 1;
 		const bo = b.status === "active" ? 0 : 1;
-		return ao - bo || b.started_at - a.started_at;
+		return ao - bo || (b.last_modified || b.started_at) - (a.last_modified || a.started_at);
 	});
 }
 
 export function sortByDate(sessions: ClaudeSession[]): ClaudeSession[] {
-	return [...sessions].sort((a, b) => b.started_at - a.started_at);
+	return [...sessions].sort(
+		(a, b) => (b.last_modified || b.started_at) - (a.last_modified || a.started_at),
+	);
 }
 
 export function sortAlpha(sessions: ClaudeSession[]): ClaudeSession[] {
@@ -39,9 +42,8 @@ export function sortSessions(sessions: ClaudeSession[], mode: SortMode): ClaudeS
 }
 
 export function projectLabel(cwd: string): string {
-	const isWin = navigator.platform?.toLowerCase().includes("win") ?? false;
-	const sep = isWin ? "\\" : "/";
-	const parts = cwd.replace(isWin ? /\\+$/ : /\/+$/, "").split(sep);
+	const sep = isWindows ? "\\" : "/";
+	const parts = cwd.replace(isWindows ? /\\+$/ : /\/+$/, "").split(sep);
 	if (parts.length >= 2) {
 		return parts.slice(-2).join("/");
 	}
@@ -168,7 +170,7 @@ export function isSessionIgnored(
 ): boolean {
 	const name = (session.display_name || session.project_name).toLowerCase();
 	const cwd = session.cwd.toLowerCase();
-	const cwdTilde = cwd.replace(/^\/users\/[^/]+/, "~");
+	const cwdTilde = formatCwd(cwd);
 
 	const excluded = patterns.exclude.some((p) => patternMatchesSession(p, name, cwd, cwdTilde));
 	if (!excluded) {
@@ -185,7 +187,7 @@ export function containsMatch(text: string, query: string): boolean {
 
 export function sessionMatchesFolder(session: ClaudeSession, query: string): boolean {
 	const cwd = session.cwd;
-	const cwdTilde = cwd.replace(/^\/Users\/[^/]+/, "~");
+	const cwdTilde = formatCwd(cwd);
 	return containsMatch(cwd, query) || containsMatch(cwdTilde, query);
 }
 

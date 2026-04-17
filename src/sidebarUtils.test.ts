@@ -21,6 +21,7 @@ function makeSession(overrides: Partial<ClaudeSession> & { session_id: string })
 		cwd: "/home/user/project",
 		project_name: "project",
 		started_at: 0,
+		last_modified: 0,
 		status: "offline",
 		display_name: null,
 		git_branch: null,

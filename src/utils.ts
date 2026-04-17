@@ -1,13 +1,13 @@
 import type { ClaudeSession } from "./types";
 
-const isWindows = navigator.platform?.toLowerCase().includes("win") ?? false;
+export const isWindows = navigator.platform?.toLowerCase().includes("win") ?? false;
 const sep = isWindows ? "\\" : "/";
 
 export function formatCwd(cwd: string): string {
 	if (isWindows) {
 		return cwd.replace(/^C:\\Users\\[^\\]+/, "~");
 	}
-	return cwd.replace(/^\/Users\/[^/]+/, "~");
+	return cwd.replace(/^\/[Uu]sers\/[^/]+/, "~");
 }
 
 export function pathBasename(filepath: string): string {

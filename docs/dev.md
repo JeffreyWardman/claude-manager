@@ -118,3 +118,78 @@ main.rs           Entry point (delegates to lib)
 10. **Wrapper functions eliminated** — `sessions.rs` had thin wrappers (`is_process_alive`, `claude_projects_dir`) that just called `utils::`. Inlined the `crate::utils::` calls directly at call sites.
 
 11. **Import ordering** — `pty_manager.rs` had `use crate::utils::is_pid_alive` placed between function definitions instead of with other imports. Moved to import block.
+
+### 2026-04-17 — Full-stack code audit (Auditor A + B)
+
+**Linting**: cargo fmt clean, 1 accepted clippy warning, 0 biome errors, 48 accepted biome warnings, 111 tests pass.
+
+#### Fixed (confirmed by both auditors)
+
+| # | Severity | File | Issue | Fix |
+|---|----------|------|-------|-----|
+| 1 | HIGH | `metadata.rs` | Session ID validation missing length check — only checked charset, not UUID length. Path traversal risk. | Created `utils::is_valid_session_id()` (36 chars + charset). Used in `metadata.rs` and `hook_server.rs`. |
+| 2 | HIGH | `metadata.rs` | `delete_session` didn't verify canonicalized path was within projects dir before deletion. | Added `canonicalize()` check: target must start with canonical projects dir. |
+| 3 | HIGH | `hook_server.rs` | Session ID from hook request used in event names without validation. | Added `is_valid_session_id()` guard before processing hook payload. |
+| 4 | MEDIUM | `ThemeContext.tsx` | `isValidTheme()` only checked `id`, `name`, `bg` existence — didn't validate nested structure (`bg.main`, `bg.sidebar`, `text.primary`, `item.selected`). Malformed custom themes could crash. | Added full structural validation of required nested properties. |
+| 5 | LOW | Multiple `.rs` | Inconsistent error message "no home dir" across modules. | Extracted `utils::NO_HOME_DIR` constant, used in all 3 locations. |
+
+#### Discarded (false positives)
+
+| Finding | Reason |
+|---------|--------|
+| A#1: Race condition in PTY state — old reader + new spawn | `Arc::ptr_eq` check at line 206 correctly handles this: old reader sees different Arc, skips cleanup. The "window" described doesn't cause data loss — both PTYs emit to different event names since the old one exits immediately. |
+| A#4: `pty_write` silent success when PTY not found | By design — focus events (`\x1b[I`/`\x1b[O`) are sent speculatively and should not error. Frontend already handles spawn failures separately. |
+| A#5: Lock poisoning risk in `pty_resize` | Accepted pattern per CLAUDE.md. Mutex poisoning = unrecoverable panic, which is correct. |
+| A#6: Untrusted file path in profile config | `shell_escape::escape()` handles the shell injection vector. The env vars come from the user's own `settings.json` in their profile directory — same trust level as `~/.zshrc`. |
+| A#8: Promise from `listen()` not awaited | Tauri's `listen()` resolves synchronously in practice (registers in the IPC layer). The `.then()` pattern is used throughout the codebase consistently and hasn't caused issues. |
+| A#9: Off-by-one in `parse_timestamp` leap years | Accepted pattern per CLAUDE.md. Only used for sort ordering, not calendar display. Error is < 1 day per century. |
+| A#15: Unvalidated localStorage sidebar width | Width is clamped by `Math.max(MIN, Math.min(MAX, ...))` during resize. A corrupt value would be fixed on first resize interaction. |
+| B#5: App.tsx too large (812 lines) | Acknowledged but not actionable in this round — extracting hooks requires careful state management review. Filed for future refactor. |
+| B#7: Sidebar too large | Same — extracting subcomponents requires refactoring prop threading. Filed for future. |
+| B#8: Inconsistent command return types | Some commands (e.g. `get_sessions`) intentionally return empty on error rather than failing the IPC call, which would show as a console error to the user. |
+| B#9: pty_spawn 9 parameters | Accepted pattern. |
+| B#10: Sidebar 26 props | Acknowledged for future refactor. Grouping into action unions is a good direction. |
+| B#16: labelRef in useDragDrop | Used on lines 60 and 94 — not dead code. |
+| B#21: N+1 session file reads | Acceptable at current scale (3s polling, typically < 100 sessions). |
+| B#22: Lock files not cleaned on crash | `acquire_lock()` already checks `is_pid_alive()` — stale locks from crashed processes are overwritten on next spawn. |
+
+### 2026-04-17 — Round 2
+
+**Linting**: cargo fmt clean, 1 accepted clippy warning, 0 biome errors, 111 tests pass.
+
+#### Fixed
+
+| # | Severity | File | Issue | Fix |
+|---|----------|------|-------|-----|
+| 1 | MEDIUM | `sidebarUtils.ts`, `utils.ts`, `Settings.tsx` | Home dir regex (`/Users/`) duplicated in 4 places with inconsistent case handling. `sessionMatchesFolder` didn't lowercase before replacing, causing match failures on case-insensitive filesystems. | Made `formatCwd` in utils.ts case-insensitive (`/[Uu]sers/`). Replaced all inline regexes with `formatCwd()`. |
+| 2 | HIGH | `commands.rs` | PowerShell command injection in Windows sound playback — backtick metacharacters in file path could execute arbitrary commands. | Pass path via `$env:__CM_SOUND` env var instead of string interpolation. Added `-NoProfile` flag. |
+
+#### Deferred
+
+| Finding | Reason |
+|---------|--------|
+| B#2: Layout cell definitions duplicated in Sidebar + Settings | Real DRY violation but low-risk. Both maps are stable (only change when layouts are added). Extracting to shared module is planned but deferred to avoid churn. |
+| B#4: Settings.tsx 1525 lines | Acknowledged. Split into sub-components planned for future. |
+| B#6: Config directory reading pattern repeated | Three implementations have different fallback behavior. Unifying risks breaking edge cases. |
+| B#7: tabStyle duplicated in MainPane + CommandPalette | Implementations differ slightly (font sizes, padding). Not worth extracting for 2 usages. |
+| B#8: usePtyActivity complex state | Already well-commented with clear constants. Reducer pattern would add complexity without benefit at this scale. |
+| B#9: JSONL discovery strategies differ | Intentional — journal needs exact match first for performance, sessions need full scan for completeness. |
+| A#3: configDir missing from TerminalPane effect deps | By design — configDir only changes on profile switch, which unmounts/remounts all TerminalPanes anyway. Adding it would cause unnecessary PTY respawns. |
+
+### 2026-04-17 — Round 3
+
+**Auditor A**: No new issues found.
+**Auditor B**: 4 minor findings.
+
+#### Fixed
+
+| # | Severity | File | Issue | Fix |
+|---|----------|------|-------|-----|
+| 1 | LOW | `sidebarUtils.ts` | Duplicate platform detection — `isWin` reimplemented instead of using `isWindows` from `utils.ts`. | Exported `isWindows` from `utils.ts`, imported in `sidebarUtils.ts`. Removed inline duplicate. |
+
+#### Discarded
+
+| Finding | Reason |
+|---------|--------|
+| B#3: `dropToSlot` unused export | False positive — imported and used in `App.tsx:12,319`. |
+| B#4: dragState module-level mutable state | Intentional — ephemeral pointer state during drag. React state would cause unnecessary re-renders on every pointermove. |

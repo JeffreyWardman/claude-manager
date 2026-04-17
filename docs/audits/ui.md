@@ -1,6 +1,6 @@
 # UI Design & Accessibility Audit
 
-**Last audit:** 2026-04-14
+**Last audit:** 2026-04-17
 **Standard:** Visual design consistency + WCAG 2.2 Level AA
 **Status: PASS** -- all confirmed issues resolved
 
@@ -24,6 +24,165 @@ Modal:    width: 560px, maxWidth: 90vw, borderRadius: 8, padding: 24
 ---
 
 ## Audit log
+
+### 2026-04-14 (converge rounds 18–19)
+
+**Converged after 2 rounds.**
+
+#### Round 18 — Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| Settings tab bar missing `role="tablist"`, tab buttons missing `role="tab"` and `aria-selected` | WCAG 4.1.2 | `Settings.tsx:486` | plain `<div>` + plain `<button>` | `role="tablist"` container + `role="tab"` + `aria-selected` on each button |
+
+#### Round 18 — Discarded
+
+| Finding | Reason |
+|---------|--------|
+| Visual auditor re-flagged LayoutIcon/theme-card internals | All covered by accepted patterns established in earlier rounds |
+| NewSessionModal listbox semantics incomplete | `role="option"` + `aria-selected` already correct on each item |
+| MainPane/CommandPalette arrow-key tab navigation | WCAG 2.1.1 requires keyboard access, not the full ARIA APG pattern; Tab provides access |
+| MainPane tabs focus indicator | `:focus-visible !important` handles it |
+
+#### Round 19 — Zero violations found
+
+Visual: only re-flagged exempt LayoutIcon `gap:1` (accepted pattern). A11y: zero findings.
+
+---
+
+### 2026-04-14 (round 17)
+
+#### Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| Sort/group button default-state icon "↕" at `--text-very-muted` (~2.4:1, below 3:1) | WCAG 1.4.11 | `Sidebar.tsx:627,634` | `var(--text-very-muted)` | `var(--text-muted)` (~4.77:1) |
+| Layout picker button text "2x1" at `--text-very-muted` (~2.4:1, below 4.5:1) | WCAG 1.4.3 | `Sidebar.tsx:1067,1076` | `var(--text-very-muted)` | `var(--text-muted)` (~4.77:1) |
+
+#### Discarded (false positives, round 17)
+
+| Finding | Reason |
+|---------|--------|
+| Visual auditor: zero violations found | All values verified compliant |
+
+---
+
+### 2026-04-14 (round 16)
+
+#### Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| Hardcoded `rgba(245,158,11,0.07)` computing row tint | Color | `Sidebar.tsx:1427` | hardcoded rgba | `color-mix(in srgb, var(--status-computing, #f59e0b) 7%, transparent)` |
+| Hardcoded `rgba(59,130,246,0.07)` unread row tint | Color | `Sidebar.tsx:1429` | hardcoded rgba | `color-mix(in srgb, var(--status-unread, #3b82f6) 7%, transparent)` |
+| Hardcoded `rgba(34,197,94,0.07)` waiting row tint | Color | `Sidebar.tsx:1431` | hardcoded rgba | `color-mix(in srgb, var(--status-waiting, #22c55e) 7%, transparent)` |
+| `outline: "none"` inline suppresses `:focus-visible` (WCAG 2.4.7) | WCAG 2.4.7 | `index.css:122` | `outline: 2px solid var(--accent)` | `outline: 2px solid var(--accent) !important` |
+
+#### Discarded (false positives, round 16)
+
+| Finding | Reason |
+|---------|--------|
+| Profile name input contrast | `background: none` renders on parent dark bg; text contrast meets 4.5:1 |
+
+---
+
+### 2026-04-14 (round 15)
+
+#### Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| Sidebar header `paddingTop` off-scale | Spacing | `Sidebar.tsx:572` | `paddingTop: 28` | `paddingTop: 24` |
+
+#### Discarded (false positives, round 15)
+
+| Finding | Reason |
+|---------|--------|
+| `Sidebar.tsx:572 height: 52` | Component dimension — spacing scale applies to padding/margin/gap, not fixed element heights |
+| `Sidebar.tsx:1457 height: 30` | Component dimension — same reason |
+| `CommandPalette.tsx maxHeight: 360` | Component dimension |
+| `NewSessionModal.tsx maxHeight: 320` | Component dimension |
+| `Settings.tsx minHeight: 80` | Component dimension |
+| A11y auditor found zero violations | All elements verified compliant |
+
+---
+
+### 2026-04-14 (round 14)
+
+#### Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| Chevron `▾` icon fontSize off-scale (3 instances) | Typography | `Sidebar.tsx:901,989,1391` | `fontSize: 8` | `fontSize: 10` |
+| Layout name label fontSize off-scale | Typography | `Sidebar.tsx:1143` | `fontSize: 8` | `fontSize: 10` |
+| Layout name label fontSize off-scale | Typography | `Settings.tsx:620` | `fontSize: 8` | `fontSize: 10` |
+| Hardcoded `rgba(59,130,246,...)` unread blue (3 instances) | Color | `MainPane.tsx:86,106,251` | `rgba(59,130,246,0.25/0.06/0.04)` | `color-mix(in srgb, var(--status-unread, #3b82f6) 25/6/4%, transparent)` |
+
+#### Discarded (false positives, round 14)
+
+| Finding | Reason |
+|---------|--------|
+| `Sidebar.tsx:1189 paddingTop: 2` | 2 is on the canonical spacing scale |
+| `Settings.tsx:1177 marginBottom: 3` | Covered by accepted pattern: theme card preview internal values |
+| A11y auditor found zero violations | All elements verified compliant |
+
+---
+
+### 2026-04-14 (round 13)
+
+#### Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| Settings tab buttons missing `minHeight` (height ~22px at fontSize:12 + 8px padding) | WCAG 2.5.8 | `Settings.tsx:408` | no `minHeight` | `minHeight: 24` |
+
+#### Discarded (false positives, round 13)
+
+| Finding | Reason |
+|---------|--------|
+| `modalBackdropStyle paddingTop: 120` off-scale | Viewport-level positioning value, not component internal spacing |
+| `--border` #1e1e1e contrast ~1.2:1 on dark bg | Decorative dividers are exempt; inputs have other identification cues (label, placeholder, cursor change); systemic dark-theme design decision |
+| Inline `transition:` values bypass `prefers-reduced-motion` | `index.css:13` uses `transition-duration: 0s !important` which overrides inline styles — motion preference is correctly respected |
+
+---
+
+### 2026-04-17 (round 13)
+
+#### Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| Group header height off-scale | Spacing | `Sidebar.tsx:936` | `height: 28` | `height: 32` |
+| Session row height off-scale | Spacing | `Sidebar.tsx:1455` | `height: 30` | `height: 32` |
+| Footer height off-scale | Spacing | `Sidebar.tsx:1602` | `height: 28` | `height: 32` |
+
+#### Discarded (false positives, round 13)
+
+| Finding | Reason |
+|---------|--------|
+| Header `height: 52` off-scale | Functional: 24px traffic light padding + 28px content. Cannot change without breaking macOS overlay. |
+| Transform transitions lack prefers-reduced-motion | Already covered by global `* { transition-duration: 0s !important; }` in the media query. |
+| Slot item `height: 24` inconsistent with others | 24 is on-scale. Other heights were fixed to 32. Slots are intentionally compact (nested under groups). |
+
+---
+
+### 2026-04-14 (round 12)
+
+#### Fixed
+
+| Issue | Category | File | Before | After |
+|-------|----------|------|--------|-------|
+| Group rename input vertical padding off-scale | Spacing | `Sidebar.tsx:1031` | `"1px 4px"` | `"2px 4px"` |
+| Session rename input vertical padding off-scale | Spacing | `Sidebar.tsx:1528` | `"1px 4px"` | `"2px 4px"` |
+
+#### Discarded (false positives, round 12)
+
+| Finding | Reason |
+|---------|--------|
+| `paddingTop: 2` at Sidebar.tsx:1189 | 2 is on the canonical spacing scale |
+| A11y auditor found zero violations | All elements verified compliant |
+
+---
 
 ### 2026-04-14 (round 11)
 

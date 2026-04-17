@@ -12,11 +12,13 @@ The session manager for Claude Code. Manage multiple sessions in one window with
 
 **Know what's happening.** Live activity indicators show which sessions are computing, done, or waiting. Optional sound alerts when a session completes.
 
+**Never miss a completion.** When subagents finish work that takes minutes, the unread indicator and optional alert ensure you notice immediately — no more polling terminal tabs to check if they're done.
+
 **Find and resume anything.** Every session from every repo, active or inactive, in one place. Search, filter, and resume old sessions with ease.
 
 **Pick up where you left off.** Groups and layouts persist across restarts. Reopen the app and your workspace is exactly how you left it.
 
-**Multiple accounts and local models.** Auto-detects `~/.claude*` directories. Switch between personal, work, or local LLM profiles without restarting.
+**Multiple Claude profiles.** Run personal, work, and local LLM accounts side by side. Claude Manager auto-detects `~/.claude*` directories and lets you switch profiles instantly. See the [profile setup guide](docs/guides/profile-setup.md) for setting up multiple Anthropic accounts or connecting a local model.
 
 **Your terminal, your way.** 20+ built-in themes, custom theme support, configurable layouts, and full keyboard-driven workflow.
 

@@ -20,8 +20,9 @@ export function usePtyActivity(
 	sessionIds: string[],
 	onInput?: (sessionId: string) => void,
 	onExit?: (sessionId: string) => void,
-): Map<string, ActivityState> {
+): { activityMap: Map<string, ActivityState>; alivePtys: Set<string> } {
 	const [activityMap, setActivityMap] = useState<Map<string, ActivityState>>(new Map());
+	const [alivePtys, setAlivePtys] = useState<Set<string>>(new Set());
 	const idsKey = sessionIds.slice().sort().join(",");
 	const onInputRef = { current: onInput };
 	onInputRef.current = onInput;
@@ -133,6 +134,12 @@ export function usePtyActivity(
 			// proves it. Do NOT cancel the short final-stop timer; let it fire so
 			// the session exits computing state after the last response.
 			listen<string>(`pty-data-${id}`, () => {
+				setAlivePtys((s) => {
+					if (s.has(id)) {
+						return s;
+					}
+					return new Set(s).add(id);
+				});
 				if (!hasInput.has(id)) {
 					return;
 				}
@@ -164,6 +171,14 @@ export function usePtyActivity(
 					next.delete(id);
 					return next;
 				});
+				setAlivePtys((s) => {
+					if (!s.has(id)) {
+						return s;
+					}
+					const next = new Set(s);
+					next.delete(id);
+					return next;
+				});
 				onExitRef.current?.(id);
 			}).then((fn) => unlisteners.push(fn));
 		}
@@ -176,5 +191,5 @@ export function usePtyActivity(
 		};
 	}, [idsKey]);
 
-	return activityMap;
+	return { activityMap, alivePtys };
 }

@@ -47,6 +47,8 @@ pub fn run() {
             pty_manager::pty_kill,
             profiles::discover_profiles,
             profiles::save_profile_config,
+            profiles::create_profile,
+            profiles::remove_profile,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

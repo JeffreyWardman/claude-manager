@@ -10,6 +10,7 @@ pub struct ClaudeSession {
     pub cwd: String,
     pub project_name: String,
     pub started_at: i64,
+    pub last_modified: i64,
     pub status: SessionStatus,
     pub display_name: Option<String>,
     pub git_branch: Option<String>,
@@ -51,6 +52,15 @@ fn project_name_from_cwd(cwd: &str) -> String {
         .and_then(|n| n.to_str())
         .unwrap_or(cwd)
         .to_string()
+}
+
+fn file_mtime_ms(path: &Path) -> i64 {
+    fs::metadata(path)
+        .and_then(|m| m.modified())
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
 }
 
 /// Parse the timestamp string "2026-04-06T04:39:58.491Z" to unix ms
@@ -183,6 +193,7 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
                         let display_name = meta.and_then(|m| m.display_name.clone());
                         let pending_rename = meta.and_then(|m| m.pending_rename.clone());
                         let project_name = project_name_from_cwd(&cwd);
+                        let last_modified = file_mtime_ms(&session_path);
                         candidates.push((
                             started_at,
                             ClaudeSession {
@@ -191,6 +202,7 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
                                 project_name,
                                 cwd,
                                 started_at,
+                                last_modified,
                                 status: SessionStatus::Offline,
                                 display_name,
                                 git_branch: header.git_branch,
@@ -226,6 +238,7 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
                         project_name,
                         cwd: cwd.clone(),
                         started_at: *started_at,
+                        last_modified: *started_at,
                         status: SessionStatus::Active,
                         display_name,
                         git_branch: None,

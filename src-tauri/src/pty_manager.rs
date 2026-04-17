@@ -20,7 +20,7 @@ fn lock_path(id: &str) -> Option<PathBuf> {
 }
 
 fn acquire_lock(id: &str) -> Result<(), String> {
-    let path = lock_path(id).ok_or("no home dir")?;
+    let path = lock_path(id).ok_or(crate::utils::NO_HOME_DIR)?;
     if let Ok(content) = fs::read_to_string(&path) {
         if let Ok(pid) = content.trim().parse::<u32>() {
             if pid != process::id() && is_pid_alive(pid) {
@@ -129,14 +129,37 @@ pub fn pty_spawn(
         } else {
             format!("claude{skip}")
         };
+
+        // Read env vars from profile's settings.json and prepend to the command
+        let mut env_prefix = String::new();
+        if let Some(ref dir) = config_dir {
+            let settings_path = std::path::Path::new(dir).join("settings.json");
+            if let Ok(content) = std::fs::read_to_string(&settings_path) {
+                if let Ok(settings) = serde_json::from_str::<serde_json::Value>(&content) {
+                    if let Some(env) = settings.get("env").and_then(|e| e.as_object()) {
+                        for (key, val) in env {
+                            if let Some(v) = val.as_str() {
+                                env_prefix.push_str(&format!(
+                                    "{}={} ",
+                                    key,
+                                    shell_escape::escape(v.into())
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let full_cmd = format!("{env_prefix}{claude_cmd}");
         if cfg!(target_os = "windows") {
             let mut c = CommandBuilder::new("cmd.exe");
-            c.args(["/C", &claude_cmd]);
+            c.args(["/C", &full_cmd]);
             c
         } else {
             let shell = std::env::var("SHELL").unwrap_or_else(|_| String::from("/bin/sh"));
             let mut c = CommandBuilder::new(&shell);
-            c.args(["-l", "-c", &claude_cmd]);
+            c.args(["-l", "-c", &full_cmd]);
             c
         }
     };

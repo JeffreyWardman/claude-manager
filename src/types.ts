@@ -26,6 +26,7 @@ export interface ClaudeSession {
 	cwd: string;
 	project_name: string;
 	started_at: number;
+	last_modified: number;
 	status: SessionStatus;
 	display_name: string | null;
 	git_branch: string | null;

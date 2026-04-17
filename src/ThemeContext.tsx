@@ -45,11 +45,21 @@ function isValidTheme(v: unknown): v is Theme {
 		return false;
 	}
 	const o = v as Record<string, unknown>;
+	const bg = o.bg as Record<string, unknown> | undefined;
+	const text = o.text as Record<string, unknown> | undefined;
+	const item = o.item as Record<string, unknown> | undefined;
 	return (
 		typeof o.id === "string" &&
 		typeof o.name === "string" &&
-		typeof o.bg === "object" &&
-		typeof o.accent === "string"
+		typeof o.accent === "string" &&
+		typeof o.border === "string" &&
+		!!bg &&
+		typeof bg.main === "string" &&
+		typeof bg.sidebar === "string" &&
+		!!text &&
+		typeof text.primary === "string" &&
+		!!item &&
+		typeof item.selected === "string"
 	);
 }
 

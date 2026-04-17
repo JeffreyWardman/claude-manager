@@ -209,9 +209,12 @@ export function GridLayout({
 				}
 				const session = found ?? lastKnown.current.get(sessionId) ?? null;
 
+				const isComputing = activityMap.get(sessionId) === "computing";
+
 				return (
 					<div
 						key={sessionId}
+						className={isComputing ? "pane-computing" : undefined}
 						style={{
 							gridArea: AREA_NAMES[idx],
 							position: "relative",

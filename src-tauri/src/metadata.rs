@@ -101,20 +101,23 @@ pub fn archive_session(session_id: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn delete_session(config_dir: String, session_id: String) -> Result<(), String> {
-    if session_id
-        .chars()
-        .any(|c| !c.is_ascii_alphanumeric() && c != '-')
-    {
+    if !crate::utils::is_valid_session_id(&session_id) {
         return Err("Invalid session ID".to_string());
     }
     let projects_dir = PathBuf::from(&config_dir).join("projects");
 
-    if let Ok(project_entries) = fs::read_dir(&projects_dir) {
-        for entry in project_entries.flatten() {
-            let jsonl_path = entry.path().join(format!("{}.jsonl", session_id));
-            if jsonl_path.exists() {
-                fs::remove_file(&jsonl_path).map_err(|e| e.to_string())?;
-                break;
+    if let Ok(canonical_projects) = projects_dir.canonicalize() {
+        if let Ok(project_entries) = fs::read_dir(&projects_dir) {
+            for entry in project_entries.flatten() {
+                let jsonl_path = entry.path().join(format!("{}.jsonl", session_id));
+                if jsonl_path.exists() {
+                    if let Ok(canonical_target) = jsonl_path.canonicalize() {
+                        if canonical_target.starts_with(&canonical_projects) {
+                            fs::remove_file(&canonical_target).map_err(|e| e.to_string())?;
+                        }
+                    }
+                    break;
+                }
             }
         }
     }

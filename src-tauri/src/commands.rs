@@ -44,11 +44,13 @@ pub fn play_sound(path: String) {
         }
         #[cfg(target_os = "windows")]
         {
-            let escaped = path.replace('\'', "''");
+            // Pass path via env var to avoid PowerShell metacharacter injection
             let _ = std::process::Command::new("powershell")
+                .env("__CM_SOUND", &path)
                 .args([
+                    "-NoProfile",
                     "-c",
-                    &format!("(New-Object Media.SoundPlayer '{}').PlaySync()", escaped),
+                    "(New-Object Media.SoundPlayer $env:__CM_SOUND).PlaySync()",
                 ])
                 .output();
         }

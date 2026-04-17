@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { applyTheme, useTheme } from "../ThemeContext";
 import type { PaneLayout, Profile } from "../types";
-import { defaultShell, noAutocorrect, pathBasename } from "../utils";
+import { defaultShell, formatCwd, noAutocorrect, pathBasename } from "../utils";
 
 const TILING_OPTIONS: PaneLayout[] = [
 	"1x1",
@@ -406,6 +406,7 @@ export function Settings({
 		fontWeight: 500,
 		color: tab === t ? "var(--text-primary)" : "var(--text-muted)",
 		padding: "4px 8px",
+		minHeight: 24,
 		borderBottom: tab === t ? "2px solid var(--accent)" : "2px solid transparent",
 		fontFamily: "inherit",
 	});
@@ -483,6 +484,8 @@ export function Settings({
 
 				{/* Tabs */}
 				<div
+					role="tablist"
+					aria-label="Settings sections"
 					style={{
 						display: "flex",
 						gap: 4,
@@ -492,21 +495,47 @@ export function Settings({
 				>
 					<button
 						type="button"
+						role="tab"
+						aria-selected={tab === "preferences"}
 						style={tabStyle("preferences")}
 						onClick={() => setTab("preferences")}
 					>
 						Preferences
 					</button>
-					<button type="button" style={tabStyle("theme")} onClick={() => setTab("theme")}>
+					<button
+						type="button"
+						role="tab"
+						aria-selected={tab === "theme"}
+						style={tabStyle("theme")}
+						onClick={() => setTab("theme")}
+					>
 						Theme
 					</button>
-					<button type="button" style={tabStyle("hotkeys")} onClick={() => setTab("hotkeys")}>
+					<button
+						type="button"
+						role="tab"
+						aria-selected={tab === "hotkeys"}
+						style={tabStyle("hotkeys")}
+						onClick={() => setTab("hotkeys")}
+					>
 						Hotkeys
 					</button>
-					<button type="button" style={tabStyle("guide")} onClick={() => setTab("guide")}>
+					<button
+						type="button"
+						role="tab"
+						aria-selected={tab === "guide"}
+						style={tabStyle("guide")}
+						onClick={() => setTab("guide")}
+					>
 						Guide
 					</button>
-					<button type="button" style={tabStyle("about")} onClick={() => setTab("about")}>
+					<button
+						type="button"
+						role="tab"
+						aria-selected={tab === "about"}
+						style={tabStyle("about")}
+						onClick={() => setTab("about")}
+					>
 						About
 					</button>
 				</div>
@@ -616,7 +645,7 @@ export function Settings({
 														</div>
 														<span
 															style={{
-																fontSize: 8,
+																fontSize: 10,
 																fontWeight: 600,
 																letterSpacing: "0.02em",
 																color: enabled ? "var(--text-secondary)" : "var(--text-muted)",
@@ -960,7 +989,7 @@ export function Settings({
 										/>
 									</>
 								)}
-								{prefSection === "profiles" && profiles.length > 1 && (
+								{prefSection === "profiles" && (
 									<>
 										<div
 											style={{
@@ -973,14 +1002,10 @@ export function Settings({
 										>
 											PROFILES
 										</div>
-										<div
-											style={{
-												display: "flex",
-												flexDirection: "column",
-												gap: 8,
-											}}
-										>
-											{profiles.map((profile) => (
+										{(() => {
+											const visible = profiles.filter((p) => !p.hidden);
+											const hidden = profiles.filter((p) => p.hidden);
+											const renderProfile = (profile: (typeof profiles)[0]) => (
 												<div
 													key={profile.id}
 													style={{
@@ -1045,11 +1070,42 @@ export function Settings({
 															flexShrink: 0,
 														}}
 													>
-														{profile.path.replace(/^\/Users\/[^/]+/, "~")}
+														{formatCwd(profile.path)}
 													</span>
 												</div>
-											))}
-										</div>
+											);
+											return (
+												<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+													{visible.map(renderProfile)}
+													{hidden.length > 0 && (
+														<>
+															<div
+																style={{
+																	display: "flex",
+																	alignItems: "center",
+																	gap: 8,
+																	marginTop: 4,
+																}}
+															>
+																<div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+																<span
+																	style={{
+																		fontSize: 9,
+																		color: "var(--text-muted)",
+																		letterSpacing: "0.06em",
+																		fontWeight: 600,
+																	}}
+																>
+																	HIDDEN
+																</span>
+																<div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+															</div>
+															{hidden.map(renderProfile)}
+														</>
+													)}
+												</div>
+											);
+										})()}
 										<button
 											type="button"
 											onClick={onRefreshProfiles}

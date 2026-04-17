@@ -83,7 +83,9 @@ export function MainPane({
 			className="flex flex-col flex-1 h-full"
 			style={{
 				background: "var(--bg-main)",
-				boxShadow: isUnread ? "inset 0 0 0 1px rgba(59,130,246,0.25)" : undefined,
+				boxShadow: isUnread
+					? "inset 0 0 0 1px color-mix(in srgb, var(--status-unread, #3b82f6) 25%, transparent)"
+					: undefined,
 			}}
 		>
 			{/* Header */}
@@ -103,7 +105,9 @@ export function MainPane({
 					borderBottom: "1px solid var(--border)",
 					flexShrink: 0,
 					cursor: inGrid ? "grab" : undefined,
-					background: isUnread ? "rgba(59,130,246,0.06)" : undefined,
+					background: isUnread
+						? "color-mix(in srgb, var(--status-unread, #3b82f6) 6%, transparent)"
+						: undefined,
 				}}
 			>
 				{inGrid && (
@@ -248,7 +252,7 @@ export function MainPane({
 						style={{
 							position: "absolute",
 							inset: 0,
-							background: "rgba(59,130,246,0.04)",
+							background: "color-mix(in srgb, var(--status-unread, #3b82f6) 4%, transparent)",
 							pointerEvents: "none",
 							zIndex: 1,
 						}}

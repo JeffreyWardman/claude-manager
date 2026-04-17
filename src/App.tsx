@@ -113,7 +113,7 @@ function AppInner() {
 		}
 		return ids;
 	}, [sessions, pendingSpawn]);
-	const activityMap = usePtyActivity(trackedIds, clearUnread, handlePtyExit);
+	const { activityMap, alivePtys } = usePtyActivity(trackedIds, clearUnread, handlePtyExit);
 
 	const [ignorePatternsRaw, setIgnorePatternsRaw] = useState(
 		() => localStorage.getItem("ignore-patterns") ?? "",
@@ -121,10 +121,11 @@ function AppInner() {
 	const ignorePatterns = useMemo(() => parseIgnorePatterns(ignorePatternsRaw), [ignorePatternsRaw]);
 
 	// Override session status based on local PTY state and filter ignored sessions.
+	// A session is "active" if it has activity OR if its PTY has produced any output.
 	const liveSessions = useMemo(() => {
 		const discovered = sessions
 			.map((s) =>
-				activityMap.has(s.session_id) && s.status === "offline"
+				(activityMap.has(s.session_id) || alivePtys.has(s.session_id)) && s.status === "offline"
 					? { ...s, status: "active" as const }
 					: s,
 			)
@@ -146,6 +147,7 @@ function AppInner() {
 				cwd: pendingSpawn.cwd,
 				project_name: folderName,
 				started_at: real?.started_at ?? Date.now(),
+				last_modified: real?.last_modified ?? Date.now(),
 				status: "active",
 				display_name: real
 					? real.display_name || `${real.project_name}-${real.session_id.slice(0, 5)}`
@@ -155,7 +157,7 @@ function AppInner() {
 			});
 		}
 		return discovered;
-	}, [sessions, activityMap, ignorePatterns, pendingSpawn]);
+	}, [sessions, activityMap, alivePtys, ignorePatterns, pendingSpawn]);
 
 	const [groups, setGroups] = useState<PaneGroup[]>(() => loadGroups(configDir));
 	const [activeGroupId, setActiveGroupId] = useState<string | null>(
@@ -734,13 +736,20 @@ function AppInner() {
 				/>
 			)}
 			{standaloneSelectedId ? (
-				<MainPane
-					session={liveSessions.find((s) => s.session_id === standaloneSelectedId) ?? null}
-					activityMap={activityMap}
-					unreadSessions={unreadSessions}
-					focused
-					configDir={configDir}
-				/>
+				<div
+					className={
+						activityMap.get(standaloneSelectedId) === "computing" ? "pane-computing" : undefined
+					}
+					style={{ flex: 1, position: "relative", overflow: "hidden" }}
+				>
+					<MainPane
+						session={liveSessions.find((s) => s.session_id === standaloneSelectedId) ?? null}
+						activityMap={activityMap}
+						unreadSessions={unreadSessions}
+						focused
+						configDir={configDir}
+					/>
+				</div>
 			) : (
 				<GridLayout
 					group={activeGroup}

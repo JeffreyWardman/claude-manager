@@ -78,6 +78,10 @@ fn handle(stream: std::net::TcpStream, app: AppHandle) {
         return;
     };
 
+    if !crate::utils::is_valid_session_id(&p.session_id) {
+        return;
+    }
+
     let event = match p.hook_event_name.as_str() {
         "UserPromptSubmit" => format!("hook-computing-{}", p.session_id),
         "Stop" => format!("hook-stop-{}", p.session_id),

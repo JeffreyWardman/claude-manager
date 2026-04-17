@@ -569,7 +569,7 @@ export function Sidebar({
 			<div
 				data-tauri-drag-region
 				className="flex items-center justify-between px-4"
-				style={{ height: 52, paddingTop: 28, flexShrink: 0 }}
+				style={{ height: 52, paddingTop: 24, flexShrink: 0 }}
 			>
 				<span
 					style={{
@@ -624,14 +624,14 @@ export function Sidebar({
 								color:
 									sortMode !== "date" || groupMode !== "status"
 										? "var(--text-secondary)"
-										: "var(--text-very-muted)",
+										: "var(--text-muted)",
 							}}
 							onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
 							onMouseLeave={(e) =>
 								(e.currentTarget.style.color =
 									sortMode !== "date" || groupMode !== "status"
 										? "var(--text-secondary)"
-										: "var(--text-very-muted)")
+										: "var(--text-muted)")
 							}
 						>
 							↕
@@ -898,7 +898,7 @@ export function Sidebar({
 									display: "inline-block",
 									transform: groupsCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
 									transition: "transform 0.1s",
-									fontSize: 8,
+									fontSize: 10,
 								}}
 							>
 								▾
@@ -933,7 +933,7 @@ export function Sidebar({
 										style={{
 											display: "flex",
 											alignItems: "center",
-											height: 28,
+											height: 32,
 											borderRadius: 6,
 											background: isActive ? "var(--item-selected)" : "none",
 											border: "1px solid transparent",
@@ -986,7 +986,7 @@ export function Sidebar({
 												cursor: "pointer",
 												padding: "4px",
 												color: "var(--text-very-muted)",
-												fontSize: 8,
+												fontSize: 10,
 												lineHeight: 1,
 												flexShrink: 0,
 											}}
@@ -1028,7 +1028,7 @@ export function Sidebar({
 													borderRadius: 4,
 													color: "var(--text-primary)",
 													fontSize: 12,
-													padding: "1px 4px",
+													padding: "2px 4px",
 													outline: "none",
 													fontFamily: "inherit",
 												}}
@@ -1064,7 +1064,7 @@ export function Sidebar({
 													fontSize: 10,
 													fontWeight: 600,
 													letterSpacing: "0.04em",
-													color: "var(--text-very-muted)",
+													color: "var(--text-muted)",
 													padding: "2px 4px",
 													border: "1px solid var(--border)",
 													borderRadius: 4,
@@ -1072,9 +1072,7 @@ export function Sidebar({
 												onMouseEnter={(e) =>
 													(e.currentTarget.style.color = "var(--text-secondary)")
 												}
-												onMouseLeave={(e) =>
-													(e.currentTarget.style.color = "var(--text-very-muted)")
-												}
+												onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
 											>
 												{group.layout}
 											</button>
@@ -1140,7 +1138,7 @@ export function Sidebar({
 																	<LayoutIcon layout={l} />
 																	<span
 																		style={{
-																			fontSize: 8,
+																			fontSize: 10,
 																			letterSpacing: "0.02em",
 																			fontWeight: 600,
 																		}}
@@ -1388,7 +1386,7 @@ export function Sidebar({
 											display: "inline-block",
 											transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
 											transition: "transform 0.1s",
-											fontSize: 8,
+											fontSize: 10,
 											marginRight: 2,
 										}}
 									>
@@ -1424,11 +1422,11 @@ export function Sidebar({
 										const isUnread = unreadSessions.has(session.session_id);
 										const rowTint =
 											activity === "computing"
-												? "rgba(245,158,11,0.07)"
+												? "color-mix(in srgb, var(--status-computing, #f59e0b) 7%, transparent)"
 												: isUnread
-													? "rgba(59,130,246,0.07)"
+													? "color-mix(in srgb, var(--status-unread, #3b82f6) 7%, transparent)"
 													: activity === "waiting"
-														? "rgba(34,197,94,0.07)"
+														? "color-mix(in srgb, var(--status-waiting, #22c55e) 7%, transparent)"
 														: undefined;
 
 										return (
@@ -1454,7 +1452,7 @@ export function Sidebar({
 													display: "flex",
 													alignItems: "center",
 													gap: 8,
-													height: 30,
+													height: 32,
 													background: isSelected
 														? "color-mix(in srgb, var(--item-selected) 50%, transparent)"
 														: (rowTint ?? "none"),
@@ -1525,7 +1523,7 @@ export function Sidebar({
 															borderRadius: 4,
 															color: "var(--text-primary)",
 															fontSize: 13,
-															padding: "1px 4px",
+															padding: "2px 4px",
 															outline: "none",
 															fontFamily: "inherit",
 														}}
@@ -1568,7 +1566,7 @@ export function Sidebar({
 															flexShrink: 0,
 														}}
 													>
-														{timeAgo(session.started_at)}
+														{timeAgo(session.last_modified || session.started_at)}
 													</span>
 												)}
 											</div>
@@ -1601,7 +1599,7 @@ export function Sidebar({
 					alignItems: "center",
 					padding: "0 12px",
 					gap: 12,
-					height: 28,
+					height: 32,
 					borderTop: "1px solid var(--border)",
 					color: "var(--text-muted)",
 					fontSize: 11,
