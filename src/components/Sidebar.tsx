@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SLOT_COUNTS } from "../groupOps";
 import type { ActivityState } from "../hooks/usePtyActivity";
 import type { SortMode } from "../sidebarUtils";
@@ -391,6 +391,12 @@ export function Sidebar({
 			: filteredSessions.filter((s) => matchSession(s, searchQuery))
 		: filteredSessions;
 
+	const startRename = useCallback((session: ClaudeSession) => {
+		setRenamingId(session.session_id);
+		setRenameValue(session.display_name ?? session.project_name);
+		setContextMenu(null);
+	}, []);
+
 	useEffect(() => {
 		const handleKey = (e: KeyboardEvent) => {
 			if (renamingId || renamingGroupId) {
@@ -431,12 +437,6 @@ export function Sidebar({
 		window.addEventListener("keydown", handleKey);
 		return () => window.removeEventListener("keydown", handleKey);
 	}, [sessions, selectedId, onSelect, renamingId, renamingGroupId, filteredSessions, startRename]);
-
-	function startRename(session: ClaudeSession) {
-		setRenamingId(session.session_id);
-		setRenameValue(session.display_name ?? session.project_name);
-		setContextMenu(null);
-	}
 
 	async function commitRename(sessionId: string) {
 		try {
@@ -638,6 +638,7 @@ export function Sidebar({
 						</button>
 						{filterDropdownOpen && (
 							<div
+								role="menu"
 								onMouseDown={(e) => e.stopPropagation()}
 								style={{
 									position: "absolute",
@@ -928,6 +929,8 @@ export function Sidebar({
 								<div key={group.id} style={{ marginBottom: 2 }}>
 									{/* Group header */}
 									<div
+										role="button"
+										tabIndex={0}
 										data-drop="group-header"
 										data-group-id={group.id}
 										style={{
@@ -945,6 +948,16 @@ export function Sidebar({
 										}}
 										onClick={() => {
 											if (!isRenamingGroup && !groupContextMenu) {
+												onActivateGroup(group.id);
+											}
+										}}
+										onKeyDown={(e) => {
+											if (
+												(e.key === "Enter" || e.key === " ") &&
+												!isRenamingGroup &&
+												!groupContextMenu
+											) {
+												e.preventDefault();
 												onActivateGroup(group.id);
 											}
 										}}
@@ -1078,6 +1091,7 @@ export function Sidebar({
 											</button>
 											{showLayoutPicker && (
 												<div
+													role="menu"
 													onMouseDown={(e) => e.stopPropagation()}
 													style={{
 														position: "absolute",
@@ -1194,6 +1208,8 @@ export function Sidebar({
 												return (
 													<div
 														key={slotIdx}
+														role="button"
+														tabIndex={0}
 														data-drop="group-slot"
 														data-group-id={group.id}
 														data-slot-idx={slotIdx}
@@ -1220,6 +1236,12 @@ export function Sidebar({
 														}}
 														onClick={() => {
 															if (session) {
+																onActivateGroupAtSlot(group.id, slotIdx);
+															}
+														}}
+														onKeyDown={(e) => {
+															if ((e.key === "Enter" || e.key === " ") && session) {
+																e.preventDefault();
 																onActivateGroupAtSlot(group.id, slotIdx);
 															}
 														}}
@@ -1432,6 +1454,8 @@ export function Sidebar({
 										return (
 											<div
 												key={session.session_id}
+												role="button"
+												tabIndex={0}
 												ref={(el) => {
 													if (el) {
 														itemRefs.current.set(session.session_id, el);
@@ -1473,6 +1497,12 @@ export function Sidebar({
 												}}
 												onClick={() => {
 													if (!isRenaming) {
+														onSelect(session);
+													}
+												}}
+												onKeyDown={(e) => {
+													if ((e.key === "Enter" || e.key === " ") && !isRenaming) {
+														e.preventDefault();
 														onSelect(session);
 													}
 												}}
@@ -1655,6 +1685,7 @@ export function Sidebar({
 						</button>
 						{profileDropdownOpen && (
 							<div
+								role="menu"
 								onMouseDown={(e) => e.stopPropagation()}
 								style={{
 									position: "absolute",

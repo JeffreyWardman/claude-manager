@@ -33,6 +33,7 @@ export function TerminalPane({ ptyId, cwd, cmd, configDir }: Props) {
 		}
 	}, [theme]);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: configDir excluded by design — profile switch unmounts/remounts component
 	useEffect(() => {
 		const container = containerRef.current;
 		if (!container) {
@@ -123,7 +124,7 @@ export function TerminalPane({ ptyId, cwd, cmd, configDir }: Props) {
 			observer.disconnect();
 			term.dispose();
 		};
-	}, [ptyId, cwd, theme.terminal, cmd]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [ptyId, cwd, theme.terminal, cmd]);
 
 	return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 }

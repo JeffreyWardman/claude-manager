@@ -426,9 +426,16 @@ export function Settings({
 				zIndex: 1000,
 			}}
 			onClick={handleClose}
+			onKeyDown={(e) => {
+				if (e.key === "Escape") {
+					handleClose();
+				}
+			}}
 		>
+			{/* biome-ignore lint/a11y/useKeyWithClickEvents: stopPropagation prevents backdrop dismiss */}
 			<div
 				ref={dialogRef}
+				role="document"
 				style={{
 					background: "var(--bg-sidebar)",
 					border: "1px solid var(--border)",
@@ -1170,6 +1177,8 @@ export function Settings({
 								/>
 							</div>
 							<div
+								role="listbox"
+								aria-label="Theme list"
 								style={{
 									display: "grid",
 									gridTemplateColumns: "1fr 1fr",
@@ -1440,20 +1449,27 @@ export function Settings({
 									<P>
 										Drop JSON theme files into <Code>~/.config/claude-manager/themes/</Code>. See
 										the{" "}
-										<a
-											href="https://github.com/JeffreyWardman/claude-manager/blob/main/README.md#custom-themes"
-											onClick={(e) => {
-												e.preventDefault();
+										<button
+											type="button"
+											onClick={() => {
 												import("@tauri-apps/plugin-opener").then(({ openUrl }) =>
 													openUrl(
 														"https://github.com/JeffreyWardman/claude-manager/blob/main/README.md#custom-themes",
 													),
 												);
 											}}
-											style={{ color: "var(--accent)", cursor: "pointer" }}
+											style={{
+												color: "var(--accent)",
+												cursor: "pointer",
+												background: "none",
+												border: "none",
+												padding: 0,
+												font: "inherit",
+												textDecoration: "underline",
+											}}
 										>
 											README
-										</a>{" "}
+										</button>{" "}
 										for the full JSON schema.
 									</P>
 								)}
