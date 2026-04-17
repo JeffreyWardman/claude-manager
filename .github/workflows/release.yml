@@ -12,6 +12,7 @@ jobs:
     outputs:
       bumped: ${{ steps.bump.outputs.bumped }}
       version: ${{ steps.bump.outputs.version }}
+      pre_bumped: ${{ steps.bump.outputs.pre_bumped }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,18 +26,32 @@ jobs:
 
       - id: bump
         run: |
-          if cz bump --dry-run 2>/dev/null; then
+          CURRENT=$(python3 -c "
+          import tomllib
+          with open('.cz.toml', 'rb') as f:
+              print(tomllib.load(f)['tool']['commitizen']['version'])
+          ")
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          LATEST_VERSION=${LATEST_TAG#v}
+
+          if [ -n "$LATEST_TAG" ] && [ "$CURRENT" != "$LATEST_VERSION" ]; then
+            echo "Version already bumped to $CURRENT (latest tag: $LATEST_TAG)"
+            echo "bumped=true" >> "$GITHUB_OUTPUT"
+            echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+            echo "pre_bumped=true" >> "$GITHUB_OUTPUT"
+          elif cz bump --dry-run 2>/dev/null; then
             cz bump --yes
             VERSION=$(cz version --project)
             echo "bumped=true" >> "$GITHUB_OUTPUT"
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "pre_bumped=false" >> "$GITHUB_OUTPUT"
           else
+            echo "No version bump needed"
             echo "bumped=false" >> "$GITHUB_OUTPUT"
           fi
 
       - if: steps.bump.outputs.bumped == 'true'
         run: |
-          # Cargo.lock needs regenerating after Cargo.toml version bump
           cd src-tauri && cargo update --workspace && cd ..
 
       - if: steps.bump.outputs.bumped == 'true'
@@ -50,6 +65,7 @@ jobs:
             src-tauri/Cargo.toml
             src-tauri/Cargo.lock
             src-tauri/tauri.conf.json
+            src/components/Settings.tsx
 
   build:
     needs: bump
@@ -122,6 +138,7 @@ jobs:
           name: bumped-source
 
       - name: Commit version bump and tag
+        if: needs.bump.outputs.pre_bumped != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -129,6 +146,14 @@ jobs:
           git commit -m "bump: v${{ needs.bump.outputs.version }}"
           git tag "v${{ needs.bump.outputs.version }}"
           git push origin main --follow-tags
+
+      - name: Tag pre-bumped version
+        if: needs.bump.outputs.pre_bumped == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "v${{ needs.bump.outputs.version }}"
+          git push origin "v${{ needs.bump.outputs.version }}"
 
       - uses: actions/download-artifact@v4
         with:

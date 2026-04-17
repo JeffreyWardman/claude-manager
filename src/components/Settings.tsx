@@ -5,6 +5,8 @@ import { applyTheme, useTheme } from "../ThemeContext";
 import type { PaneLayout, Profile } from "../types";
 import { defaultShell, formatCwd, noAutocorrect, pathBasename } from "../utils";
 
+const APP_VERSION = "0.0.0";
+
 const TILING_OPTIONS: PaneLayout[] = [
 	"1x1",
 	"2x1",
@@ -1524,7 +1526,7 @@ export function Settings({
 							</div>
 							<div style={{ marginBottom: 12 }}>
 								<span style={{ color: "var(--text-muted)" }}>Version </span>
-								0.1.0
+								{APP_VERSION}
 							</div>
 							<p style={{ marginBottom: 12 }}>
 								A desktop app for managing multiple Claude Code sessions side by side.
