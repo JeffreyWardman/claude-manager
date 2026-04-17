@@ -34,7 +34,12 @@ jobs:
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           LATEST_VERSION=${LATEST_TAG#v}
 
-          if [ -n "$LATEST_TAG" ] && [ "$CURRENT" != "$LATEST_VERSION" ]; then
+          if [ -z "$LATEST_TAG" ] && [ "$CURRENT" != "0.0.0" ]; then
+            echo "First release: $CURRENT (no existing tags)"
+            echo "bumped=true" >> "$GITHUB_OUTPUT"
+            echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+            echo "pre_bumped=true" >> "$GITHUB_OUTPUT"
+          elif [ -n "$LATEST_TAG" ] && [ "$CURRENT" != "$LATEST_VERSION" ]; then
             echo "Version already bumped to $CURRENT (latest tag: $LATEST_TAG)"
             echo "bumped=true" >> "$GITHUB_OUTPUT"
             echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
