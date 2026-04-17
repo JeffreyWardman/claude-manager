@@ -22,9 +22,9 @@ The session manager for Claude Code. Manage multiple sessions in one window with
 
 **Your terminal, your way.** 20+ built-in themes, custom theme support, configurable layouts, and full keyboard-driven workflow.
 
-### Star History
+## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=jeffreywardman/claude-manager&type=Date)](https://www.star-history.com/#jeffreywardman/claude-manager&Date)
+[![Star History Chart](https://api.star-history.com/chart?repos=JeffreyWardman/claude-manager&type=date&legend=top-left)](https://www.star-history.com/?repos=JeffreyWardman%2Fclaude-manager&type=date&legend=top-left)
 
 ## Features
 
