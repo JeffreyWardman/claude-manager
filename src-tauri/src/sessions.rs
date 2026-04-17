@@ -251,7 +251,7 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
 
     // Step 3: Sort by recency. For each cwd with a live process, mark the most
     // recent JSONL session in that directory as Active (and attach the pid).
-    candidates.sort_by(|a, b| b.0.cmp(&a.0));
+    candidates.sort_by_key(|c| std::cmp::Reverse(c.0));
 
     let mut active_cwds_marked: std::collections::HashSet<String> =
         std::collections::HashSet::new();

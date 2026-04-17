@@ -121,8 +121,7 @@ export function GridLayout({
 	const multiPane = group.slots.length > 1;
 
 	return (
-		<div
-			role="region"
+		<section
 			aria-label={`Pane grid — ${group.layout} layout`}
 			style={{
 				flex: 1,
@@ -214,6 +213,7 @@ export function GridLayout({
 				return (
 					<div
 						key={sessionId}
+						role="group"
 						className={isComputing ? "pane-computing" : undefined}
 						style={{
 							gridArea: AREA_NAMES[idx],
@@ -263,6 +263,6 @@ export function GridLayout({
 					</div>
 				);
 			})}
-		</div>
+		</section>
 	);
 }

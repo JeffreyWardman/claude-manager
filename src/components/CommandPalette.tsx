@@ -113,9 +113,15 @@ export function CommandPalette({
 			aria-label="Command palette"
 			style={modalBackdropStyle}
 			onClick={onClose}
+			onKeyDown={(e) => {
+				if (e.key === "Escape") {
+					onClose();
+				}
+			}}
 		>
 			<div
 				ref={dialogRef}
+				role="document"
 				onClick={(e) => e.stopPropagation()}
 				onKeyDown={(e) => {
 					if (e.key === "Tab") {

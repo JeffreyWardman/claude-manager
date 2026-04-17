@@ -68,8 +68,19 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 			aria-label="New session"
 			style={modalBackdropStyle}
 			onClick={onClose}
+			onKeyDown={(e) => {
+				if (e.key === "Escape") {
+					onClose();
+				}
+			}}
 		>
-			<div ref={dialogRef} onClick={(e) => e.stopPropagation()} style={modalDialogStyle}>
+			{/* biome-ignore lint/a11y/useKeyWithClickEvents: stopPropagation prevents backdrop dismiss */}
+			<div
+				ref={dialogRef}
+				role="document"
+				onClick={(e) => e.stopPropagation()}
+				style={modalDialogStyle}
+			>
 				<div
 					style={{
 						display: "flex",

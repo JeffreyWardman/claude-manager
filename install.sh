@@ -42,7 +42,7 @@ if [ "$PLATFORM" = "macos" ]; then
     curl -fSL -o "$DMG_PATH" "$URL"
 
     echo "Installing to /Applications..."
-    MOUNT=$(hdiutil attach "$DMG_PATH" -nobrowse -quiet | tail -1 | awk '{print $3}')
+    MOUNT=$(hdiutil attach "$DMG_PATH" -nobrowse -quiet | tail -1 | sed 's/.*\(\/Volumes\/.*\)/\1/')
     if [ -d "/Applications/$APP_NAME.app" ]; then
         rm -rf "/Applications/$APP_NAME.app"
     fi
@@ -50,7 +50,13 @@ if [ "$PLATFORM" = "macos" ]; then
     hdiutil detach "$MOUNT" -quiet
     rm -rf "$TMPDIR"
 
+    # Create CLI symlinks
+    mkdir -p /usr/local/bin
+    ln -sf "/Applications/$APP_NAME.app/Contents/MacOS/$APP_NAME" /usr/local/bin/claude-manager
+    ln -sf "/Applications/$APP_NAME.app/Contents/MacOS/$APP_NAME" /usr/local/bin/cmanager
+
     echo "Installed $APP_NAME $VERSION to /Applications/$APP_NAME.app"
+    echo "CLI commands available: claude-manager, cmanager"
 
 elif [ "$PLATFORM" = "linux" ]; then
     if [ "$ARCH_TAG" != "x64" ]; then
@@ -72,7 +78,9 @@ elif [ "$PLATFORM" = "linux" ]; then
         sudo dpkg -i "$DEB_PATH" || sudo apt-get install -f -y
         rm -rf "$TMPDIR"
 
+        sudo ln -sf /usr/bin/claude-manager /usr/bin/cmanager
         echo "Installed $APP_NAME $VERSION"
+        echo "CLI commands available: claude-manager, cmanager"
     else
         APPIMAGE="${APP_NAME}_${VERSION}_amd64.AppImage"
         URL="$BASE_URL/$APPIMAGE"
@@ -83,7 +91,9 @@ elif [ "$PLATFORM" = "linux" ]; then
         curl -fSL -o "$INSTALL_DIR/$APP_NAME" "$URL"
         chmod +x "$INSTALL_DIR/$APP_NAME"
 
+        ln -sf "$INSTALL_DIR/$APP_NAME" "$INSTALL_DIR/cmanager"
         echo "Installed $APP_NAME $VERSION to $INSTALL_DIR/$APP_NAME"
+        echo "CLI commands available: claude-manager, cmanager"
         echo "Make sure $INSTALL_DIR is in your PATH"
     fi
 fi

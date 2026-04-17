@@ -65,6 +65,7 @@ impl PtyState {
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub fn pty_spawn(
     id: String,
     cwd: String,

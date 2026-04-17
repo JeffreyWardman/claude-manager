@@ -59,9 +59,12 @@ src-tauri/src/metadata.rs   Local metadata store (rename, archive, delete)
 
 ## Linting
 
-- Frontend: `bunx biome check` (0 errors, warnings acceptable for exhaustive deps and a11y click handlers)
-- Backend: `cargo fmt -- --check && cargo clippy`
-- CI runs both on PR
+- `bun run check` — runs full CI pipeline: `tsc`, `biome check`, `vitest`, `cargo fmt --check`, `cargo clippy`
+- `bun run fmt` — auto-format both frontend (biome) and backend (rustfmt)
+- `bun run clippy` — run clippy standalone
+- Frontend: `bunx biome check` (0 errors, 0 warnings)
+- Backend: `cargo fmt -- --check && cargo clippy -D warnings`
+- CI runs on all PRs and must pass before merge
 
 ## Documentation
 

@@ -4,6 +4,7 @@ export function useFocusTrap(
 	dialogRef: React.RefObject<HTMLDivElement | null>,
 	onEscape?: () => void,
 ) {
+	// biome-ignore lint/correctness/useExhaustiveDependencies: dialogRef is a stable ref
 	useEffect(() => {
 		const handleKey = (e: KeyboardEvent) => {
 			if (e.key === "Escape" && onEscape) {
