@@ -164,7 +164,7 @@ jobs:
           git add -A
           git commit -m "bump: v${{ needs.bump.outputs.version }}"
           git tag "v${{ needs.bump.outputs.version }}"
-          git push origin main --follow-tags
+          git push origin HEAD --follow-tags
 
       - name: Tag pre-bumped version
         if: needs.bump.outputs.pre_bumped == 'true'
