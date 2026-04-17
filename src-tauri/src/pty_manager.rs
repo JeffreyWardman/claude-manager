@@ -1,0 +1,320 @@
+use base64::Engine as _;
+use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
+use std::collections::HashMap;
+use std::io::{Read, Write};
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+use std::{fs, process};
+use tauri::{AppHandle, Emitter, State};
+
+use crate::utils::is_pid_alive;
+
+const MAX_BUF: usize = 512 * 1024; // 512 KB scrollback
+
+fn locks_dir() -> Option<PathBuf> {
+    crate::utils::manager_config_dir().map(|d| d.join("locks"))
+}
+
+fn lock_path(id: &str) -> Option<PathBuf> {
+    locks_dir().map(|d| d.join(format!("{id}.lock")))
+}
+
+fn acquire_lock(id: &str) -> Result<(), String> {
+    let path = lock_path(id).ok_or(crate::utils::NO_HOME_DIR)?;
+    if let Ok(content) = fs::read_to_string(&path) {
+        if let Ok(pid) = content.trim().parse::<u32>() {
+            if pid != process::id() && is_pid_alive(pid) {
+                return Err(format!("Session is locked by another instance (pid {pid})"));
+            }
+        }
+    }
+    if let Some(parent) = path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    fs::write(&path, process::id().to_string()).map_err(|e| e.to_string())
+}
+
+fn release_lock(id: &str) {
+    if let Some(path) = lock_path(id) {
+        if let Ok(content) = fs::read_to_string(&path) {
+            if content.trim().parse::<u32>().ok() == Some(process::id()) {
+                let _ = fs::remove_file(&path);
+            }
+        }
+    }
+}
+
+struct PtyEntry {
+    writer: Box<dyn Write + Send>,
+    master: Box<dyn portable_pty::MasterPty + Send>,
+    scrollback: Arc<Mutex<Vec<u8>>>,
+}
+
+pub struct PtyState(Arc<Mutex<HashMap<String, PtyEntry>>>);
+
+impl Default for PtyState {
+    fn default() -> Self {
+        PtyState(Arc::new(Mutex::new(HashMap::new())))
+    }
+}
+
+impl PtyState {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+#[tauri::command]
+pub fn pty_spawn(
+    id: String,
+    cwd: String,
+    rows: u16,
+    cols: u16,
+    resume: bool,
+    cmd: Option<String>,
+    skip_permissions: Option<bool>,
+    config_dir: Option<String>,
+    state: State<'_, PtyState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    // Expand ~ in cwd
+    let cwd = if cwd.starts_with("~/") || cwd == "~" {
+        dirs_next::home_dir()
+            .map(|h| cwd.replacen("~", &h.to_string_lossy(), 1))
+            .unwrap_or(cwd)
+    } else {
+        cwd
+    };
+
+    // Lock this session so no other instance can resume it
+    if cmd.is_none() {
+        acquire_lock(&id)?;
+    }
+
+    // Kill any existing PTY with this id first
+    state.0.lock().unwrap().remove(&id);
+
+    let pty_system = NativePtySystem::default();
+    let pair = pty_system
+        .openpty(PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .map_err(|e| e.to_string())?;
+
+    let (master, slave) = (pair.master, pair.slave);
+
+    let mut cmd_builder = if let Some(ref explicit_cmd) = cmd {
+        // Plain shell: run directly as a login shell
+        if cfg!(target_os = "windows") {
+            let mut c = CommandBuilder::new("cmd.exe");
+            c.args(["/C", explicit_cmd]);
+            c
+        } else {
+            let mut c = CommandBuilder::new(explicit_cmd);
+            c.args(["-l"]);
+            c
+        }
+    } else {
+        // Claude session — use a shell to resolve PATH for `claude`
+        let skip = if skip_permissions.unwrap_or(false) {
+            " --dangerously-skip-permissions"
+        } else {
+            ""
+        };
+        let claude_cmd = if resume {
+            format!("claude --resume {id}{skip}")
+        } else {
+            format!("claude{skip}")
+        };
+
+        // Read env vars from profile's settings.json and prepend to the command
+        let mut env_prefix = String::new();
+        if let Some(ref dir) = config_dir {
+            let settings_path = std::path::Path::new(dir).join("settings.json");
+            if let Ok(content) = std::fs::read_to_string(&settings_path) {
+                if let Ok(settings) = serde_json::from_str::<serde_json::Value>(&content) {
+                    if let Some(env) = settings.get("env").and_then(|e| e.as_object()) {
+                        for (key, val) in env {
+                            if let Some(v) = val.as_str() {
+                                env_prefix.push_str(&format!(
+                                    "{}={} ",
+                                    key,
+                                    shell_escape::escape(v.into())
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let full_cmd = format!("{env_prefix}{claude_cmd}");
+        if cfg!(target_os = "windows") {
+            let mut c = CommandBuilder::new("cmd.exe");
+            c.args(["/C", &full_cmd]);
+            c
+        } else {
+            let shell = std::env::var("SHELL").unwrap_or_else(|_| String::from("/bin/sh"));
+            let mut c = CommandBuilder::new(&shell);
+            c.args(["-l", "-c", &full_cmd]);
+            c
+        }
+    };
+    cmd_builder.cwd(&cwd);
+    cmd_builder.env("TERM", "xterm-256color");
+    cmd_builder.env("COLORTERM", "truecolor");
+    if let Some(ref dir) = config_dir {
+        cmd_builder.env("CLAUDE_CONFIG_DIR", dir);
+    }
+
+    let mut child = slave
+        .spawn_command(cmd_builder)
+        .map_err(|e| e.to_string())?;
+    drop(slave);
+
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
+
+    let mut reader = master.try_clone_reader().map_err(|e| e.to_string())?;
+    let writer = master.take_writer().map_err(|e| e.to_string())?;
+
+    let scrollback: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
+    let scrollback_writer = scrollback.clone();
+
+    let data_event = format!("pty-data-{}", id);
+    let exit_event = format!("pty-exit-{}", id);
+
+    // Clones needed by the reader thread for cleanup on exit
+    let state_map = state.0.clone();
+    let id_for_exit = id.clone();
+
+    // Capture a weak reference to identify this specific spawn instance.
+    // If pty_spawn is called again for the same id before this reader exits,
+    // the new entry will have a different Arc, so we won't accidentally remove it.
+    let scrollback_identity = scrollback.clone();
+
+    std::thread::spawn(move || {
+        let mut buf = vec![0u8; 8192];
+        let mut first_output = true;
+        loop {
+            match reader.read(&mut buf) {
+                Ok(0) | Err(_) => {
+                    let _ = app.emit(&exit_event, ());
+                    // Only remove the entry if it still belongs to this spawn instance.
+                    let mut map = state_map.lock().unwrap();
+                    let is_same = map
+                        .get(&id_for_exit)
+                        .map(|e| Arc::ptr_eq(&e.scrollback, &scrollback_identity))
+                        .unwrap_or(false);
+                    if is_same {
+                        map.remove(&id_for_exit);
+                        drop(map);
+                        release_lock(&id_for_exit);
+                        let _ = app.emit("sessions-changed", ());
+                    }
+                    break;
+                }
+                Ok(n) => {
+                    if first_output {
+                        first_output = false;
+                        // Claude needs time to write its pid file.
+                        // Emit at 1s and 3s to catch it reliably.
+                        for delay in [1, 3] {
+                            let app_handle = app.clone();
+                            std::thread::spawn(move || {
+                                std::thread::sleep(std::time::Duration::from_secs(delay));
+                                let _ = app_handle.emit("sessions-changed", ());
+                            });
+                        }
+                    }
+                    {
+                        let mut scrollback = scrollback_writer.lock().unwrap();
+                        scrollback.extend_from_slice(&buf[..n]);
+                        if scrollback.len() > MAX_BUF {
+                            let excess = scrollback.len() - MAX_BUF;
+                            scrollback.drain(..excess);
+                        }
+                    }
+                    let encoded = base64::engine::general_purpose::STANDARD.encode(&buf[..n]);
+                    let _ = app.emit(&data_event, encoded);
+                }
+            }
+        }
+    });
+
+    state.0.lock().unwrap().insert(
+        id,
+        PtyEntry {
+            writer,
+            master,
+            scrollback,
+        },
+    );
+    Ok(())
+}
+
+/// Returns base64-encoded scrollback buffer if a PTY with this id exists, else null.
+/// Used by the frontend to replay history when reattaching to a running PTY.
+#[tauri::command]
+pub fn pty_get_scrollback(id: String, state: State<'_, PtyState>) -> Option<String> {
+    let map = state.0.lock().unwrap();
+    map.get(&id).map(|e| {
+        let sb = e.scrollback.lock().unwrap();
+        base64::engine::general_purpose::STANDARD.encode(&*sb)
+    })
+}
+
+#[tauri::command]
+pub fn pty_write(
+    id: String,
+    data: Vec<u8>,
+    state: State<'_, PtyState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    // xterm.js sends focus-in (\x1b[I) and focus-out (\x1b[O) sequences when
+    // the terminal gains/loses focus. Write them through so the app can respond,
+    // but don't emit the input event — they're not user input and would
+    // spuriously trigger the "computing" activity state.
+    let is_focus_seq = matches!(data.as_slice(), b"\x1b[I" | b"\x1b[O");
+    let mut map = state.0.lock().unwrap();
+    if let Some(e) = map.get_mut(&id) {
+        e.writer.write_all(&data).map_err(|e| e.to_string())?;
+        drop(map);
+        if !is_focus_seq {
+            let _ = app.emit(&format!("pty-input-{}", id), ());
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn pty_resize(
+    id: String,
+    rows: u16,
+    cols: u16,
+    state: State<'_, PtyState>,
+) -> Result<(), String> {
+    let map = state.0.lock().unwrap();
+    if let Some(e) = map.get(&id) {
+        e.master
+            .resize(PtySize {
+                rows,
+                cols,
+                pixel_width: 0,
+                pixel_height: 0,
+            })
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn pty_kill(id: String, state: State<'_, PtyState>) -> Result<(), String> {
+    state.0.lock().unwrap().remove(&id);
+    release_lock(&id);
+    Ok(())
+}

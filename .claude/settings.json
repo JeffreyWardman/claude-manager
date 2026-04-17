@@ -1,0 +1,47 @@
+{
+	"$schema": "https://json.schemastore.org/claude-code-settings.json",
+	"env": {
+		"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+	},
+	"permissions": {
+		"allow": ["Bash(chmod:*)", "Bash(git:*)"],
+		"deny": ["Read(./.env)", "Read(./.env.local)"]
+	},
+	"hooks": {
+		"Stop": [
+			{
+				"matcher": "",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "afplay /System/Library/Sounds/Glass.aiff 2>/dev/null || paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || true"
+					}
+				]
+			}
+		],
+		"Notification": [
+			{
+				"matcher": "",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "afplay /System/Library/Sounds/Glass.aiff 2>/dev/null || paplay /usr/share/sounds/freedesktop/stereo/message.oga 2>/dev/null || true"
+					}
+				]
+			}
+		]
+	},
+	"enabledPlugins": {
+		"context7@claude-plugins-official": true,
+		"figma@claude-plugins-official": true,
+		"frontend-design@claude-plugins-official": true,
+		"github@claude-plugins-official": true,
+		"linear@claude-plugins-official": true,
+		"ralph-loop@claude-plugins-official": true,
+		"rust-analyzer-lsp@claude-plugins-official": true,
+		"superpowers@claude-plugins-official": true,
+		"typescript-lsp@claude-plugins-official": true
+	},
+	"defaultMode": "plan",
+	"teammateMode": "in-process"
+}
