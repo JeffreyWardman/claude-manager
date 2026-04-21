@@ -237,10 +237,10 @@ function AppInner() {
 
 	// Remove archived/deleted sessions from all group slots
 	useEffect(() => {
-		if (sessions.length === 0) {
+		if (liveSessions.length === 0) {
 			return;
 		}
-		const ids = new Set(sessions.map((s) => s.session_id));
+		const ids = new Set(liveSessions.map((s) => s.session_id));
 		const needsUpdate = groups.some((g) => g.slots.some((s) => s !== null && !ids.has(s)));
 		if (needsUpdate) {
 			const next = groups.map((g) => ({
@@ -249,7 +249,7 @@ function AppInner() {
 			}));
 			persistGroups(next);
 		}
-	}, [sessions, groups, persistGroups]);
+	}, [liveSessions, groups, persistGroups]);
 
 	const handleActivateGroupAtSlot = useCallback((groupId: string, slotIdx: number) => {
 		setActiveGroupId(groupId);
@@ -519,22 +519,42 @@ function AppInner() {
 		[refresh, configDir],
 	);
 
-	// Poll aggressively until the real session is discovered by liveSessions
+	// Poll aggressively until the real session is discovered.
+	// Once found, replace tmpId references in groups and standalone selection.
+	const tmpIdSwapped = useRef<string | null>(null);
 	useEffect(() => {
 		if (!pendingSpawn) {
 			return;
 		}
-		// Check if the real session has been found (liveSessions handles matching)
+		if (tmpIdSwapped.current === pendingSpawn.tmpId) {
+			return;
+		}
 		const spawnFolder = pathBasename(pendingSpawn.cwd);
-		const found = sessions.some(
+		const real = sessions.find(
 			(s) => !pendingSpawn.existingIds.has(s.session_id) && pathBasename(s.cwd) === spawnFolder,
 		);
-		if (found) {
+		if (real) {
+			tmpIdSwapped.current = pendingSpawn.tmpId;
+			setGroups((prev) => {
+				const hasTmpId = prev.some((g) => g.slots.includes(pendingSpawn.tmpId));
+				if (!hasTmpId) {
+					return prev;
+				}
+				const next = prev.map((g) => ({
+					...g,
+					slots: g.slots.map((s) => (s === pendingSpawn.tmpId ? real.session_id : s)),
+				}));
+				localStorage.setItem(groupsKey(configDirRef.current), JSON.stringify(next));
+				return next;
+			});
+			if (standaloneSelectedId === pendingSpawn.tmpId) {
+				setStandaloneSelectedId(real.session_id);
+			}
 			return;
 		}
 		const poll = setInterval(refresh, 200);
 		return () => clearInterval(poll);
-	}, [sessions, pendingSpawn, refresh]);
+	}, [sessions, pendingSpawn, refresh, standaloneSelectedId]);
 
 	// Flush pending renames when a session transitions to "waiting"
 	const prevActivityRef = useRef<Map<string, ActivityState>>(new Map());
