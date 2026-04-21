@@ -1,6 +1,6 @@
 # Code Audit Report
 
-**Last audit:** 2026-04-14 (4 rounds, dual-reviewer process)
+**Last audit:** 2026-04-18 (round 8-9, converged, dual-reviewer process)
 **Standard:** DRY, SOLID, clean code, correctness, safety
 **Status: PASS** -- all confirmed issues resolved
 
@@ -192,3 +192,95 @@ No fixes applied.
 | Biome exhaustive-deps warnings | Intentionally limited deps to prevent re-subscription loops |
 | `/users/` lowercase in `isSessionIgnored` | Input is `.toLowerCase()`'d first on the line above |
 | Layout constants defined per-component | Different data (CSS grid positions vs icon positions vs templates) |
+| Tailwind utility classes in components | Convention: Tailwind for layout, inline styles for dynamic/theme values |
+
+---
+
+## Round 5 — 2026-04-18
+
+Dual-reviewer audit (Correctness & Safety + Architecture & Design).
+
+### Fixed (10)
+
+| # | File | Issue | Fix |
+|---|------|-------|-----|
+| 1 | `pty_manager.rs:80` | Session ID not validated before shell interpolation | Added alphanumeric+hyphen validation at IPC boundary |
+| 2 | `pty_manager.rs:143` | Env var keys from settings.json not validated | Added alphanumeric+underscore check, skip invalid keys |
+| 3 | `App.tsx:506` | Control chars in pending_rename written to PTY | Strip chars < 32 and 127 before writing |
+| 4 | `Sidebar.tsx:1342` | Inline display name logic duplicates `sessionDisplayName()` | Replaced with shared util call |
+| 5 | `Settings.tsx:10` | `TILING_OPTIONS` duplicates `LAYOUT_ORDER` from groupOps | Import from groupOps |
+| 6 | `Sidebar.tsx:879` | Redundant `autoCorrect`/`autoCapitalize`/`spellCheck` after `{...noAutocorrect}` spread | Removed duplicates |
+| 7 | `MainPane.tsx:31` | Unnecessary `useEffect` setting state to same initial value | Removed |
+| 8 | `usePtyActivity.ts:27` | Plain objects used instead of `useRef` for callback refs | Changed to `useRef` |
+| 9 | `commands.rs:72` | Profile ID not URL-encoded in window URL | Added percent-encoding |
+| 10 | `App.tsx:31` | `Math.random()` for group IDs | Changed to `crypto.randomUUID()` |
+
+### Discarded
+
+| Finding | Reason |
+|---------|--------|
+| TOCTOU race in lock acquisition | Requires two instances within same millisecond; risk is negligible |
+| Hook server fixed port 23816 | Known limitation; dynamic port would require service discovery |
+| `is_pid_alive` not Windows-portable | Windows support is untested; will address when Windows CI is added |
+| `metadata.rs` save() silent failures | Matches existing error-handling pattern; metadata is non-critical |
+| `parse_timestamp` leap year approximation | Accepted pattern per checklist |
+| Sidebar/Settings/App component length | Large but well-structured; extraction would add indirection without clear benefit |
+| `theme.terminal` in TerminalPane deps | Intentional: ensures terminal recreates with correct theme on profile switch |
+| Layout cell data duplication | Different shapes per component (CSS strings vs icon grids); shared constant wouldn't simplify |
+| `hook_server.rs` settings.json no atomic write | Localhost-only, single writer; risk is negligible |
+| `sessions.rs` alive_cwd_pids overwrite on dup cwd | Only one Claude process per cwd in practice |
+
+---
+
+## Round 6 — 2026-04-18 (convergence round 1)
+
+Windows support in scope. Dual-reviewer audit.
+
+### Fixed (9)
+
+| # | File | Issue | Fix |
+|---|------|-------|-----|
+| 1 | `utils.rs:5` | `is_pid_alive` uses Unix `kill -0`, broken on Windows | Added `#[cfg(unix)]`/`#[cfg(windows)]` with `tasklist` fallback |
+| 2 | `pty_manager.rs:86` | Tilde expansion only handles `~/`, not `~\` | Added `~\\` check for Windows paths |
+| 3 | `pty_manager.rs:138-171` | Env prefix `KEY=val cmd` is bash-only, breaks on Windows | Replaced with `cmd_builder.env()` on all platforms |
+| 4 | `journal.rs:95` | `encode_path_for_claude` strips `/` only, not `\` or drive letters | Handle both separators and drive prefix |
+| 5 | `hook_server.rs:10` | Hook command uses `curl \|\| true` (bash-only) | Added Windows PowerShell `Invoke-WebRequest` variant |
+| 6 | `StatusDot.tsx` | Base styles repeated across all 4 branches | Extracted shared `base` style object |
+| 7 | `utils.ts:10` | `formatCwd` only handles `/Users/`, not Linux `/home/` | Added `/home/` to regex |
+| 8 | `useSessions.ts:11,37` | `error` state declared but never consumed by callers | Removed |
+| 9 | `commands.rs:7` | Custom themes path hardcoded instead of using `manager_config_dir()` | Use shared util |
+
+## Round 7 — 2026-04-18 (convergence round 2)
+
+Both auditors reported **zero issues**. Converged.
+
+---
+
+## Round 8 — 2026-04-18 (convergence round 1, fresh)
+
+Fresh dual-reviewer audit with Windows support in scope.
+
+### Fixed (5)
+
+| # | File | Issue | Fix |
+|---|------|-------|-----|
+| 1 | `utils.rs:16` | `is_pid_alive` Windows tasklist substring false positives | Use CSV format and exact PID column match |
+| 2 | `journal.rs:95` | `encode_path_for_claude` greedy trim strips valid leading chars | Only strip drive prefix (letter + colon), not all leading alpha |
+| 3 | `utils.ts:14` | `pathBasename` only splits on platform separator, misses mixed paths | Split on both `/` and `\` |
+| 4 | `App.tsx:505` | rename-on-waiting fires from any window, not just PTY owner | Guard with `alivePtys.has(session.session_id)` |
+| 5 | `Sidebar.tsx:443` | control-char filter missing from `commitRename` (only in auto-rename) | Added same filter to `commitRename` |
+
+### Discarded
+
+| Finding | Reason |
+|---------|--------|
+| cmd.exe /C shell wrapping | User controls their own shell config; claude_cmd is validated |
+| profiles_path ~/.config on Windows | Design decision, consistent across app |
+| navigator.platform deprecated | Works in Tauri WKWebView/WebView2 today |
+| HTTP method validation in hook_server | Localhost only, valid payload required |
+| Sessions sort with 0 timestamp | Fallback search handles it |
+| macOS modifier glyphs hardcoded | Cosmetic, platform detection throughout is out of scope |
+
+## Round 9 — 2026-04-18 (convergence round 2)
+
+Both auditors reported **zero issues**. Converged.

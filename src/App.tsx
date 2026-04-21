@@ -29,7 +29,7 @@ const MIN_SIDEBAR_WIDTH = 160;
 const MAX_SIDEBAR_WIDTH = 480;
 
 function genId() {
-	return Math.random().toString(36).slice(2, 10);
+	return crypto.randomUUID().slice(0, 8);
 }
 
 function groupsKey(profilePath: string): string {
@@ -434,7 +434,11 @@ function AppInner() {
 	useEffect(() => {
 		const prev = prevActivityForUnreadRef.current;
 		for (const [id, state] of activityMap) {
-			if (state === "waiting" && prev.get(id) === "computing" && id !== selectedId) {
+			if (
+				state === "waiting" &&
+				prev.get(id) === "computing" &&
+				(id !== selectedId || !windowFocusedRef.current)
+			) {
 				setUnreadSessions((s) => new Set(s).add(id));
 				if (localStorage.getItem("notif-sound-enabled") === "true") {
 					const soundPath = localStorage.getItem("notif-sound-path");
@@ -453,6 +457,43 @@ function AppInner() {
 			clearUnread(selectedId);
 		}
 	}, [selectedId, clearUnread]);
+
+	// Dock badge: show unread count when window loses focus (Cmd+Tab, Cmd+H)
+	const windowFocusedRef = useRef(true);
+	const unreadCountRef = useRef(0);
+	unreadCountRef.current = unreadSessions.size;
+	const selectedIdRef = useRef(selectedId);
+	selectedIdRef.current = selectedId;
+
+	useEffect(() => {
+		const count = unreadSessions.size;
+		if (!windowFocusedRef.current && count > 0) {
+			invoke("set_badge_count", { count }).catch(() => {});
+		}
+	}, [unreadSessions]);
+
+	useEffect(() => {
+		let unlisten: (() => void) | null = null;
+		import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
+			const win = getCurrentWindow();
+			win
+				.onFocusChanged(({ payload: focused }) => {
+					windowFocusedRef.current = focused;
+					if (focused) {
+						invoke("set_badge_count", { count: null }).catch(() => {});
+						if (selectedIdRef.current) {
+							clearUnread(selectedIdRef.current);
+						}
+					} else if (unreadCountRef.current > 0) {
+						invoke("set_badge_count", { count: unreadCountRef.current }).catch(() => {});
+					}
+				})
+				.then((fn) => {
+					unlisten = fn;
+				});
+		});
+		return () => unlisten?.();
+	}, []);
 
 	const handleNewSession = useCallback(
 		(cwd: string) => {
@@ -502,8 +543,17 @@ function AppInner() {
 		for (const session of sessions) {
 			const prevState = prev.get(session.session_id);
 			const currState = activityMap.get(session.session_id);
-			if (currState === "waiting" && prevState !== "waiting" && session.pending_rename) {
-				const encoded = Array.from(new TextEncoder().encode(`/rename ${session.pending_rename}\r`));
+			if (
+				currState === "waiting" &&
+				prevState !== "waiting" &&
+				session.pending_rename &&
+				alivePtys.has(session.session_id)
+			) {
+				const safeName = session.pending_rename
+					.split("")
+					.filter((c) => c.charCodeAt(0) >= 32 && c.charCodeAt(0) !== 127)
+					.join("");
+				const encoded = Array.from(new TextEncoder().encode(`/rename ${safeName}\r`));
 				invoke("pty_write", { id: session.session_id, data: encoded })
 					.then(() => invoke("clear_pending_rename", { sessionId: session.session_id }))
 					.then(() => refresh())
@@ -511,7 +561,7 @@ function AppInner() {
 			}
 		}
 		prevActivityRef.current = new Map(activityMap);
-	}, [activityMap, sessions, refresh]);
+	}, [activityMap, sessions, refresh, alivePtys]);
 
 	useEffect(() => {
 		const handleKey = (e: KeyboardEvent) => {

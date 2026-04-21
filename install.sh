@@ -2,7 +2,8 @@
 set -e
 
 REPO="JeffreyWardman/claude-manager"
-APP_NAME="claude-manager"
+APP_NAME="ClaudeManager"
+PKG_NAME="claude-manager"
 
 # Detect platform and architecture
 OS="$(uname -s)"
@@ -66,7 +67,7 @@ elif [ "$PLATFORM" = "linux" ]; then
 
     # Prefer .deb on Debian/Ubuntu, fall back to AppImage
     if command -v dpkg >/dev/null 2>&1; then
-        DEB="${APP_NAME}_${VERSION}_amd64.deb"
+        DEB="${PKG_NAME}_${VERSION}_amd64.deb"
         URL="$BASE_URL/$DEB"
         TMPDIR=$(mktemp -d)
         DEB_PATH="$TMPDIR/$DEB"
@@ -82,17 +83,17 @@ elif [ "$PLATFORM" = "linux" ]; then
         echo "Installed $APP_NAME $VERSION"
         echo "CLI commands available: claude-manager, cmanager"
     else
-        APPIMAGE="${APP_NAME}_${VERSION}_amd64.AppImage"
+        APPIMAGE="${PKG_NAME}_${VERSION}_amd64.AppImage"
         URL="$BASE_URL/$APPIMAGE"
         INSTALL_DIR="${HOME}/.local/bin"
         mkdir -p "$INSTALL_DIR"
 
         echo "Downloading $APPIMAGE..."
-        curl -fSL -o "$INSTALL_DIR/$APP_NAME" "$URL"
-        chmod +x "$INSTALL_DIR/$APP_NAME"
+        curl -fSL -o "$INSTALL_DIR/$PKG_NAME" "$URL"
+        chmod +x "$INSTALL_DIR/$PKG_NAME"
 
-        ln -sf "$INSTALL_DIR/$APP_NAME" "$INSTALL_DIR/cmanager"
-        echo "Installed $APP_NAME $VERSION to $INSTALL_DIR/$APP_NAME"
+        ln -sf "$INSTALL_DIR/$PKG_NAME" "$INSTALL_DIR/cmanager"
+        echo "Installed $APP_NAME $VERSION to $INSTALL_DIR/$PKG_NAME"
         echo "CLI commands available: claude-manager, cmanager"
         echo "Make sure $INSTALL_DIR is in your PATH"
     fi

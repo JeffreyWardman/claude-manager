@@ -78,8 +78,12 @@ pub fn pty_spawn(
     state: State<'_, PtyState>,
     app: AppHandle,
 ) -> Result<(), String> {
-    // Expand ~ in cwd
-    let cwd = if cwd.starts_with("~/") || cwd == "~" {
+    if !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+        return Err("Invalid session ID".to_string());
+    }
+
+    // Expand ~ in cwd (works on both Unix ~/foo and Windows ~\foo)
+    let cwd = if cwd.starts_with("~/") || cwd.starts_with("~\\") || cwd == "~" {
         dirs_next::home_dir()
             .map(|h| cwd.replacen("~", &h.to_string_lossy(), 1))
             .unwrap_or(cwd)
@@ -131,8 +135,8 @@ pub fn pty_spawn(
             format!("claude{skip}")
         };
 
-        // Read env vars from profile's settings.json and prepend to the command
-        let mut env_prefix = String::new();
+        // Read env vars from profile's settings.json
+        let mut env_vars: Vec<(String, String)> = Vec::new();
         if let Some(ref dir) = config_dir {
             let settings_path = std::path::Path::new(dir).join("settings.json");
             if let Ok(content) = std::fs::read_to_string(&settings_path) {
@@ -140,11 +144,9 @@ pub fn pty_spawn(
                     if let Some(env) = settings.get("env").and_then(|e| e.as_object()) {
                         for (key, val) in env {
                             if let Some(v) = val.as_str() {
-                                env_prefix.push_str(&format!(
-                                    "{}={} ",
-                                    key,
-                                    shell_escape::escape(v.into())
-                                ));
+                                if key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+                                    env_vars.push((key.clone(), v.to_string()));
+                                }
                             }
                         }
                     }
@@ -152,17 +154,20 @@ pub fn pty_spawn(
             }
         }
 
-        let full_cmd = format!("{env_prefix}{claude_cmd}");
-        if cfg!(target_os = "windows") {
+        let mut cmd_builder = if cfg!(target_os = "windows") {
             let mut c = CommandBuilder::new("cmd.exe");
-            c.args(["/C", &full_cmd]);
+            c.args(["/C", &claude_cmd]);
             c
         } else {
             let shell = std::env::var("SHELL").unwrap_or_else(|_| String::from("/bin/sh"));
             let mut c = CommandBuilder::new(&shell);
-            c.args(["-l", "-c", &full_cmd]);
+            c.args(["-l", "-c", &claude_cmd]);
             c
+        };
+        for (key, val) in &env_vars {
+            cmd_builder.env(key, val);
         }
+        cmd_builder
     };
     cmd_builder.cwd(&cwd);
     cmd_builder.env("TERM", "xterm-256color");

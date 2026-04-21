@@ -2,6 +2,8 @@
 
 The session manager for Claude Code. Manage multiple sessions in one window with live status, named groups, and persistent workspaces.
 
+> Not affiliated with or endorsed by Anthropic. Claude is a trademark of Anthropic PBC.
+
 ## Why Claude Manager?
 
 **Organise by role.** Name sessions "planner", "implementer", "reviewer" and group them together. Drag to rearrange, switch between project contexts in one click.

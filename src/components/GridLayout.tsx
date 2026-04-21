@@ -214,52 +214,59 @@ export function GridLayout({
 					<div
 						key={sessionId}
 						role="group"
-						className={isComputing ? "pane-computing" : undefined}
 						style={{
 							gridArea: AREA_NAMES[idx],
 							position: "relative",
-							overflow: "hidden",
-							background: "var(--bg-main)",
-							borderRadius: 6,
 						}}
 						onMouseDown={() => onFocus(idx)}
 					>
-						{(isFocused || isHovered) && (
-							<div
-								style={{
-									position: "absolute",
-									inset: 0,
-									border: `2px solid var(--accent)`,
-									borderRadius: 6,
-									zIndex: 5,
-									pointerEvents: "none",
-									opacity: isHovered ? 0.4 : 1,
-								}}
+						{isComputing && <div className="computing-border" />}
+						<div
+							style={{
+								position: "relative",
+								overflow: "hidden",
+								background: "var(--bg-main)",
+								borderRadius: 6,
+								height: "100%",
+							}}
+						>
+							{(isFocused || isHovered) && (
+								<div
+									style={{
+										position: "absolute",
+										inset: 0,
+										border: `2px solid var(--accent)`,
+										borderRadius: 6,
+										zIndex: 5,
+										pointerEvents: "none",
+										opacity: isHovered ? 0.4 : 1,
+									}}
+								/>
+							)}
+							<MainPane
+								session={session}
+								gridSlotIdx={multiPane ? idx : undefined}
+								onGridClose={multiPane ? () => onRemoveFromSlot(idx) : undefined}
+								activityMap={activityMap}
+								unreadSessions={unreadSessions}
+								focused={idx === focusedIdx}
+								configDir={configDir}
 							/>
-						)}
-						<MainPane
-							session={session}
-							gridSlotIdx={multiPane ? idx : undefined}
-							onGridClose={multiPane ? () => onRemoveFromSlot(idx) : undefined}
-							activityMap={activityMap}
-							unreadSessions={unreadSessions}
-							focused={idx === focusedIdx}
-							configDir={configDir}
-						/>
-						{/* Overlay: sits above xterm canvas so pointer-based DnD can detect grid slots.
+							{/* Overlay: sits above xterm canvas so pointer-based DnD can detect grid slots.
                 Only rendered while a drag is in progress to avoid blocking terminal interaction. */}
-						{dndActive && (
-							<div
-								data-drop="grid-slot"
-								data-grid-idx={idx}
-								style={{
-									position: "absolute",
-									inset: 0,
-									zIndex: 10,
-									background: "transparent",
-								}}
-							/>
-						)}
+							{dndActive && (
+								<div
+									data-drop="grid-slot"
+									data-grid-idx={idx}
+									style={{
+										position: "absolute",
+										inset: 0,
+										zIndex: 10,
+										background: "transparent",
+									}}
+								/>
+							)}
+						</div>
 					</div>
 				);
 			})}

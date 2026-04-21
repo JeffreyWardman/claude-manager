@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { ActivityState } from "../hooks/usePtyActivity";
 import type { ClaudeSession } from "../types";
 import { defaultShell, formatCwd, sessionDisplayName } from "../utils";
@@ -27,10 +27,6 @@ export function MainPane({
 	configDir,
 }: Props) {
 	const [view, setView] = useState<View>("claude");
-
-	useEffect(() => {
-		setView("claude");
-	}, []);
 
 	if (!session) {
 		return (

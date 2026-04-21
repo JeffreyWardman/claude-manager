@@ -93,7 +93,15 @@ fn strip_system_tags(text: &str) -> String {
 }
 
 fn encode_path_for_claude(path: &str) -> String {
-    path.trim_start_matches('/').replace('/', "-")
+    let stripped = if path.len() >= 2
+        && path.as_bytes()[0].is_ascii_alphabetic()
+        && path.as_bytes()[1] == b':'
+    {
+        path[2..].trim_start_matches('\\')
+    } else {
+        path.trim_start_matches('/')
+    };
+    stripped.replace(['/', '\\'], "-")
 }
 
 fn find_jsonl_path(projects_dir: &Path, cwd: &str, session_id: &str) -> Option<PathBuf> {

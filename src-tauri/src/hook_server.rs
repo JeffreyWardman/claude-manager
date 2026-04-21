@@ -8,9 +8,15 @@ pub const PORT: u16 = 23816;
 const HOOK_URL: &str = "http://127.0.0.1:23816/hook";
 
 fn hook_command() -> String {
-    format!(
-        "curl -sf --max-time 2 -X POST {HOOK_URL} -H 'Content-Type: application/json' -d @- || true"
-    )
+    if cfg!(target_os = "windows") {
+        format!(
+            "powershell -NoProfile -Command \"try {{ $input | Invoke-WebRequest -Uri '{HOOK_URL}' -Method POST -ContentType 'application/json' -TimeoutSec 2 | Out-Null }} catch {{}}\""
+        )
+    } else {
+        format!(
+            "curl -sf --max-time 2 -X POST {HOOK_URL} -H 'Content-Type: application/json' -d @- || true"
+        )
+    }
 }
 
 /// Start the HTTP hook listener. Silently no-ops if the port is already bound.

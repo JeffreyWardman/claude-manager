@@ -258,7 +258,7 @@ export function Sidebar({
 		() => (localStorage.getItem("sidebar-group-mode") as GroupMode | null) ?? "status",
 	);
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>(
-		() => (localStorage.getItem("sidebar-status-filter") as StatusFilter | null) ?? "all",
+		() => (localStorage.getItem("sidebar-status-filter") as StatusFilter | null) ?? "active",
 	);
 	const [sortMode, setSortMode] = useState<SortMode>(
 		() => (localStorage.getItem("sidebar-sort-mode") as SortMode | null) ?? "date",
@@ -440,7 +440,11 @@ export function Sidebar({
 
 	async function commitRename(sessionId: string) {
 		try {
-			const trimmed = renameValue.trim();
+			const trimmed = renameValue
+				.trim()
+				.split("")
+				.filter((c) => c.charCodeAt(0) >= 32 && c.charCodeAt(0) !== 127)
+				.join("");
 			await invoke("rename_session", { sessionId, name: trimmed });
 			if (trimmed && activityMap.get(sessionId) === "waiting") {
 				await invoke("pty_write", {
@@ -569,22 +573,55 @@ export function Sidebar({
 			<div
 				data-tauri-drag-region
 				className="flex items-center justify-between px-4"
-				style={{ height: 52, paddingTop: 24, flexShrink: 0 }}
+				style={{ paddingTop: 32, paddingBottom: 16, flexShrink: 0 }}
 			>
-				<span
+				<div
 					style={{
-						fontSize: 13,
-						fontWeight: 600,
-						color: "var(--text-primary)",
-						letterSpacing: "-0.01em",
+						display: "inline-flex",
+						alignItems: "center",
+						gap: 8,
 						overflow: "hidden",
-						textOverflow: "ellipsis",
-						whiteSpace: "nowrap",
 						minWidth: 0,
+						userSelect: "none",
+						WebkitUserSelect: "none",
 					}}
 				>
-					Claude Manager
-				</span>
+					<svg
+						width={22}
+						height={22}
+						viewBox="0 0 64 64"
+						style={{ display: "block", flexShrink: 0 }}
+					>
+						<rect x={0} y={0} width={29.44} height={29.44} rx={8.24} fill="#D97757" />
+						<rect x={34.56} y={0} width={29.44} height={29.44} rx={8.24} fill="#6B8E5A" />
+						<rect x={0} y={34.56} width={29.44} height={29.44} rx={8.24} fill="#4A3526" />
+						<rect
+							x={34.56}
+							y={34.56}
+							width={29.44}
+							height={29.44}
+							rx={8.24}
+							fill="#D97757"
+							opacity={0.55}
+						/>
+					</svg>
+					<span
+						style={{
+							fontSize: 16,
+							lineHeight: 1.2,
+							fontFamily:
+								'-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif',
+							letterSpacing: "-0.3px",
+							color: "var(--text-primary)",
+							overflow: "hidden",
+							textOverflow: "ellipsis",
+							whiteSpace: "nowrap",
+						}}
+					>
+						<span style={{ fontWeight: 600 }}>Claude</span>{" "}
+						<span style={{ fontWeight: 400, color: "var(--text-muted)" }}>Manager</span>
+					</span>
+				</div>
 				<div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
 					<button
 						type="button"
@@ -843,9 +880,6 @@ export function Sidebar({
 							searchRef.current?.blur();
 						}
 					}}
-					autoCorrect="off"
-					autoCapitalize="off"
-					spellCheck={false}
 					style={{
 						width: "100%",
 						background: sidebarSearch ? "var(--bg-main)" : "transparent",
@@ -1306,8 +1340,7 @@ export function Sidebar({
 																		pointerEvents: "none",
 																	}}
 																>
-																	{session.display_name ||
-																		`${session.project_name}-${session.session_id.slice(0, 5)}`}
+																	{sessionDisplayName(session)}
 																</span>
 															</>
 														) : (

@@ -6,6 +6,7 @@ export function useFocusTrap(
 ) {
 	// biome-ignore lint/correctness/useExhaustiveDependencies: dialogRef is a stable ref
 	useEffect(() => {
+		const previouslyFocused = document.activeElement as HTMLElement | null;
 		const handleKey = (e: KeyboardEvent) => {
 			if (e.key === "Escape" && onEscape) {
 				onEscape();
@@ -29,6 +30,9 @@ export function useFocusTrap(
 			}
 		};
 		window.addEventListener("keydown", handleKey);
-		return () => window.removeEventListener("keydown", handleKey);
+		return () => {
+			window.removeEventListener("keydown", handleKey);
+			previouslyFocused?.focus();
+		};
 	}, [onEscape]);
 }

@@ -32,6 +32,7 @@ pub fn run() {
             commands::get_sessions,
             commands::get_custom_themes,
             commands::new_window,
+            commands::set_badge_count,
             commands::get_platform,
             commands::play_sound,
             journal::get_conversation,

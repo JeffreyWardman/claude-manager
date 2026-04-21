@@ -1,6 +1,6 @@
 # UI Design & Accessibility Audit
 
-**Last audit:** 2026-04-17
+**Last audit:** 2026-04-18
 **Standard:** Visual design consistency + WCAG 2.2 Level AA
 **Status: PASS** -- all confirmed issues resolved
 
@@ -456,3 +456,32 @@ Full WCAG audit history in `docs/audits/wcag2-audit.md`. Summary:
 | 3.3.2 Form labels | PASS (aria-labels added to DEFAULT SHELL and profile name inputs) |
 | 3.3.7 Redundant entry | PASS |
 | 4.1.2 ARIA labels | PASS |
+
+---
+
+## Round 14 — 2026-04-18
+
+### Fixed (5)
+
+| # | Issue | Fix |
+|---|-------|-----|
+| 1 | `role="document"` on inner modal divs (3 files) — non-standard, causes noStaticElementInteractions | Removed role attribute |
+| 2 | `fontSize: 9` on hidden profiles separator label — below minimum scale | Changed to 10 |
+| 3 | Focus trap doesn't restore focus to previously focused element (WCAG 2.4.3) | Store `document.activeElement` on mount, restore on cleanup |
+| 4 | ~~Tailwind utility classes mixed with inline styles in MainPane~~ | Reverted — Tailwind is the convention for layout classes |
+| 5 | Biome formatting drift from edits | Auto-formatted |
+
+### Discarded
+
+| Finding | Reason |
+|---------|--------|
+| paddingTop: 120 on command palette | Intentional positioning for command palette feel |
+| Settings modal centered vs command palette top-anchored | Intentional: settings = centered, palettes = top |
+| Hardcoded logo colors | Branding colors, theme-independent by design |
+| Sub-4px borderRadius on decorative elements (1, 2) | Decorative sub-scale elements |
+| fontSize: 24 on grid slot "+" icon | Display/decorative size |
+| maxHeight on scroll containers (320, 360) | Scroll container sizing, not spacing |
+| Logo SVG 22px | Set by user, intentional |
+| Tab font weight differences | Intentional per component context |
+| z-index layering (50 vs 1000) | Works correctly in practice |
+| Profile pill borderRadius 4 | Design choice |
