@@ -1,19 +1,74 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
+import { createActor, createMachine } from "xstate";
 
 export type ActivityState = "computing" | "waiting";
 
-// How long after a non-agent Stop hook fires before transitioning to waiting.
 const STOP_CONFIRM_MS = 1_500;
-
-// How long after an agent-mode Stop hook fires. Agents run asynchronously;
-// their PTY output will cancel this timer. A subsequent Stop (after agents
-// finish and Claude resumes) uses the short window instead.
-const AGENT_STOP_CONFIRM_MS = 5 * 60 * 1000;
-
-// Fallback: if no Stop hook ever arrives (e.g. hooks not yet installed for a
-// running session), transition to waiting after this long without PTY output.
 const IDLE_FALLBACK_MS = 60_000;
+
+// State machine for a single session's activity.
+//
+// idle       → computing     on PROMPT
+// computing  → draining      on STOP (no running agents)
+// computing  → agentWait     on STOP (agents still running)
+// computing  → waiting       after 60s idle (no PTY output or hooks)
+// draining   → waiting       after 1.5s
+// agentWait  → draining      on AGENT_DONE (last agent completed)
+// agentWait  → computing     on PTY_DATA (agents producing output)
+// waiting    → computing     on PROMPT
+// *          → idle          on EXIT
+//
+const sessionMachine = createMachine({
+	id: "session",
+	initial: "idle",
+	states: {
+		idle: {
+			on: {
+				PROMPT: "computing",
+			},
+		},
+		computing: {
+			after: {
+				IDLE_TIMEOUT: "waiting",
+			},
+			on: {
+				STOP: [{ guard: "hasRunningAgents", target: "agentWait" }, { target: "draining" }],
+				PTY_DATA: { target: "computing", reenter: true },
+				EXIT: "idle",
+			},
+		},
+		draining: {
+			after: {
+				DRAIN_TIMEOUT: "waiting",
+			},
+			on: {
+				PROMPT: "computing",
+				EXIT: "idle",
+			},
+		},
+		agentWait: {
+			on: {
+				AGENT_DONE: "draining",
+				PTY_DATA: { target: "agentWait", reenter: true },
+				STOP: { target: "agentWait", reenter: true },
+				PROMPT: "computing",
+				EXIT: "idle",
+			},
+		},
+		waiting: {
+			on: {
+				PROMPT: "computing",
+				EXIT: "idle",
+			},
+		},
+	},
+});
+
+const delays = {
+	IDLE_TIMEOUT: IDLE_FALLBACK_MS,
+	DRAIN_TIMEOUT: STOP_CONFIRM_MS,
+};
 
 export function usePtyActivity(
 	sessionIds: string[],
@@ -35,114 +90,83 @@ export function usePtyActivity(
 		}
 
 		const unlisteners: (() => void)[] = [];
-		// isComputing: true while Claude is actively responding.
-		const isComputing = new Set<string>();
-		// finalStopReceived: set when a non-agent Stop fires. While true, PTY data
-		// will NOT re-enter computing — output is just the tail end streaming.
-		const finalStopReceived = new Set<string>();
-		// hadAgentLaunch: set when Agent PreToolUse fires. Cleared on each Stop so
-		// the next Stop (after agents complete) uses the short window.
-		const hadAgentLaunch = new Set<string>();
-		// agentStopActive: the current stop timer is the long agent-mode one.
-		// PTY output cancels agent-mode timers (agents still running) but does NOT
-		// cancel final-stop timers.
-		const agentStopActive = new Set<string>();
-		const stopConfirmTimers = new Map<string, ReturnType<typeof setTimeout>>();
-		const idleTimers = new Map<string, ReturnType<typeof setTimeout>>();
+		const actors = new Map<string, ReturnType<typeof createActor>>();
+		// Track running agent count per session.
+		// Incremented on PreToolUse(Agent), decremented on SubagentStop.
+		const agentCount = new Map<string, number>();
 
-		function clearTimers(id: string) {
-			const st = stopConfirmTimers.get(id);
-			if (st) {
-				clearTimeout(st);
-				stopConfirmTimers.delete(id);
+		function toActivityState(xstateValue: string): ActivityState | null {
+			if (
+				xstateValue === "computing" ||
+				xstateValue === "draining" ||
+				xstateValue === "agentWait"
+			) {
+				return "computing";
 			}
-			agentStopActive.delete(id);
-			const it = idleTimers.get(id);
-			if (it) {
-				clearTimeout(it);
-				idleTimers.delete(id);
+			if (xstateValue === "waiting") {
+				return "waiting";
 			}
-		}
-
-		function transitionToWaiting(id: string) {
-			isComputing.delete(id);
-			finalStopReceived.delete(id);
-			agentStopActive.delete(id);
-			hadAgentLaunch.delete(id);
-			clearTimers(id);
-			setActivityMap((m) => new Map(m).set(id, "waiting"));
-		}
-
-		function scheduleIdleFallback(id: string) {
-			const prev = idleTimers.get(id);
-			if (prev) {
-				clearTimeout(prev);
-			}
-			idleTimers.set(
-				id,
-				setTimeout(() => {
-					idleTimers.delete(id);
-					transitionToWaiting(id);
-				}, IDLE_FALLBACK_MS),
-			);
+			return null;
 		}
 
 		for (const id of sessionIds) {
-			// UserPromptSubmit: enter computing state.
+			const actor = createActor(
+				sessionMachine.provide({
+					delays,
+					guards: {
+						hasRunningAgents: () => (agentCount.get(id) ?? 0) > 0,
+					},
+				}),
+			);
+
+			actor.subscribe((snapshot) => {
+				const activity = toActivityState(snapshot.value as string);
+				setActivityMap((m) => {
+					const prev = m.get(id);
+					if (activity === null) {
+						if (!m.has(id)) {
+							return m;
+						}
+						const next = new Map(m);
+						next.delete(id);
+						return next;
+					}
+					if (prev === activity) {
+						return m;
+					}
+					return new Map(m).set(id, activity);
+				});
+			});
+
+			actor.start();
+			actors.set(id, actor);
+
+			// UserPromptSubmit: enter computing
 			listen<void>(`hook-computing-${id}`, () => {
-				isComputing.add(id);
-				finalStopReceived.delete(id);
-				hadAgentLaunch.delete(id);
-				agentStopActive.delete(id);
-				clearTimers(id);
-				setActivityMap((m) => new Map(m).set(id, "computing"));
-				scheduleIdleFallback(id);
+				actor.send({ type: "PROMPT" });
 				onInputRef.current?.(id);
 			}).then((fn) => unlisteners.push(fn));
 
-			// Agent PreToolUse: fires before a background agent is launched.
+			// PreToolUse(Agent/Task): an agent is about to be spawned
 			listen<void>(`hook-agentlaunched-${id}`, () => {
-				hadAgentLaunch.add(id);
+				agentCount.set(id, (agentCount.get(id) ?? 0) + 1);
 			}).then((fn) => unlisteners.push(fn));
 
-			// Stop: Claude finished a response. If agents were launched since the
-			// last Stop, use the extended window (agents still running). Otherwise
-			// use the short window and mark as final stop so pty-data won't re-enter.
+			// SubagentStop: an agent completed
+			listen<void>(`hook-agentdone-${id}`, () => {
+				const count = Math.max(0, (agentCount.get(id) ?? 0) - 1);
+				agentCount.set(id, count);
+				if (count === 0) {
+					actor.send({ type: "AGENT_DONE" });
+				}
+			}).then((fn) => unlisteners.push(fn));
+
+			// Stop: Claude finished responding
 			listen<void>(`hook-stop-${id}`, () => {
-				if (!isComputing.has(id)) {
-					return;
-				}
-				const isAgentStop = hadAgentLaunch.has(id);
-				hadAgentLaunch.delete(id);
-
-				if (isAgentStop) {
-					agentStopActive.add(id);
-					finalStopReceived.delete(id);
-				} else {
-					agentStopActive.delete(id);
-					finalStopReceived.add(id);
-				}
-
-				const delay = isAgentStop ? AGENT_STOP_CONFIRM_MS : STOP_CONFIRM_MS;
-				const prev = stopConfirmTimers.get(id);
-				if (prev) {
-					clearTimeout(prev);
-				}
-				stopConfirmTimers.set(
-					id,
-					setTimeout(() => {
-						stopConfirmTimers.delete(id);
-						transitionToWaiting(id);
-					}, delay),
-				);
+				actor.send({ type: "STOP" });
 			}).then((fn) => unlisteners.push(fn));
 
-			// PTY output: mark session as alive.
-			// - If final (non-agent) Stop was received: don't re-enter computing,
-			//   output is just the tail end streaming.
-			// - If agent-mode Stop is active: cancel the timer (agents still running),
-			//   re-enter computing.
-			// - Otherwise: re-enter computing if not already.
+			// PTY output: mark session as alive
 			listen<string>(`pty-data-${id}`, () => {
 				setAlivePtys((s) => {
 					if (s.has(id)) {
@@ -150,43 +174,13 @@ export function usePtyActivity(
 					}
 					return new Set(s).add(id);
 				});
-				if (!isComputing.has(id)) {
-					return;
-				}
-				// Final stop received: don't fight the timer, let it transition.
-				if (finalStopReceived.has(id)) {
-					return;
-				}
-				// Agent-mode stop: cancel timer, agents are still producing output.
-				if (agentStopActive.has(id)) {
-					const st = stopConfirmTimers.get(id);
-					if (st) {
-						clearTimeout(st);
-						stopConfirmTimers.delete(id);
-						agentStopActive.delete(id);
-					}
-				}
-				// Re-enter computing if we were knocked out by an intermediate stop.
-				setActivityMap((m) => {
-					if (m.get(id) !== "computing") {
-						return new Map(m).set(id, "computing");
-					}
-					return m;
-				});
-				scheduleIdleFallback(id);
+				actor.send({ type: "PTY_DATA" });
 			}).then((fn) => unlisteners.push(fn));
 
+			// PTY exit: session terminated
 			listen<void>(`pty-exit-${id}`, () => {
-				isComputing.delete(id);
-				finalStopReceived.delete(id);
-				hadAgentLaunch.delete(id);
-				agentStopActive.delete(id);
-				clearTimers(id);
-				setActivityMap((m) => {
-					const next = new Map(m);
-					next.delete(id);
-					return next;
-				});
+				agentCount.delete(id);
+				actor.send({ type: "EXIT" });
 				setAlivePtys((s) => {
 					if (!s.has(id)) {
 						return s;
@@ -201,8 +195,7 @@ export function usePtyActivity(
 
 		return () => {
 			for (const fn of unlisteners) fn();
-			for (const t of stopConfirmTimers.values()) clearTimeout(t);
-			for (const t of idleTimers.values()) clearTimeout(t);
+			for (const actor of actors.values()) actor.stop();
 		};
 	}, [idsKey]);
 

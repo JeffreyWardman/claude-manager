@@ -38,24 +38,36 @@ src-tauri/src/metadata.rs   Local metadata store (rename, archive, delete)
 Session activity is tracked via Claude Code hooks and PTY events. This system has been
 through multiple iterations — do not simplify without understanding the full state machine.
 
-### State machine (`usePtyActivity.ts`)
+### State machine (`usePtyActivity.ts`) — XState
 
-States: `computing` | `waiting` | (no entry = inactive/offline)
+Each session gets an independent XState actor. The machine has 5 states:
 
 ```
-UserPromptSubmit hook → computing
-Stop hook (no agents) → finalStopReceived=true, 1.5s timer → waiting
-Stop hook (agents)    → agentStopActive=true, 5min timer → waiting
-PTY data (no stop)    → re-enter computing, reset idle timer
-PTY data (agent stop) → cancel timer, re-enter computing (agents still running)
-PTY data (final stop) → IGNORED (tail-end streaming, don't fight timer)
-PTY exit              → clear all state
-Idle fallback (60s)   → waiting (if hooks never fired)
+idle ──PROMPT──→ computing ──STOP(no agents)──→ draining ──1.5s──→ waiting
+                     │                                                │
+                     ├──STOP(agents>0)──→ agentWait                   │
+                     │                      │                         │
+                     ├──60s idle──→ waiting  ├──AGENT_DONE(count=0)──→ draining
+                     │                      ├──PTY_DATA/STOP (reenter)│
+                     └──PTY_DATA──→ computing (reenter, resets timer)  │
+                                                                      │
+waiting ──PROMPT──→ computing                                         │
+    * ──EXIT──→ idle                                                  │
 ```
 
-Key invariant: after a non-agent Stop fires, PTY data must NOT re-enter computing.
-This was the root cause of "stuck as pending" — streaming output after Stop would
-re-enter computing, cancelling the transition timer indefinitely.
+Key design decisions:
+- `draining` state: after a non-agent Stop, PTY_DATA is IGNORED (no transition).
+  This prevents streaming output from re-entering computing and fighting the timer.
+- `agentWait` state: tracks running agent count via PreToolUse(Agent) increments
+  and SubagentStop decrements. Only transitions to draining when count reaches 0.
+  PTY_DATA and STOP reenter (no-op, keeps state alive).
+- `computing` reenter on PTY_DATA: resets the idle timeout timer.
+- `hasRunningAgents` guard: checked via a mutable Map<id, count> outside the machine.
+
+The `toActivityState` mapper collapses internal states for the UI:
+- computing, draining, agentWait → "computing" (snake border)
+- waiting → "waiting" (green dot)
+- idle → null (no entry in activityMap)
 
 ### Unread tracking (`App.tsx`)
 

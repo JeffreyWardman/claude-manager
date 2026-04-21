@@ -97,6 +97,7 @@ fn handle(stream: std::net::TcpStream, app: AppHandle) {
         "PreToolUse" if matches!(p.tool_name.as_deref(), Some("Agent") | Some("Task")) => {
             format!("hook-agentlaunched-{}", p.session_id)
         }
+        "SubagentStop" => format!("hook-agentdone-{}", p.session_id),
         _ => return,
     };
     let _ = app.emit(&event, ());
@@ -126,7 +127,7 @@ fn install_for_dir(dir: &std::path::Path, command: &str) -> Option<()> {
     let hooks_map = hooks_val.as_object_mut()?;
 
     let mut changed = false;
-    for hook_type in &["UserPromptSubmit", "PreToolUse", "Stop"] {
+    for hook_type in &["UserPromptSubmit", "PreToolUse", "Stop", "SubagentStop"] {
         let entries = hooks_map
             .entry(*hook_type)
             .or_insert_with(|| serde_json::json!([]));
