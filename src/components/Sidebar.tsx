@@ -1285,6 +1285,11 @@ export function Sidebar({
 																onActivateGroupAtSlot(group.id, slotIdx);
 															}
 														}}
+														onDoubleClick={() => {
+															if (session) {
+																startRename(session);
+															}
+														}}
 														onKeyDown={(e) => {
 															if ((e.key === "Enter" || e.key === " ") && session) {
 																e.preventDefault();
@@ -1338,22 +1343,56 @@ export function Sidebar({
 																	unread={unreadSessions.has(session.session_id)}
 																	size={5}
 																/>
-																<span
-																	style={{
-																		fontSize: 11,
-																		color: isSlotSelected
-																			? "var(--text-primary)"
-																			: "var(--text-secondary)",
-																		fontWeight: isSlotSelected ? 500 : 400,
-																		overflow: "hidden",
-																		textOverflow: "ellipsis",
-																		whiteSpace: "nowrap",
-																		flex: 1,
-																		pointerEvents: "none",
-																	}}
-																>
-																	{sessionDisplayName(session)}
-																</span>
+																{renamingId === session.session_id ? (
+																	<input
+																		aria-label="Session name"
+																		ref={renameInputRef}
+																		value={renameValue}
+																		{...noAutocorrect}
+																		onChange={(e) => setRenameValue(e.target.value)}
+																		onKeyDown={(e) => {
+																			if (e.key === "Enter") {
+																				e.preventDefault();
+																				commitRename(session.session_id);
+																			}
+																			if (e.key === "Escape") {
+																				e.preventDefault();
+																				setRenamingId(null);
+																			}
+																		}}
+																		onBlur={() => commitRename(session.session_id)}
+																		onClick={(e) => e.stopPropagation()}
+																		onMouseDown={(e) => e.stopPropagation()}
+																		style={{
+																			flex: 1,
+																			background: "var(--bg-main)",
+																			border: "1px solid var(--accent)",
+																			borderRadius: 4,
+																			color: "var(--text-primary)",
+																			fontSize: 11,
+																			padding: "2px 4px",
+																			outline: "none",
+																			fontFamily: "inherit",
+																		}}
+																	/>
+																) : (
+																	<span
+																		style={{
+																			fontSize: 11,
+																			color: isSlotSelected
+																				? "var(--text-primary)"
+																				: "var(--text-secondary)",
+																			fontWeight: isSlotSelected ? 500 : 400,
+																			overflow: "hidden",
+																			textOverflow: "ellipsis",
+																			whiteSpace: "nowrap",
+																			flex: 1,
+																			pointerEvents: "none",
+																		}}
+																	>
+																		{sessionDisplayName(session)}
+																	</span>
+																)}
 															</>
 														) : (
 															<span
@@ -1870,6 +1909,22 @@ export function Sidebar({
 						padding: "4px 0",
 					}}
 				>
+					<button
+						type="button"
+						role="menuitem"
+						onClick={() => {
+							const session = sessions.find((s) => s.session_id === groupSlotContextMenu.sessionId);
+							if (session) {
+								startRename(session);
+							}
+							setGroupSlotContextMenu(null);
+						}}
+						style={menuItemStyle}
+						onMouseEnter={menuItemHover}
+						onMouseLeave={menuItemUnhover}
+					>
+						Rename
+					</button>
 					<button
 						type="button"
 						role="menuitem"
