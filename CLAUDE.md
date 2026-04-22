@@ -37,6 +37,16 @@ src-tauri/src/metadata.rs   Local metadata store (rename, archive, delete)
 
 Session activity is tracked via Claude Code hooks and PTY events. This system has been
 through multiple iterations — do not simplify without understanding the full state machine.
+Full details in `docs/activity-detection.md`.
+
+### New session creation
+
+`handleNewSession` spawns a PTY with a temporary ID (`new-{timestamp}`), renders it
+immediately via `TerminalPane`, then rekeys to the real session UUID once the backend
+discovers the JSONL file. The `pendingPty` state tracks the temp ID, cwd, and a snapshot
+of existing session IDs (used to match the new session by cwd basename exclusion).
+The rekey effect polls at 200ms until discovery, then calls `pty_rekey` which atomically
+updates the reader thread's event prefix via a shared `Arc<Mutex<String>>`.
 
 ### State machine (`usePtyActivity.ts`) — XState
 
@@ -58,16 +68,23 @@ waiting ──PROMPT──→ computing                                         
 Key design decisions:
 - `draining` state: after a non-agent Stop, PTY_DATA is IGNORED (no transition).
   This prevents streaming output from re-entering computing and fighting the timer.
-- `agentWait` state: tracks running agent count via PreToolUse(Agent) increments
+- `agentWait` state: tracks running agent count via PreToolUse(Agent/Task) increments
   and SubagentStop decrements. Only transitions to draining when count reaches 0.
   PTY_DATA and STOP reenter (no-op, keeps state alive).
 - `computing` reenter on PTY_DATA: resets the idle timeout timer.
 - `hasRunningAgents` guard: checked via a mutable Map<id, count> outside the machine.
+- Agent count is cleared on EXIT to prevent stale counts affecting future sessions.
 
 The `toActivityState` mapper collapses internal states for the UI:
 - computing, draining, agentWait → "computing" (snake border)
 - waiting → "waiting" (green dot)
 - idle → null (no entry in activityMap)
+
+### Cleanup effect (`App.tsx`)
+
+Removes stale session IDs from group slots when the session list changes. Builds a
+valid ID set from discovered sessions + pending PTY temp ID, then nulls slots with
+unknown IDs. Protects against archived/deleted sessions lingering in groups.
 
 ### Unread tracking (`App.tsx`)
 

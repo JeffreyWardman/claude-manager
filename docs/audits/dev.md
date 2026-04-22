@@ -1,6 +1,6 @@
 # Code Audit Report
 
-**Last audit:** 2026-04-18 (round 8-9, converged, dual-reviewer process)
+**Last audit:** 2026-04-22 (round 10-11, converged, dual-reviewer process)
 **Standard:** DRY, SOLID, clean code, correctness, safety
 **Status: PASS** -- all confirmed issues resolved
 
@@ -282,5 +282,25 @@ Fresh dual-reviewer audit with Windows support in scope.
 | macOS modifier glyphs hardcoded | Cosmetic, platform detection throughout is out of scope |
 
 ## Round 9 — 2026-04-18 (convergence round 2)
+
+Both auditors reported **zero issues**. Converged.
+
+---
+
+## Round 10 — 2026-04-22 (convergence round 1)
+
+### Fixed (7)
+
+| # | File | Issue | Fix |
+|---|------|-------|-----|
+| 1 | `App.tsx:612` | Cmd+W deletes without confirmation | Added `ask()` dialog |
+| 2 | `App.tsx:527` | Pending PTY match uses basename only | Full cwd match |
+| 3 | `App.tsx:297-338` | 3 handlers bypass persistGroups | Use persistGroups callback |
+| 4 | `utils.ts:7` | formatCwd only handles C:\ drive | Any drive letter `[A-Z]` |
+| 5 | `Settings.tsx:201` | Hotkeys table says "Archive" | Updated to "Delete" |
+| 6 | `Settings.tsx:1388` | Guide lists "Archive" action | Replaced with "Rename" |
+| 7 | `App.tsx:96` | handlePtyExit doesn't filter empty groups | Added `.filter()` |
+
+## Round 11 — 2026-04-22 (convergence round 2)
 
 Both auditors reported **zero issues**. Converged.

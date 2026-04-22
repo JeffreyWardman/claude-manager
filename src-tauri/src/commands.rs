@@ -80,9 +80,11 @@ pub fn new_window(app: AppHandle, profile: Option<String>) -> Result<(), String>
         url = format!("/?profile={}", encoded);
     }
     let builder = WebviewWindowBuilder::new(&app, &label, WebviewUrl::App(url.into()))
-        .title("claude-manager")
+        .title("ClaudeManager")
         .inner_size(1200.0, 800.0)
-        .min_inner_size(800.0, 500.0);
+        .min_inner_size(800.0, 500.0)
+        .visible(false)
+        .background_color(tauri::window::Color(245, 239, 228, 255));
     #[cfg(target_os = "macos")]
     let builder = builder
         .title_bar_style(tauri::TitleBarStyle::Overlay)

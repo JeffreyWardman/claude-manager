@@ -160,10 +160,7 @@ export function useDragDrop(handlers: DragDropHandlers) {
 			} else if (dropType === "ungroup" && payload.type === "session") {
 				handlers.onRemoveFromGroup(payload.sessionId);
 			} else if (dropType === "session" && payload.type === "session") {
-				const targetSessionId = target.getAttribute("data-session-id")!;
-				if (targetSessionId !== payload.sessionId) {
-					handlers.onCreateGroupFromSessions(payload.sessionId, targetSessionId);
-				}
+				handlers.onRemoveFromGroup(payload.sessionId);
 			} else if (dropType === "grid-slot" && payload.type === "session") {
 				const gridIdx = parseInt(target.getAttribute("data-grid-idx")!, 10);
 				handlers.onDropToGridSlot(gridIdx, payload.sessionId);

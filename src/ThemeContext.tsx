@@ -85,6 +85,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
 	useEffect(() => {
 		applyTheme(theme);
+		// Show window after theme is applied (new windows start hidden to prevent flash)
+		import("@tauri-apps/api/window")
+			.then(({ getCurrentWindow }) => getCurrentWindow().show())
+			.catch(() => {});
 	}, [theme]);
 
 	const setThemeId = (id: string) => {

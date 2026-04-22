@@ -196,10 +196,10 @@ const HOTKEYS = [
 	{ keys: "⌘K", desc: "Command palette" },
 	{ keys: "⌘P", desc: "Settings" },
 	{ keys: "⌘N", desc: "New window" },
-	{ keys: "⌘⇧N", desc: "New session" },
+	{ keys: "⌘⇧N / ⌘T", desc: "New session" },
 	{ keys: "⌘M", desc: "Minimize window" },
-	{ keys: "⌘W", desc: "Archive session" },
-	{ keys: "⌘⌫", desc: "Delete group or archive tab" },
+	{ keys: "⌘W", desc: "Delete session" },
+	{ keys: "⌘⌫", desc: "Delete group or session" },
 	{ keys: "⌘B", desc: "Toggle sidebar" },
 	{ keys: "⌃Tab", desc: "Next group" },
 	{ keys: "⌃⇧Tab", desc: "Previous group" },
@@ -1385,7 +1385,7 @@ export function Settings({
 										<P>Right-click a session in the sidebar for:</P>
 										<Table
 											rows={[
-												["Archive", "Hides from sidebar. File preserved on disk."],
+												["Rename", "Set a display name for the session."],
 												["Delete", "Permanently removes conversation file. Cannot be undone."],
 											]}
 										/>

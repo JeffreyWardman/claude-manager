@@ -4,7 +4,7 @@ export const isWindows = navigator.platform?.toLowerCase().includes("win") ?? fa
 
 export function formatCwd(cwd: string): string {
 	if (isWindows) {
-		return cwd.replace(/^C:\\Users\\[^\\]+/, "~");
+		return cwd.replace(/^[A-Z]:\\Users\\[^\\]+/i, "~");
 	}
 	return cwd.replace(/^\/([Uu]sers|home)\/[^/]+/, "~");
 }

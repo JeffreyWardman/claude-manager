@@ -7,7 +7,7 @@ mod pty_manager;
 mod sessions;
 mod utils;
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -16,7 +16,27 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin({
+            use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
+
+            let new_session = Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::KeyN);
+
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(move |app, shortcut, event| {
+                    if shortcut == &new_session && event.state() == ShortcutState::Pressed {
+                        let _ = app.emit("global-new-session", ());
+                    }
+                })
+                .build()
+        })
         .setup(|app| {
+            #[cfg(desktop)]
+            {
+                use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut};
+                let shortcut = Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::KeyN);
+                app.global_shortcut().register(shortcut)?;
+            }
+
             app.manage(pty_manager::PtyState::new());
 
             let config_dirs: Vec<std::path::PathBuf> = profiles::discover_profiles()
@@ -45,6 +65,7 @@ pub fn run() {
             pty_manager::pty_get_scrollback,
             pty_manager::pty_write,
             pty_manager::pty_resize,
+            pty_manager::pty_rekey,
             pty_manager::pty_kill,
             profiles::discover_profiles,
             profiles::save_profile_config,

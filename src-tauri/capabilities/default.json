@@ -8,6 +8,7 @@
 		"core:window:allow-start-dragging",
 		"core:window:allow-minimize",
 		"core:window:allow-create",
+		"core:window:allow-show",
 		"opener:default",
 		"shell:default",
 		"shell:allow-execute",
@@ -16,6 +17,9 @@
 		"fs:allow-read-dir",
 		"fs:allow-exists",
 		"dialog:default",
-		"dialog:allow-open"
+		"dialog:allow-open",
+		"global-shortcut:allow-register",
+		"global-shortcut:allow-unregister",
+		"global-shortcut:allow-is-registered"
 	]
 }

@@ -6,6 +6,7 @@ import { MainPane } from "./components/MainPane";
 import { NewSessionModal } from "./components/NewSessionModal";
 import { Settings } from "./components/Settings";
 import { Sidebar } from "./components/Sidebar";
+import { TerminalPane } from "./components/TerminalPane";
 import {
 	addToGroup,
 	dropToGroupSlot,
@@ -23,7 +24,6 @@ import { isSessionIgnored, parseIgnorePatterns } from "./sidebarUtils";
 import { ThemeProvider } from "./ThemeContext";
 import type { ClaudeSession, PaneGroup, PaneLayout } from "./types";
 import { useDragDrop } from "./useDragDrop";
-import { pathBasename } from "./utils";
 
 const MIN_SIDEBAR_WIDTH = 160;
 const MAX_SIDEBAR_WIDTH = 480;
@@ -85,9 +85,9 @@ function AppInner() {
 	configDirRef.current = configDir;
 	const sessionsRef = useRef(sessions);
 	sessionsRef.current = sessions;
-	// Tracks a newly spawned session. The PTY runs under tmpId.
-	// liveSessions matches the real Claude session by existingIds + cwd to pull its name.
-	const [pendingSpawn, setPendingSpawn] = useState<{
+	// Tracks a newly spawned PTY that hasn't been matched to a real session yet.
+	// Once the backend discovers the real session, we pty_rekey and clear this.
+	const [pendingPty, setPendingPty] = useState<{
 		tmpId: string;
 		cwd: string;
 		existingIds: Set<string>;
@@ -95,24 +95,25 @@ function AppInner() {
 
 	const handlePtyExit = useCallback((sessionId: string) => {
 		setGroups((prev) => {
-			const next = prev.map((g) => ({
-				...g,
-				slots: g.slots.map((s) => (s === sessionId ? null : s)),
-			}));
+			const next = prev
+				.map((g) => ({
+					...g,
+					slots: g.slots.map((s) => (s === sessionId ? null : s)),
+				}))
+				.filter((g) => g.slots.some((s) => s !== null));
 			localStorage.setItem(groupsKey(configDirRef.current), JSON.stringify(next));
 			return next;
 		});
 		setStandaloneSelectedId((prev) => (prev === sessionId ? null : prev));
-		setPendingSpawn((prev) => (prev?.tmpId === sessionId ? null : prev));
+		setPendingPty((prev) => (prev?.tmpId === sessionId ? null : prev));
 	}, []);
-	// Include pending tmpId so activity tracking works for the synthetic session
 	const trackedIds = useMemo(() => {
 		const ids = sessions.map((s) => s.session_id);
-		if (pendingSpawn && !ids.includes(pendingSpawn.tmpId)) {
-			ids.push(pendingSpawn.tmpId);
+		if (pendingPty && !ids.includes(pendingPty.tmpId)) {
+			ids.push(pendingPty.tmpId);
 		}
 		return ids;
-	}, [sessions, pendingSpawn]);
+	}, [sessions, pendingPty]);
 	const { activityMap, alivePtys } = usePtyActivity(trackedIds, clearUnread, handlePtyExit);
 
 	const [ignorePatternsRaw, setIgnorePatternsRaw] = useState(
@@ -121,7 +122,6 @@ function AppInner() {
 	const ignorePatterns = useMemo(() => parseIgnorePatterns(ignorePatternsRaw), [ignorePatternsRaw]);
 
 	// Override session status based on local PTY state and filter ignored sessions.
-	// A session is "active" if it has activity OR if its PTY has produced any output.
 	const liveSessions = useMemo(() => {
 		const discovered = sessions
 			.map((s) =>
@@ -130,39 +130,15 @@ function AppInner() {
 					: s,
 			)
 			.filter((s) => !isSessionIgnored(s, ignorePatterns));
-		// Inject synthetic entry that stays under tmpId for the PTY's lifetime
-		if (pendingSpawn && !discovered.some((s) => s.session_id === pendingSpawn.tmpId)) {
-			const folderName = pathBasename(pendingSpawn.cwd) || "new";
-			const spawnFolder = pathBasename(pendingSpawn.cwd);
-			// Find the real session inline — no effect needed, no intermediate render
-			const real = discovered.find(
-				(s) => !pendingSpawn.existingIds.has(s.session_id) && pathBasename(s.cwd) === spawnFolder,
-			);
-			if (real) {
-				discovered.splice(discovered.indexOf(real), 1);
-			}
-			discovered.unshift({
-				pid: real?.pid ?? 0,
-				session_id: pendingSpawn.tmpId,
-				cwd: pendingSpawn.cwd,
-				project_name: folderName,
-				started_at: real?.started_at ?? Date.now(),
-				last_modified: real?.last_modified ?? Date.now(),
-				status: "active",
-				display_name: real
-					? real.display_name || `${real.project_name}-${real.session_id.slice(0, 5)}`
-					: `${folderName}-{pending-id}`,
-				git_branch: real?.git_branch ?? null,
-				pending_rename: null,
-			});
-		}
 		return discovered;
-	}, [sessions, activityMap, alivePtys, ignorePatterns, pendingSpawn]);
+	}, [sessions, activityMap, alivePtys, ignorePatterns]);
 
 	const [groups, setGroups] = useState<PaneGroup[]>(() => loadGroups(configDir));
 	const [activeGroupId, setActiveGroupId] = useState<string | null>(
 		() => localStorage.getItem(activeGroupKey(configDir)) ?? null,
 	);
+	const activeGroupIdRef = useRef(activeGroupId);
+	activeGroupIdRef.current = activeGroupId;
 
 	// Reload groups when profile changes
 	useEffect(() => {
@@ -215,10 +191,16 @@ function AppInner() {
 		}
 	}, [groups, activeGroupId, configDir]);
 
-	const persistGroups = useCallback((next: PaneGroup[]) => {
-		setGroups(next);
-		localStorage.setItem(groupsKey(configDirRef.current), JSON.stringify(next));
-	}, []);
+	const persistGroups = useCallback(
+		(nextOrFn: PaneGroup[] | ((prev: PaneGroup[]) => PaneGroup[])) => {
+			setGroups((prev) => {
+				const next = typeof nextOrFn === "function" ? nextOrFn(prev) : nextOrFn;
+				localStorage.setItem(groupsKey(configDirRef.current), JSON.stringify(next));
+				return next;
+			});
+		},
+		[],
+	);
 
 	const activateGroup = useCallback((id: string) => {
 		setActiveGroupId(id);
@@ -235,21 +217,29 @@ function AppInner() {
 		}
 	}, [activeGroup?.slots.length, focusedSlotIdx]);
 
-	// Remove archived/deleted sessions from all group slots
+	// Remove archived/deleted sessions from all group slots.
+	// Only triggers on session list changes — not on group changes.
 	useEffect(() => {
-		if (liveSessions.length === 0) {
+		if (sessions.length === 0) {
 			return;
 		}
-		const ids = new Set(liveSessions.map((s) => s.session_id));
-		const needsUpdate = groups.some((g) => g.slots.some((s) => s !== null && !ids.has(s)));
-		if (needsUpdate) {
-			const next = groups.map((g) => ({
+		const ids = new Set(sessions.map((s) => s.session_id));
+		if (pendingPty) {
+			ids.add(pendingPty.tmpId);
+		}
+		setGroups((prev) => {
+			const needsUpdate = prev.some((g) => g.slots.some((s) => s !== null && !ids.has(s)));
+			if (!needsUpdate) {
+				return prev;
+			}
+			const next = prev.map((g) => ({
 				...g,
 				slots: g.slots.map((s) => (s && ids.has(s) ? s : null)),
 			}));
-			persistGroups(next);
-		}
-	}, [liveSessions, groups, persistGroups]);
+			localStorage.setItem(groupsKey(configDirRef.current), JSON.stringify(next));
+			return next;
+		});
+	}, [sessions, pendingPty]);
 
 	const handleActivateGroupAtSlot = useCallback((groupId: string, slotIdx: number) => {
 		setActiveGroupId(groupId);
@@ -260,45 +250,39 @@ function AppInner() {
 
 	const handleCreateGroup = useCallback(() => {
 		const id = genId();
-		const group: PaneGroup = {
-			id,
-			name: `Group ${groups.length + 1}`,
-			layout: "2x1",
-			slots: [null, null],
-		};
-		persistGroups([...groups, group]);
+		persistGroups((prev) => [
+			...prev,
+			{ id, name: `Group ${prev.length + 1}`, layout: "2x1" as PaneLayout, slots: [null, null] },
+		]);
 		activateGroup(id);
-	}, [groups, persistGroups, activateGroup]);
+	}, [persistGroups, activateGroup]);
 
 	const handleDeleteGroup = useCallback(
 		(id: string) => {
-			const next = groups.filter((g) => g.id !== id);
-			persistGroups(next);
-			if (activeGroupId === id) {
-				const newActive = next[0]?.id ?? null;
-				setActiveGroupId(newActive);
-				if (newActive) {
-					localStorage.setItem(activeGroupKey(configDirRef.current), newActive);
-				} else {
-					localStorage.removeItem(activeGroupKey(configDirRef.current));
+			persistGroups((prev) => prev.filter((g) => g.id !== id));
+			setActiveGroupId((prevActive) => {
+				if (prevActive !== id) {
+					return prevActive;
 				}
-			}
+				return null;
+			});
+			localStorage.removeItem(activeGroupKey(configDirRef.current));
 		},
-		[groups, activeGroupId, persistGroups],
+		[persistGroups],
 	);
 
 	const handleRenameGroup = useCallback(
 		(id: string, name: string) => {
-			persistGroups(groups.map((g) => (g.id === id ? { ...g, name } : g)));
+			persistGroups((prev) => prev.map((g) => (g.id === id ? { ...g, name } : g)));
 		},
-		[groups, persistGroups],
+		[persistGroups],
 	);
 
 	const handleChangeLayout = useCallback(
 		(id: string, layout: PaneLayout) => {
 			const count = SLOT_COUNTS[layout];
-			persistGroups(
-				groups.map((g) => {
+			persistGroups((prev) =>
+				prev.map((g) => {
 					if (g.id !== id) {
 						return g;
 					}
@@ -308,58 +292,67 @@ function AppInner() {
 			);
 			activateGroup(id);
 		},
-		[groups, activateGroup, persistGroups],
+		[activateGroup, persistGroups],
 	);
 
 	const handleDropToSlot = useCallback(
 		(slotIdx: number, sessionId: string) => {
-			if (!activeGroup) {
-				return;
-			}
-			persistGroups(dropToSlot(groups, activeGroup.id, slotIdx, sessionId));
+			persistGroups((prev) => {
+				const activeGrp = prev.find((g) => g.id === activeGroupIdRef.current);
+				if (!activeGrp) {
+					return prev;
+				}
+				return dropToSlot(prev, activeGrp.id, slotIdx, sessionId);
+			});
 		},
-		[groups, activeGroup, persistGroups],
+		[persistGroups],
 	);
 
 	const handleDropToGroupSlot = useCallback(
 		(groupId: string, slotIdx: number, sessionId: string) => {
-			persistGroups(dropToGroupSlot(groups, groupId, slotIdx, sessionId));
+			persistGroups((prev) => dropToGroupSlot(prev, groupId, slotIdx, sessionId));
 		},
-		[groups, persistGroups],
+		[persistGroups],
 	);
 
 	const handleSwapSlots = useCallback(
 		(fromIdx: number, toIdx: number) => {
-			if (!activeGroup) {
-				return;
-			}
-			persistGroups(swapSlots(groups, activeGroup.id, fromIdx, toIdx));
+			persistGroups((prev) => {
+				const activeGrp = prev.find((g) => g.id === activeGroupIdRef.current);
+				if (!activeGrp) {
+					return prev;
+				}
+				return swapSlots(prev, activeGrp.id, fromIdx, toIdx);
+			});
 		},
-		[groups, activeGroup, persistGroups],
+		[persistGroups],
 	);
 
 	const handleRemoveFromSlot = useCallback(
 		(slotIdx: number) => {
-			if (!activeGroup) {
-				return;
-			}
-			persistGroups(removeFromSlot(groups, activeGroup.id, slotIdx));
+			persistGroups((prev) => {
+				const activeGrp = prev.find((g) => g.id === activeGroupIdRef.current);
+				if (!activeGrp) {
+					return prev;
+				}
+				return removeFromSlot(prev, activeGrp.id, slotIdx);
+			});
 		},
-		[groups, activeGroup, persistGroups],
+		[persistGroups],
 	);
 
 	const handleRemoveFromGroup = useCallback(
 		(sessionId: string) => {
-			persistGroups(removeFromGroup(groups, sessionId));
+			persistGroups((prev) => removeFromGroup(prev, sessionId));
 		},
-		[groups, persistGroups],
+		[persistGroups],
 	);
 
 	const handleAddToGroup = useCallback(
 		(groupId: string, sessionId: string) => {
-			persistGroups(addToGroup(groups, groupId, sessionId, enabledLayouts));
+			persistGroups((prev) => addToGroup(prev, groupId, sessionId, enabledLayouts));
 		},
-		[groups, enabledLayouts, persistGroups],
+		[enabledLayouts, persistGroups],
 	);
 
 	const handleCreateGroupWithSessionRef = useRef<(sid: string) => void>(() => {});
@@ -378,33 +371,39 @@ function AppInner() {
 	const handleCreateGroupFromSessions = useCallback(
 		(sessionIdA: string, sessionIdB: string) => {
 			const id = genId();
-			const group: PaneGroup = {
-				id,
-				name: `Group ${groups.length + 1}`,
-				layout: "2x1",
-				slots: [sessionIdA, sessionIdB],
-			};
-			persistGroups([...groups, group]);
+			persistGroups((prev) => [
+				...prev,
+				{
+					id,
+					name: `Group ${prev.length + 1}`,
+					layout: "2x1" as PaneLayout,
+					slots: [sessionIdA, sessionIdB],
+				},
+			]);
 			activateGroup(id);
 		},
-		[groups, persistGroups, activateGroup],
+		[persistGroups, activateGroup],
 	);
 	handleCreateGroupFromSessionsRef.current = handleCreateGroupFromSessions;
 
 	const handleCreateGroupWithSession = useCallback(
 		(sessionId: string) => {
 			const id = genId();
-			const next = removeFromGroup(groups, sessionId);
-			const group: PaneGroup = {
-				id,
-				name: `Group ${next.length + 1}`,
-				layout: "2x1",
-				slots: [sessionId, null],
-			};
-			persistGroups([...next, group]);
+			persistGroups((prev) => {
+				const cleaned = removeFromGroup(prev, sessionId);
+				return [
+					...cleaned,
+					{
+						id,
+						name: `Group ${cleaned.length + 1}`,
+						layout: "2x1" as PaneLayout,
+						slots: [sessionId, null],
+					},
+				];
+			});
 			activateGroup(id);
 		},
-		[groups, persistGroups, activateGroup],
+		[persistGroups, activateGroup],
 	);
 	handleCreateGroupWithSessionRef.current = handleCreateGroupWithSession;
 
@@ -500,7 +499,7 @@ function AppInner() {
 			const tmpId = `new-${Date.now()}`;
 			const skipPermissions = localStorage.getItem("skip-permissions") === "true";
 			const existingIds = new Set(sessionsRef.current.map((s) => s.session_id));
-			setPendingSpawn({ tmpId, cwd, existingIds });
+			setPendingPty({ tmpId, cwd, existingIds });
 			setStandaloneSelectedId(tmpId);
 
 			invoke("pty_spawn", {
@@ -519,42 +518,34 @@ function AppInner() {
 		[refresh, configDir],
 	);
 
-	// Poll aggressively until the real session is discovered.
-	// Once found, replace tmpId references in groups and standalone selection.
-	const tmpIdSwapped = useRef<string | null>(null);
+	// When the real session is discovered, rekey the PTY and switch selection.
+	// The rekey must complete before we update React state, otherwise TerminalPane
+	// re-mounts with the new ID before the Rust PTY entry is moved, sees null
+	// scrollback, and spawns a duplicate `claude --resume` process.
 	useEffect(() => {
-		if (!pendingSpawn) {
+		if (!pendingPty) {
 			return;
 		}
-		if (tmpIdSwapped.current === pendingSpawn.tmpId) {
-			return;
-		}
-		const spawnFolder = pathBasename(pendingSpawn.cwd);
+		let cancelled = false;
 		const real = sessions.find(
-			(s) => !pendingSpawn.existingIds.has(s.session_id) && pathBasename(s.cwd) === spawnFolder,
+			(s) => !pendingPty.existingIds.has(s.session_id) && s.cwd === pendingPty.cwd,
 		);
 		if (real) {
-			tmpIdSwapped.current = pendingSpawn.tmpId;
-			setGroups((prev) => {
-				const hasTmpId = prev.some((g) => g.slots.includes(pendingSpawn.tmpId));
-				if (!hasTmpId) {
-					return prev;
-				}
-				const next = prev.map((g) => ({
-					...g,
-					slots: g.slots.map((s) => (s === pendingSpawn.tmpId ? real.session_id : s)),
-				}));
-				localStorage.setItem(groupsKey(configDirRef.current), JSON.stringify(next));
-				return next;
-			});
-			if (standaloneSelectedId === pendingSpawn.tmpId) {
-				setStandaloneSelectedId(real.session_id);
-			}
-			return;
+			invoke("pty_rekey", { from: pendingPty.tmpId, to: real.session_id })
+				.then(() => {
+					if (cancelled) return;
+					setStandaloneSelectedId(real.session_id);
+					setPendingPty(null);
+				})
+				.catch(console.error);
+			return () => {
+				cancelled = true;
+			};
 		}
+		// Poll aggressively until discovered
 		const poll = setInterval(refresh, 200);
 		return () => clearInterval(poll);
-	}, [sessions, pendingSpawn, refresh, standaloneSelectedId]);
+	}, [sessions, pendingPty, refresh]);
 
 	// Flush pending renames when a session transitions to "waiting"
 	const prevActivityRef = useRef<Map<string, ActivityState>>(new Map());
@@ -604,7 +595,7 @@ function AppInner() {
 				});
 				return;
 			}
-			if (mod && e.shiftKey && e.key === "N") {
+			if (mod && (e.key === "t" || (e.shiftKey && e.key === "N"))) {
 				e.preventDefault();
 				setNewSessionOpen(true);
 				return;
@@ -621,24 +612,26 @@ function AppInner() {
 				invoke("new_window", { profile: activeProfile?.id ?? null }).catch(console.error);
 				return;
 			}
-			if (mod && e.key === "w") {
+			if (mod && (e.key === "w" || e.key === "Backspace" || e.key === "Delete")) {
 				e.preventDefault();
-				if (selectedId) {
-					invoke("archive_session", { sessionId: selectedId })
-						.then(() => refresh())
-						.catch(console.error);
-				}
-				return;
-			}
-
-			if (mod && (e.key === "Backspace" || e.key === "Delete")) {
-				e.preventDefault();
-				if (activeGroupId) {
+				if (activeGroupId && (e.key === "Backspace" || e.key === "Delete")) {
 					handleDeleteGroup(activeGroupId);
 				} else if (selectedId) {
-					invoke("archive_session", { sessionId: selectedId })
-						.then(() => refresh())
-						.catch(console.error);
+					import("@tauri-apps/plugin-dialog").then(({ ask }) =>
+						ask("This will permanently delete the conversation file. This cannot be undone.", {
+							title: "Delete session?",
+							kind: "warning",
+						}).then((confirmed) => {
+							if (confirmed) {
+								invoke("delete_session", {
+									configDir: configDirRef.current,
+									sessionId: selectedId,
+								})
+									.then(() => refresh())
+									.catch(console.error);
+							}
+						}),
+					);
 				}
 				return;
 			}
@@ -669,8 +662,8 @@ function AppInner() {
 				return;
 			}
 		};
-		window.addEventListener("keydown", handleKey);
-		return () => window.removeEventListener("keydown", handleKey);
+		window.addEventListener("keydown", handleKey, true);
+		return () => window.removeEventListener("keydown", handleKey, true);
 	}, [
 		selectedId,
 		paletteOpen,
@@ -682,6 +675,19 @@ function AppInner() {
 		activateGroup,
 		activeProfile?.id,
 	]);
+
+	// Global shortcut: Cmd+Shift+N intercepted at OS level by tauri-plugin-global-shortcut
+	useEffect(() => {
+		let unlisten: (() => void) | null = null;
+		import("@tauri-apps/api/event").then(({ listen }) => {
+			listen("global-new-session", () => {
+				setNewSessionOpen(true);
+			}).then((fn) => {
+				unlisten = fn;
+			});
+		});
+		return () => unlisten?.();
+	}, []);
 
 	function startResize(e: React.MouseEvent) {
 		e.preventDefault();
@@ -712,6 +718,7 @@ function AppInner() {
 					alignItems: "center",
 					justifyContent: "center",
 					height: "100%",
+					background: "var(--bg-main)",
 					color: "var(--text-very-muted)",
 					fontSize: 12,
 				}}
@@ -770,6 +777,7 @@ function AppInner() {
 					activeProfile={activeProfile}
 					onSwitchProfile={(id: string) => setActiveProfileId(id)}
 					configDir={configDir}
+					dndActive={dndActive}
 				/>
 			)}
 			{sidebarVisible && (
@@ -812,13 +820,17 @@ function AppInner() {
 					}
 					style={{ flex: 1, position: "relative", overflow: "hidden" }}
 				>
-					<MainPane
-						session={liveSessions.find((s) => s.session_id === standaloneSelectedId) ?? null}
-						activityMap={activityMap}
-						unreadSessions={unreadSessions}
-						focused
-						configDir={configDir}
-					/>
+					{standaloneSelectedId === pendingPty?.tmpId ? (
+						<TerminalPane ptyId={pendingPty.tmpId} cwd={pendingPty.cwd} configDir={configDir} />
+					) : (
+						<MainPane
+							session={liveSessions.find((s) => s.session_id === standaloneSelectedId) ?? null}
+							activityMap={activityMap}
+							unreadSessions={unreadSessions}
+							focused
+							configDir={configDir}
+						/>
+					)}
 				</div>
 			) : (
 				<GridLayout

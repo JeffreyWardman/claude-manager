@@ -48,6 +48,7 @@ struct PtyEntry {
     writer: Box<dyn Write + Send>,
     master: Box<dyn portable_pty::MasterPty + Send>,
     scrollback: Arc<Mutex<Vec<u8>>>,
+    event_id: Arc<Mutex<String>>,
 }
 
 pub struct PtyState(Arc<Mutex<HashMap<String, PtyEntry>>>);
@@ -190,13 +191,11 @@ pub fn pty_spawn(
 
     let scrollback: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
     let scrollback_writer = scrollback.clone();
-
-    let data_event = format!("pty-data-{}", id);
-    let exit_event = format!("pty-exit-{}", id);
+    let event_id: Arc<Mutex<String>> = Arc::new(Mutex::new(id.clone()));
+    let event_id_reader = event_id.clone();
 
     // Clones needed by the reader thread for cleanup on exit
     let state_map = state.0.clone();
-    let id_for_exit = id.clone();
 
     // Capture a weak reference to identify this specific spawn instance.
     // If pty_spawn is called again for the same id before this reader exits,
@@ -209,17 +208,18 @@ pub fn pty_spawn(
         loop {
             match reader.read(&mut buf) {
                 Ok(0) | Err(_) => {
-                    let _ = app.emit(&exit_event, ());
+                    let current_id = event_id_reader.lock().unwrap().clone();
+                    let _ = app.emit(&format!("pty-exit-{}", current_id), ());
                     // Only remove the entry if it still belongs to this spawn instance.
                     let mut map = state_map.lock().unwrap();
                     let is_same = map
-                        .get(&id_for_exit)
+                        .get(&current_id)
                         .map(|e| Arc::ptr_eq(&e.scrollback, &scrollback_identity))
                         .unwrap_or(false);
                     if is_same {
-                        map.remove(&id_for_exit);
+                        map.remove(&current_id);
                         drop(map);
-                        release_lock(&id_for_exit);
+                        release_lock(&current_id);
                         let _ = app.emit("sessions-changed", ());
                     }
                     break;
@@ -245,8 +245,9 @@ pub fn pty_spawn(
                             scrollback.drain(..excess);
                         }
                     }
+                    let current_id = event_id_reader.lock().unwrap().clone();
                     let encoded = base64::engine::general_purpose::STANDARD.encode(&buf[..n]);
-                    let _ = app.emit(&data_event, encoded);
+                    let _ = app.emit(&format!("pty-data-{}", current_id), encoded);
                 }
             }
         }
@@ -258,6 +259,7 @@ pub fn pty_spawn(
             writer,
             master,
             scrollback,
+            event_id,
         },
     );
     Ok(())
@@ -314,6 +316,22 @@ pub fn pty_resize(
                 pixel_height: 0,
             })
             .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Re-key a PTY entry from one id to another. Used when a newly spawned session's
+/// real id is discovered. Updates the event prefix so subsequent pty-data/pty-exit
+/// events emit under the new id. Also transfers the lock file.
+#[tauri::command]
+pub fn pty_rekey(from: String, to: String, state: State<'_, PtyState>) -> Result<(), String> {
+    let mut map = state.0.lock().unwrap();
+    if let Some(entry) = map.remove(&from) {
+        *entry.event_id.lock().unwrap() = to.clone();
+        map.insert(to.clone(), entry);
+        drop(map);
+        release_lock(&from);
+        let _ = acquire_lock(&to);
     }
     Ok(())
 }

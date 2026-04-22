@@ -39,18 +39,18 @@
   * { transition-duration: 0s !important; }
 }
 
-/* Default theme CSS variables (Void) — overridden by ThemeContext at runtime */
+/* Default theme CSS variables (Claude Light) — overridden by ThemeContext at runtime */
 :root {
-  --bg-sidebar: #111111;
-  --bg-main: #0f0f0f;
-  --border: #1e1e1e;
-  --text-primary: #ededef;
-  --text-secondary: #9ca3af;
-  --text-muted: #808080;
-  --text-very-muted: #525252;
-  --item-selected: rgba(255, 255, 255, 0.07);
-  --item-hover: rgba(255, 255, 255, 0.04);
-  --accent: #8a8fa0;
+  --bg-sidebar: #F0EBE1;
+  --bg-main: #F5EFE4;
+  --border: #E0D8CA;
+  --text-primary: #2C1E14;
+  --text-secondary: #4A3526;
+  --text-muted: #7A6B5D;
+  --text-very-muted: #A89D8C;
+  --item-selected: rgba(44, 30, 20, 0.08);
+  --item-hover: rgba(44, 30, 20, 0.04);
+  --accent: #D97757;
   --danger: #f87171;
 }
 
@@ -85,8 +85,8 @@
 }
 
 /* Pointer-event DnD (replaces HTML5 DnD which is broken in WKWebView) */
-body.dragging * {
-  overflow: hidden !important;
+body.dragging {
+  overflow: hidden;
 }
 
 .drag-ghost {
