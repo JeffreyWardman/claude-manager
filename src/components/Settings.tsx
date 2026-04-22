@@ -414,6 +414,7 @@ export function Settings({
 				position: "fixed",
 				inset: 0,
 				background: "rgba(0,0,0,0.6)",
+				backdropFilter: "blur(4px)",
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
@@ -1410,7 +1411,12 @@ export function Settings({
 									<>
 										<P>
 											Drag sessions onto a group header to add them. If the group is full, it
-											automatically expands to the next enabled layout.
+											automatically expands to the next enabled layout. Drag a grouped session onto
+											the sessions list to ungroup it.
+										</P>
+										<P>
+											Drag group headers to reorder them. A line shows where the group will be
+											inserted.
 										</P>
 										<P>
 											Change tiling layouts from the layout icon in the group header. Enable or

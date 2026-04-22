@@ -12,11 +12,33 @@ interface DragDropHandlers {
 	onDropToGridSlot: (slotIdx: number, sessionId: string) => void;
 	onSwapGridSlots: (fromIdx: number, toIdx: number) => void;
 	onActivateGroupAtSlot: (groupId: string, slotIdx: number) => void;
+	onReorderGroup: (fromId: string, toId: string, above: boolean) => void;
 }
 
 function findDropTarget(x: number, y: number): Element | null {
 	const el = document.elementFromPoint(x, y);
 	return el?.closest("[data-drop]") ?? null;
+}
+
+let insertLineEl: HTMLDivElement | null = null;
+
+function showInsertLine(target: HTMLElement, above: boolean) {
+	if (!insertLineEl) {
+		insertLineEl = document.createElement("div");
+		insertLineEl.style.cssText =
+			"position:absolute;left:8px;right:8px;height:2px;background:var(--accent);border-radius:1px;z-index:100;pointer-events:none;";
+		document.body.appendChild(insertLineEl);
+	}
+	const rect = target.getBoundingClientRect();
+	insertLineEl.style.top = `${above ? rect.top - 1 : rect.bottom - 1}px`;
+	insertLineEl.style.left = `${rect.left}px`;
+	insertLineEl.style.right = `${document.documentElement.clientWidth - rect.right}px`;
+	insertLineEl.style.width = "";
+}
+
+function removeInsertLine() {
+	insertLineEl?.remove();
+	insertLineEl = null;
 }
 
 function findDragSource(el: Element | null): Element | null {
@@ -69,6 +91,11 @@ export function useDragDrop(handlers: DragDropHandlers) {
 						type: "pane",
 						paneIdx: parseInt(source.getAttribute("data-drag-idx")!, 10),
 					});
+				} else if (dragType === "group") {
+					setDragPayload({
+						type: "group",
+						groupId: source.getAttribute("data-drag-id")!,
+					});
 				} else {
 					return;
 				}
@@ -104,8 +131,18 @@ export function useDragDrop(handlers: DragDropHandlers) {
 			const target = findDropTarget(e.clientX, e.clientY);
 			if (target !== lastTarget.current) {
 				lastTarget.current?.classList.remove("drag-over");
+				removeInsertLine();
 				target?.classList.add("drag-over");
 				lastTarget.current = target ?? null;
+			}
+			// Show insertion line for group reordering
+			const payload = getDragPayload();
+			if (payload?.type === "group" && target?.getAttribute("data-drop") === "group-header") {
+				const rect = target.getBoundingClientRect();
+				const above = e.clientY < rect.top + rect.height / 2;
+				showInsertLine(target as HTMLElement, above);
+			} else {
+				removeInsertLine();
 			}
 		}
 
@@ -123,6 +160,7 @@ export function useDragDrop(handlers: DragDropHandlers) {
 			// Full cleanup for actual drags
 			lastTarget.current?.classList.remove("drag-over");
 			lastTarget.current = null;
+			removeInsertLine();
 			ghostRef.current?.remove();
 			ghostRef.current = null;
 			isDraggingRef.current = false;
@@ -168,6 +206,13 @@ export function useDragDrop(handlers: DragDropHandlers) {
 				const gridIdx = parseInt(target.getAttribute("data-grid-idx")!, 10);
 				if (gridIdx !== payload.paneIdx) {
 					handlers.onSwapGridSlots(payload.paneIdx, gridIdx);
+				}
+			} else if (dropType === "group-header" && payload.type === "group") {
+				const targetGroupId = target.getAttribute("data-group-id")!;
+				if (targetGroupId !== payload.groupId) {
+					const rect = target.getBoundingClientRect();
+					const above = e.clientY < rect.top + rect.height / 2;
+					handlers.onReorderGroup(payload.groupId, targetGroupId, above);
 				}
 			}
 		}

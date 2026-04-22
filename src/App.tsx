@@ -358,6 +358,26 @@ function AppInner() {
 	const handleCreateGroupWithSessionRef = useRef<(sid: string) => void>(() => {});
 	const handleCreateGroupFromSessionsRef = useRef<(a: string, b: string) => void>(() => {});
 
+	const handleReorderGroup = useCallback(
+		(fromId: string, toId: string, above: boolean) => {
+			persistGroups((prev) => {
+				const fromIdx = prev.findIndex((g) => g.id === fromId);
+				const toIdx = prev.findIndex((g) => g.id === toId);
+				if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) {
+					return prev;
+				}
+				const next = [...prev];
+				const [moved] = next.splice(fromIdx, 1);
+				const insertIdx = above
+					? next.findIndex((g) => g.id === toId)
+					: next.findIndex((g) => g.id === toId) + 1;
+				next.splice(insertIdx < 0 ? next.length : insertIdx, 0, moved);
+				return next;
+			});
+		},
+		[persistGroups],
+	);
+
 	const { isDragging: dndActive } = useDragDrop({
 		onDropToGroupSlot: handleDropToGroupSlot,
 		onAddToGroup: handleAddToGroup,
@@ -367,6 +387,7 @@ function AppInner() {
 		onDropToGridSlot: handleDropToSlot,
 		onSwapGridSlots: handleSwapSlots,
 		onActivateGroupAtSlot: handleActivateGroupAtSlot,
+		onReorderGroup: handleReorderGroup,
 	});
 	const handleCreateGroupFromSessions = useCallback(
 		(sessionIdA: string, sessionIdB: string) => {

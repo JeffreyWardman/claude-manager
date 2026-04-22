@@ -1,6 +1,6 @@
 # UI Design & Accessibility Audit
 
-**Last audit:** 2026-04-18
+**Last audit:** 2026-04-22
 **Standard:** Visual design consistency + WCAG 2.2 Level AA
 **Status: PASS** -- all confirmed issues resolved
 
@@ -485,3 +485,26 @@ Full WCAG audit history in `docs/audits/wcag2-audit.md`. Summary:
 | Tab font weight differences | Intentional per component context |
 | z-index layering (50 vs 1000) | Works correctly in practice |
 | Profile pill borderRadius 4 | Design choice |
+
+---
+
+## Round 15 — 2026-04-22
+
+### Fixed (6)
+
+| # | Issue | Fix |
+|---|-------|-----|
+| 1 | `modalBackdropStyle` z-index 50 vs Settings 1000 | Standardized to 1000 |
+| 2 | Settings modal missing `backdropFilter: "blur(4px)"` | Added blur to match shared style |
+| 3 | NewSessionModal padding "20px 12px" off-scale | Changed to "24px 12px" |
+| 4 | `.computing-border` border-radius 10px off-scale | Changed to 8px |
+| 5 | Filter dropdown padding "6px 0" inconsistent with "4px 0" | Standardized to "4px 0" |
+| 6 | Layout picker padding "6px" inconsistent | Changed to "4px" |
+
+### Discarded
+
+| Finding | Reason |
+|---------|--------|
+| tabpanel roles on Settings/MainPane/CommandPalette tabs | Low priority, tabs work via focus trap |
+| Context menu menuitem roles | Already present (auditor error) |
+| Separator role with aria-value attributes | Valid per ARIA spec for focusable separators |

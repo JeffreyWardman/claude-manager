@@ -1,6 +1,7 @@
 export type DragPayload =
 	| { type: "session"; sessionId: string }
 	| { type: "pane"; paneIdx: number }
+	| { type: "group"; groupId: string }
 	| null;
 
 let current: DragPayload = null;

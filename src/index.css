@@ -22,7 +22,7 @@
 .computing-border {
   position: absolute;
   inset: -4px;
-  border-radius: 10px;
+  border-radius: 8px;
   background: conic-gradient(
     from var(--cm-angle),
     transparent 60%,

@@ -26,7 +26,7 @@ export const modalBackdropStyle = {
 	justifyContent: "center" as const,
 	paddingTop: 120,
 	background: "rgba(0,0,0,0.6)",
-	zIndex: 50,
+	zIndex: 1000,
 	backdropFilter: "blur(4px)",
 };
 

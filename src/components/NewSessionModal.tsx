@@ -78,7 +78,7 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 			<div
 				ref={dialogRef}
 				onClick={(e) => e.stopPropagation()}
-				style={{ ...modalDialogStyle, padding: "20px 12px" }}
+				style={{ ...modalDialogStyle, padding: "24px 12px" }}
 			>
 				<div
 					style={{

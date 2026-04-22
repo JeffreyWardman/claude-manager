@@ -1,6 +1,6 @@
 # Code Audit Report
 
-**Last audit:** 2026-04-22 (round 13, converged, dual-reviewer process)
+**Last audit:** 2026-04-22 (round 14, converged, dual-reviewer process)
 **Standard:** DRY, SOLID, clean code, correctness, safety
 **Status: PASS** -- all confirmed issues resolved
 
@@ -331,3 +331,9 @@ Both auditors reported **zero issues**. Converged.
 | 3 | `pty_manager.rs:296` | Dead `pty-input-{id}` emit on every keystroke, never listened to | Removed emit and unused `app` parameter from `pty_write` |
 
 ### Converged.
+
+---
+
+## Round 14 — 2026-04-22
+
+Combined audit (correctness + architecture). **No issues found.** Converged.

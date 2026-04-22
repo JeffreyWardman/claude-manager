@@ -700,7 +700,7 @@ export function Sidebar({
 									boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
 									zIndex: 1000,
 									minWidth: 160,
-									padding: "6px 0",
+									padding: "4px 0",
 								}}
 							>
 								<div style={{ padding: "4px 12px 2px", ...sectionLabel }}>SORT</div>
@@ -979,6 +979,9 @@ export function Sidebar({
 										tabIndex={0}
 										data-drop="group-header"
 										data-group-id={group.id}
+										data-drag="group"
+										data-drag-id={group.id}
+										data-drag-label={group.name}
 										style={{
 											display: "flex",
 											alignItems: "center",
@@ -1145,7 +1148,7 @@ export function Sidebar({
 														borderRadius: 6,
 														boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
 														zIndex: 100,
-														padding: "6px",
+														padding: "4px",
 														display: "flex",
 														gap: 4,
 														maxWidth: "calc(100vw - 40px)",

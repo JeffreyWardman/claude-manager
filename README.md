@@ -152,6 +152,8 @@ Right-click a session in the sidebar to access these actions:
 ### Groups and tiling
 
 - Drag sessions onto a group header to add them. If the group is full, it auto-expands to the next enabled tiling layout.
+- Drag a group header onto another group to reorder them. A line shows the insertion point.
+- Drag a grouped session onto the sessions list to ungroup it.
 - Change tiling layouts from the group header in the sidebar.
 - Enable/disable layouts in Settings > Preferences > Tiling Layouts.
 
