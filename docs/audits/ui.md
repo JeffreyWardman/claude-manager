@@ -1,6 +1,6 @@
 # UI Design & Accessibility Audit
 
-**Last audit:** 2026-04-17
+**Last audit:** 2026-04-22
 **Standard:** Visual design consistency + WCAG 2.2 Level AA
 **Status: PASS** -- all confirmed issues resolved
 
@@ -456,3 +456,55 @@ Full WCAG audit history in `docs/audits/wcag2-audit.md`. Summary:
 | 3.3.2 Form labels | PASS (aria-labels added to DEFAULT SHELL and profile name inputs) |
 | 3.3.7 Redundant entry | PASS |
 | 4.1.2 ARIA labels | PASS |
+
+---
+
+## Round 14 — 2026-04-18
+
+### Fixed (5)
+
+| # | Issue | Fix |
+|---|-------|-----|
+| 1 | `role="document"` on inner modal divs (3 files) — non-standard, causes noStaticElementInteractions | Removed role attribute |
+| 2 | `fontSize: 9` on hidden profiles separator label — below minimum scale | Changed to 10 |
+| 3 | Focus trap doesn't restore focus to previously focused element (WCAG 2.4.3) | Store `document.activeElement` on mount, restore on cleanup |
+| 4 | ~~Tailwind utility classes mixed with inline styles in MainPane~~ | Reverted — Tailwind is the convention for layout classes |
+| 5 | Biome formatting drift from edits | Auto-formatted |
+
+### Discarded
+
+| Finding | Reason |
+|---------|--------|
+| paddingTop: 120 on command palette | Intentional positioning for command palette feel |
+| Settings modal centered vs command palette top-anchored | Intentional: settings = centered, palettes = top |
+| Hardcoded logo colors | Branding colors, theme-independent by design |
+| Sub-4px borderRadius on decorative elements (1, 2) | Decorative sub-scale elements |
+| fontSize: 24 on grid slot "+" icon | Display/decorative size |
+| maxHeight on scroll containers (320, 360) | Scroll container sizing, not spacing |
+| Logo SVG 22px | Set by user, intentional |
+| Tab font weight differences | Intentional per component context |
+| z-index layering (50 vs 1000) | Works correctly in practice |
+| Profile pill borderRadius 4 | Design choice |
+
+---
+
+## Round 15 — 2026-04-22
+
+### Fixed (6)
+
+| # | Issue | Fix |
+|---|-------|-----|
+| 1 | `modalBackdropStyle` z-index 50 vs Settings 1000 | Standardized to 1000 |
+| 2 | Settings modal missing `backdropFilter: "blur(4px)"` | Added blur to match shared style |
+| 3 | NewSessionModal padding "20px 12px" off-scale | Changed to "24px 12px" |
+| 4 | `.computing-border` border-radius 10px off-scale | Changed to 8px |
+| 5 | Filter dropdown padding "6px 0" inconsistent with "4px 0" | Standardized to "4px 0" |
+| 6 | Layout picker padding "6px" inconsistent | Changed to "4px" |
+
+### Discarded
+
+| Finding | Reason |
+|---------|--------|
+| tabpanel roles on Settings/MainPane/CommandPalette tabs | Low priority, tabs work via focus trap |
+| Context menu menuitem roles | Already present (auditor error) |
+| Separator role with aria-value attributes | Valid per ARIA spec for focusable separators |

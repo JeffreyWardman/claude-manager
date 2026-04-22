@@ -8,9 +8,15 @@ pub const PORT: u16 = 23816;
 const HOOK_URL: &str = "http://127.0.0.1:23816/hook";
 
 fn hook_command() -> String {
-    format!(
-        "curl -sf --max-time 2 -X POST {HOOK_URL} -H 'Content-Type: application/json' -d @- || true"
-    )
+    if cfg!(target_os = "windows") {
+        format!(
+            "powershell -NoProfile -Command \"try {{ $input | Invoke-WebRequest -Uri '{HOOK_URL}' -Method POST -ContentType 'application/json' -TimeoutSec 2 | Out-Null }} catch {{}}\""
+        )
+    } else {
+        format!(
+            "curl -sf --max-time 2 -X POST {HOOK_URL} -H 'Content-Type: application/json' -d @- || true"
+        )
+    }
 }
 
 /// Start the HTTP hook listener. Silently no-ops if the port is already bound.
@@ -28,6 +34,7 @@ pub fn start(app: AppHandle) {
 }
 
 fn handle(stream: std::net::TcpStream, app: AppHandle) {
+    let _ = stream.set_read_timeout(Some(std::time::Duration::from_secs(5)));
     if stream
         .peer_addr()
         .map(|a| !a.ip().is_loopback())
@@ -91,6 +98,7 @@ fn handle(stream: std::net::TcpStream, app: AppHandle) {
         "PreToolUse" if matches!(p.tool_name.as_deref(), Some("Agent") | Some("Task")) => {
             format!("hook-agentlaunched-{}", p.session_id)
         }
+        "SubagentStop" => format!("hook-agentdone-{}", p.session_id),
         _ => return,
     };
     let _ = app.emit(&event, ());
@@ -120,7 +128,7 @@ fn install_for_dir(dir: &std::path::Path, command: &str) -> Option<()> {
     let hooks_map = hooks_val.as_object_mut()?;
 
     let mut changed = false;
-    for hook_type in &["UserPromptSubmit", "PreToolUse", "Stop"] {
+    for hook_type in &["UserPromptSubmit", "PreToolUse", "Stop", "SubagentStop"] {
         let entries = hooks_map
             .entry(*hook_type)
             .or_insert_with(|| serde_json::json!([]));

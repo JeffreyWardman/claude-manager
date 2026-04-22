@@ -286,4 +286,100 @@ describe("removeFromSlot", () => {
 		const result = removeFromSlot(groups, "A", 0);
 		expect(slots(result[0])).toEqual([null, "s2"]);
 	});
+
+	it("prunes the group if removing the last session", () => {
+		const groups = [makeGroup("A", ["s1", null])];
+		const result = removeFromSlot(groups, "A", 0);
+		expect(result).toHaveLength(0);
+	});
+
+	it("does nothing for non-existent group", () => {
+		const groups = [makeGroup("A", ["s1", "s2"])];
+		const result = removeFromSlot(groups, "nonexistent", 0);
+		expect(result).toEqual(groups);
+	});
+});
+
+// ─── Edge cases: group pruning ────────────────────────────────────────────
+
+describe("group pruning", () => {
+	it("removeFromGroup prunes groups that become all-null", () => {
+		const groups = [makeGroup("A", ["s1", null])];
+		const result = removeFromGroup(groups, "s1");
+		expect(result).toHaveLength(0);
+	});
+
+	it("removeFromGroup does not prune groups with remaining sessions", () => {
+		const groups = [makeGroup("A", ["s1", "s2"])];
+		const result = removeFromGroup(groups, "s1");
+		expect(result).toHaveLength(1);
+		expect(slots(result[0])).toEqual([null, "s2"]);
+	});
+
+	it("dropToSlot prunes source group when cross-group move empties it", () => {
+		const groups = [makeGroup("A", ["s1", null]), makeGroup("B", [null, null])];
+		const result = dropToSlot(groups, "B", 0, "s1");
+		expect(result.find((g) => g.id === "A")).toBeUndefined();
+		expect(result).toHaveLength(1);
+	});
+
+	it("dropToSlot does not prune source group with remaining sessions", () => {
+		const groups = [makeGroup("A", ["s1", "s2"]), makeGroup("B", [null, null])];
+		const result = dropToSlot(groups, "B", 0, "s1");
+		expect(result.find((g) => g.id === "A")).toBeDefined();
+		expect(slots(result.find((g) => g.id === "A")!)).toEqual([null, "s2"]);
+	});
+});
+
+// ─── Edge cases: out-of-bounds and invalid indices ────────────────────────
+
+describe("out-of-bounds indices", () => {
+	it("swapSlots with out-of-bounds index creates sparse slots", () => {
+		const groups = [makeGroup("A", ["s1", "s2"])];
+		const result = swapSlots(groups, "A", 0, 5);
+		// No bounds check — creates sparse array
+		expect(result[0].slots[0]).toBeUndefined();
+		expect(result[0].slots[5]).toBe("s1");
+	});
+
+	it("removeFromSlot with out-of-bounds index creates sparse slots", () => {
+		const groups = [makeGroup("A", ["s1", "s2"])];
+		const result = removeFromSlot(groups, "A", 10);
+		// splice-like behavior: slots[10] = null extends the array
+		expect(result[0].slots[0]).toBe("s1");
+		expect(result[0].slots[1]).toBe("s2");
+		expect(result[0].slots.length).toBeGreaterThan(2);
+	});
+
+	it("dropToSlot to out-of-bounds occupied slot is rejected (undefined !== null)", () => {
+		const groups = [makeGroup("A", ["s1", null])];
+		// slots[5] is undefined, not null, so the "target occupied" check triggers
+		const result = dropToSlot(groups, "A", 5, "s2");
+		// Session is not in group + slot is not null (undefined) = no-op
+		expect(result).toEqual(groups);
+	});
+});
+
+// ─── addToGroup expansion with various layout configurations ──────────────
+
+describe("addToGroup layout expansion edge cases", () => {
+	it("expands through multiple layout sizes to find one with room", () => {
+		// Start with 2x1 (2 slots), both full. Enabled layouts jump to 2x2 (4 slots)
+		const groups = [makeGroup("A", ["s1", "s2"], "2x1")];
+		const enabled: PaneLayout[] = ["2x1", "2x2"];
+		const result = addToGroup(groups, "A", "s3", enabled);
+		expect(result[0].layout).toBe("2x2");
+		expect(slots(result[0])).toEqual(["s1", "s2", "s3", null]);
+	});
+
+	it("removes session from old group when adding to new group via expand", () => {
+		const groups = [makeGroup("A", ["s1", "s2"]), makeGroup("B", ["s3"], "1x1")];
+		const enabled: PaneLayout[] = ["1x1", "2x1"];
+		const result = addToGroup(groups, "B", "s1", enabled);
+		// A retains s2 after s1 is removed
+		expect(slots(result.find((g) => g.id === "A")!)).toEqual([null, "s2"]);
+		// B expanded to 2x1 and now has s3 and s1
+		expect(result.find((g) => g.id === "B")!.layout).toBe("2x1");
+		expect(slots(result.find((g) => g.id === "B")!)).toEqual(["s3", "s1"]);
+	});
 });

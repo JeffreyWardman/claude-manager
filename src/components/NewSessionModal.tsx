@@ -77,9 +77,8 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 			{/* biome-ignore lint/a11y/useKeyWithClickEvents: stopPropagation prevents backdrop dismiss */}
 			<div
 				ref={dialogRef}
-				role="document"
 				onClick={(e) => e.stopPropagation()}
-				style={modalDialogStyle}
+				style={{ ...modalDialogStyle, padding: "24px 12px" }}
 			>
 				<div
 					style={{

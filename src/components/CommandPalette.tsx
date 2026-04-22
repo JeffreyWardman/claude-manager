@@ -121,7 +121,6 @@ export function CommandPalette({
 		>
 			<div
 				ref={dialogRef}
-				role="document"
 				onClick={(e) => e.stopPropagation()}
 				onKeyDown={(e) => {
 					if (e.key === "Tab") {

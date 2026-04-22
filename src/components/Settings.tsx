@@ -7,20 +7,7 @@ import { defaultShell, formatCwd, noAutocorrect, pathBasename } from "../utils";
 
 const APP_VERSION = "0.1.0";
 
-const TILING_OPTIONS: PaneLayout[] = [
-	"1x1",
-	"2x1",
-	"1x2",
-	"2+1",
-	"1+2",
-	"2x2",
-	"3x1",
-	"1x3",
-	"3+1",
-	"1+3",
-	"3x2",
-	"2x3",
-];
+import { LAYOUT_ORDER as TILING_OPTIONS } from "../groupOps";
 
 // Cell definitions for layout previews: [gridColumn, gridRow]
 const LAYOUT_CELLS: Record<PaneLayout, [string, string][]> = {
@@ -152,17 +139,23 @@ function pairThemes(
 		light?: (typeof themes)[0];
 	}> = [];
 
-	// Pin defaults first
-	const defaultDark = dark.find((t) => t.id.startsWith("default-"));
-	const defaultLight = light.find((t) => t.id.startsWith("default-"));
-	if (defaultDark || defaultLight) {
-		pairs.push({ dark: defaultDark, light: defaultLight });
+	// Pin Claude pair first, then Basic/default pair
+	const pinPrefixes = ["claude-", "default-"];
+	const pinned = new Set<string>();
+	for (const prefix of pinPrefixes) {
+		const d = dark.find((t) => t.id.startsWith(prefix));
+		const l = light.find((t) => t.id.startsWith(prefix));
+		if (d || l) {
+			pairs.push({ dark: d, light: l });
+			if (d) pinned.add(d.id);
+			if (l) pinned.add(l.id);
+		}
 	}
 
 	const remaining = dark
-		.filter((t) => !t.id.startsWith("default-"))
+		.filter((t) => !pinned.has(t.id))
 		.sort((a, b) => a.name.localeCompare(b.name));
-	const usedLight = new Set(defaultLight ? [defaultLight.id] : []);
+	const usedLight = new Set([...pinned]);
 
 	for (const d of remaining) {
 		// Try to find a light pair by family name
@@ -203,10 +196,10 @@ const HOTKEYS = [
 	{ keys: "⌘K", desc: "Command palette" },
 	{ keys: "⌘P", desc: "Settings" },
 	{ keys: "⌘N", desc: "New window" },
-	{ keys: "⌘⇧N", desc: "New session" },
+	{ keys: "⌘⇧N / ⌘T", desc: "New session" },
 	{ keys: "⌘M", desc: "Minimize window" },
-	{ keys: "⌘W", desc: "Archive session" },
-	{ keys: "⌘⌫", desc: "Delete group or archive tab" },
+	{ keys: "⌘W", desc: "Delete session" },
+	{ keys: "⌘⌫", desc: "Delete group or session" },
 	{ keys: "⌘B", desc: "Toggle sidebar" },
 	{ keys: "⌃Tab", desc: "Next group" },
 	{ keys: "⌃⇧Tab", desc: "Previous group" },
@@ -391,13 +384,12 @@ export function Settings({
 			.catch(() => {});
 	}, []);
 
-	const dialogRef = useRef<HTMLDivElement>(null);
-	useFocusTrap(dialogRef);
-
 	const handleClose = () => {
 		applyTheme(theme);
 		onClose();
 	};
+	const dialogRef = useRef<HTMLDivElement>(null);
+	useFocusTrap(dialogRef, handleClose);
 	const [themeSearch, setThemeSearch] = useState("");
 
 	const tabStyle = (t: Tab) => ({
@@ -422,6 +414,7 @@ export function Settings({
 				position: "fixed",
 				inset: 0,
 				background: "rgba(0,0,0,0.6)",
+				backdropFilter: "blur(4px)",
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
@@ -437,7 +430,6 @@ export function Settings({
 			{/* biome-ignore lint/a11y/useKeyWithClickEvents: stopPropagation prevents backdrop dismiss */}
 			<div
 				ref={dialogRef}
-				role="document"
 				style={{
 					background: "var(--bg-sidebar)",
 					border: "1px solid var(--border)",
@@ -1099,7 +1091,7 @@ export function Settings({
 																<div style={{ flex: 1, height: 1, background: "var(--border)" }} />
 																<span
 																	style={{
-																		fontSize: 9,
+																		fontSize: 10,
 																		color: "var(--text-muted)",
 																		letterSpacing: "0.06em",
 																		fontWeight: 600,
@@ -1275,8 +1267,8 @@ export function Settings({
 										);
 									};
 									return [
-										dark ? renderCard(dark) : <div key={`empty-dark-${light?.id}`} />,
 										light ? renderCard(light) : <div key={`empty-light-${dark?.id}`} />,
+										dark ? renderCard(dark) : <div key={`empty-dark-${light?.id}`} />,
 									];
 								})}
 							</div>
@@ -1394,7 +1386,7 @@ export function Settings({
 										<P>Right-click a session in the sidebar for:</P>
 										<Table
 											rows={[
-												["Archive", "Hides from sidebar. File preserved on disk."],
+												["Rename", "Set a display name for the session."],
 												["Delete", "Permanently removes conversation file. Cannot be undone."],
 											]}
 										/>
@@ -1419,7 +1411,12 @@ export function Settings({
 									<>
 										<P>
 											Drag sessions onto a group header to add them. If the group is full, it
-											automatically expands to the next enabled layout.
+											automatically expands to the next enabled layout. Drag a grouped session onto
+											the sessions list to ungroup it.
+										</P>
+										<P>
+											Drag group headers to reorder them. A line shows where the group will be
+											inserted.
 										</P>
 										<P>
 											Change tiling layouts from the layout icon in the group header. Enable or

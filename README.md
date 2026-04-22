@@ -2,6 +2,8 @@
 
 The session manager for Claude Code. Manage multiple sessions in one window with live status, named groups, and persistent workspaces.
 
+> Not affiliated with or endorsed by Anthropic. Claude is a trademark of Anthropic PBC.
+
 ## Why Claude Manager?
 
 **Organise by role.** Name sessions "planner", "implementer", "reviewer" and group them together. Drag to rearrange, switch between project contexts in one click.
@@ -150,6 +152,8 @@ Right-click a session in the sidebar to access these actions:
 ### Groups and tiling
 
 - Drag sessions onto a group header to add them. If the group is full, it auto-expands to the next enabled tiling layout.
+- Drag a group header onto another group to reorder them. A line shows the insertion point.
+- Drag a grouped session onto the sessions list to ungroup it.
 - Change tiling layouts from the group header in the sidebar.
 - Enable/disable layouts in Settings > Preferences > Tiling Layouts.
 

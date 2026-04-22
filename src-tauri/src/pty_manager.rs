@@ -48,6 +48,7 @@ struct PtyEntry {
     writer: Box<dyn Write + Send>,
     master: Box<dyn portable_pty::MasterPty + Send>,
     scrollback: Arc<Mutex<Vec<u8>>>,
+    event_id: Arc<Mutex<String>>,
 }
 
 pub struct PtyState(Arc<Mutex<HashMap<String, PtyEntry>>>);
@@ -78,8 +79,12 @@ pub fn pty_spawn(
     state: State<'_, PtyState>,
     app: AppHandle,
 ) -> Result<(), String> {
-    // Expand ~ in cwd
-    let cwd = if cwd.starts_with("~/") || cwd == "~" {
+    if !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+        return Err("Invalid session ID".to_string());
+    }
+
+    // Expand ~ in cwd (works on both Unix ~/foo and Windows ~\foo)
+    let cwd = if cwd.starts_with("~/") || cwd.starts_with("~\\") || cwd == "~" {
         dirs_next::home_dir()
             .map(|h| cwd.replacen("~", &h.to_string_lossy(), 1))
             .unwrap_or(cwd)
@@ -131,8 +136,8 @@ pub fn pty_spawn(
             format!("claude{skip}")
         };
 
-        // Read env vars from profile's settings.json and prepend to the command
-        let mut env_prefix = String::new();
+        // Read env vars from profile's settings.json
+        let mut env_vars: Vec<(String, String)> = Vec::new();
         if let Some(ref dir) = config_dir {
             let settings_path = std::path::Path::new(dir).join("settings.json");
             if let Ok(content) = std::fs::read_to_string(&settings_path) {
@@ -140,11 +145,9 @@ pub fn pty_spawn(
                     if let Some(env) = settings.get("env").and_then(|e| e.as_object()) {
                         for (key, val) in env {
                             if let Some(v) = val.as_str() {
-                                env_prefix.push_str(&format!(
-                                    "{}={} ",
-                                    key,
-                                    shell_escape::escape(v.into())
-                                ));
+                                if key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+                                    env_vars.push((key.clone(), v.to_string()));
+                                }
                             }
                         }
                     }
@@ -152,17 +155,20 @@ pub fn pty_spawn(
             }
         }
 
-        let full_cmd = format!("{env_prefix}{claude_cmd}");
-        if cfg!(target_os = "windows") {
+        let mut cmd_builder = if cfg!(target_os = "windows") {
             let mut c = CommandBuilder::new("cmd.exe");
-            c.args(["/C", &full_cmd]);
+            c.args(["/C", &claude_cmd]);
             c
         } else {
             let shell = std::env::var("SHELL").unwrap_or_else(|_| String::from("/bin/sh"));
             let mut c = CommandBuilder::new(&shell);
-            c.args(["-l", "-c", &full_cmd]);
+            c.args(["-l", "-c", &claude_cmd]);
             c
+        };
+        for (key, val) in &env_vars {
+            cmd_builder.env(key, val);
         }
+        cmd_builder
     };
     cmd_builder.cwd(&cwd);
     cmd_builder.env("TERM", "xterm-256color");
@@ -185,13 +191,11 @@ pub fn pty_spawn(
 
     let scrollback: Arc<Mutex<Vec<u8>>> = Arc::new(Mutex::new(Vec::new()));
     let scrollback_writer = scrollback.clone();
-
-    let data_event = format!("pty-data-{}", id);
-    let exit_event = format!("pty-exit-{}", id);
+    let event_id: Arc<Mutex<String>> = Arc::new(Mutex::new(id.clone()));
+    let event_id_reader = event_id.clone();
 
     // Clones needed by the reader thread for cleanup on exit
     let state_map = state.0.clone();
-    let id_for_exit = id.clone();
 
     // Capture a weak reference to identify this specific spawn instance.
     // If pty_spawn is called again for the same id before this reader exits,
@@ -204,17 +208,18 @@ pub fn pty_spawn(
         loop {
             match reader.read(&mut buf) {
                 Ok(0) | Err(_) => {
-                    let _ = app.emit(&exit_event, ());
+                    let current_id = event_id_reader.lock().unwrap().clone();
+                    let _ = app.emit(&format!("pty-exit-{}", current_id), ());
                     // Only remove the entry if it still belongs to this spawn instance.
                     let mut map = state_map.lock().unwrap();
                     let is_same = map
-                        .get(&id_for_exit)
+                        .get(&current_id)
                         .map(|e| Arc::ptr_eq(&e.scrollback, &scrollback_identity))
                         .unwrap_or(false);
                     if is_same {
-                        map.remove(&id_for_exit);
+                        map.remove(&current_id);
                         drop(map);
-                        release_lock(&id_for_exit);
+                        release_lock(&current_id);
                         let _ = app.emit("sessions-changed", ());
                     }
                     break;
@@ -240,8 +245,9 @@ pub fn pty_spawn(
                             scrollback.drain(..excess);
                         }
                     }
+                    let current_id = event_id_reader.lock().unwrap().clone();
                     let encoded = base64::engine::general_purpose::STANDARD.encode(&buf[..n]);
-                    let _ = app.emit(&data_event, encoded);
+                    let _ = app.emit(&format!("pty-data-{}", current_id), encoded);
                 }
             }
         }
@@ -253,6 +259,7 @@ pub fn pty_spawn(
             writer,
             master,
             scrollback,
+            event_id,
         },
     );
     Ok(())
@@ -270,24 +277,10 @@ pub fn pty_get_scrollback(id: String, state: State<'_, PtyState>) -> Option<Stri
 }
 
 #[tauri::command]
-pub fn pty_write(
-    id: String,
-    data: Vec<u8>,
-    state: State<'_, PtyState>,
-    app: AppHandle,
-) -> Result<(), String> {
-    // xterm.js sends focus-in (\x1b[I) and focus-out (\x1b[O) sequences when
-    // the terminal gains/loses focus. Write them through so the app can respond,
-    // but don't emit the input event — they're not user input and would
-    // spuriously trigger the "computing" activity state.
-    let is_focus_seq = matches!(data.as_slice(), b"\x1b[I" | b"\x1b[O");
+pub fn pty_write(id: String, data: Vec<u8>, state: State<'_, PtyState>) -> Result<(), String> {
     let mut map = state.0.lock().unwrap();
     if let Some(e) = map.get_mut(&id) {
         e.writer.write_all(&data).map_err(|e| e.to_string())?;
-        drop(map);
-        if !is_focus_seq {
-            let _ = app.emit(&format!("pty-input-{}", id), ());
-        }
     }
     Ok(())
 }
@@ -309,6 +302,22 @@ pub fn pty_resize(
                 pixel_height: 0,
             })
             .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Re-key a PTY entry from one id to another. Used when a newly spawned session's
+/// real id is discovered. Updates the event prefix so subsequent pty-data/pty-exit
+/// events emit under the new id. Also transfers the lock file.
+#[tauri::command]
+pub fn pty_rekey(from: String, to: String, state: State<'_, PtyState>) -> Result<(), String> {
+    let mut map = state.0.lock().unwrap();
+    if let Some(entry) = map.remove(&from) {
+        *entry.event_id.lock().unwrap() = to.clone();
+        map.insert(to.clone(), entry);
+        drop(map);
+        release_lock(&from);
+        let _ = acquire_lock(&to);
     }
     Ok(())
 }

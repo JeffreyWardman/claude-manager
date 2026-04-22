@@ -48,9 +48,9 @@ Cross-reference both reports. For each finding:
 - Re-run linting to verify fixes compile
 - Append findings to `docs/audits/dev.md`
 
-### Step 5: Converge (only if invoked with `converge`)
+### Step 5: Converge (only if invoked with `--converge`)
 
-If the user ran `/code-audit converge`:
+If the user ran `/code-audit --converge`:
 
 Repeat steps 1-4 until a round finds **zero confirmed issues**. Each round:
 1. Re-run both auditor agents (they must re-read the code — previous fixes may have introduced new issues)

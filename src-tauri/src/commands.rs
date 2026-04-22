@@ -1,11 +1,10 @@
 use crate::sessions::{get_all_sessions, ClaudeSession};
+use crate::utils::manager_config_dir;
 use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder};
 
 #[tauri::command]
 pub fn get_custom_themes() -> Vec<serde_json::Value> {
-    let Some(dir) =
-        dirs_next::home_dir().map(|h| h.join(".config").join("claude-manager").join("themes"))
-    else {
+    let Some(dir) = manager_config_dir().map(|d| d.join("themes")) else {
         return vec![];
     };
     let Ok(entries) = std::fs::read_dir(&dir) else {
@@ -68,16 +67,54 @@ pub fn new_window(app: AppHandle, profile: Option<String>) -> Result<(), String>
     );
     let mut url = String::from("/");
     if let Some(ref profile_id) = profile {
-        url = format!("/?profile={}", profile_id);
+        let encoded: String = profile_id
+            .bytes()
+            .flat_map(|b| {
+                if b.is_ascii_alphanumeric() || b == b'-' || b == b'_' || b == b'.' {
+                    vec![b as char]
+                } else {
+                    format!("%{:02X}", b).chars().collect()
+                }
+            })
+            .collect();
+        url = format!("/?profile={}", encoded);
     }
     let builder = WebviewWindowBuilder::new(&app, &label, WebviewUrl::App(url.into()))
-        .title("claude-manager")
+        .title("ClaudeManager")
         .inner_size(1200.0, 800.0)
-        .min_inner_size(800.0, 500.0);
+        .min_inner_size(800.0, 500.0)
+        .visible(false)
+        .background_color(tauri::window::Color(245, 239, 228, 255));
     #[cfg(target_os = "macos")]
     let builder = builder
         .title_bar_style(tauri::TitleBarStyle::Overlay)
         .hidden_title(true);
     builder.build().map_err(|e: tauri::Error| e.to_string())?;
     Ok(())
+}
+
+#[tauri::command]
+pub fn set_badge_count(count: Option<i64>, app: AppHandle) {
+    #[cfg(target_os = "macos")]
+    {
+        let _ = app.run_on_main_thread(move || unsafe {
+            use objc2::MainThreadMarker;
+            use objc2_app_kit::NSApplication;
+            use objc2_foundation::NSString;
+
+            let mtm = MainThreadMarker::new_unchecked();
+            let ns_app = NSApplication::sharedApplication(mtm);
+            let dock_tile = ns_app.dockTile();
+            let label = match count {
+                Some(n) if n > 0 => Some(NSString::from_str(&n.to_string())),
+                _ => None,
+            };
+            dock_tile.setBadgeLabel(label.as_deref());
+            dock_tile.display();
+        });
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (count, app);
+    }
 }

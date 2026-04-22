@@ -14,7 +14,7 @@ export const SLOT_COUNTS: Record<PaneLayout, number> = {
 	"3+1": 4,
 	"1+3": 4,
 };
-const LAYOUT_ORDER: PaneLayout[] = [
+export const LAYOUT_ORDER: PaneLayout[] = [
 	"1x1",
 	"2x1",
 	"1x2",

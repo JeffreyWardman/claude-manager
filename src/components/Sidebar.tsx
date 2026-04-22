@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getDragPayload } from "../dragState";
 import { SLOT_COUNTS } from "../groupOps";
 import type { ActivityState } from "../hooks/usePtyActivity";
 import type { SortMode } from "../sidebarUtils";
@@ -48,6 +49,7 @@ interface Props {
 	activeProfile: Profile | null;
 	onSwitchProfile: (id: string) => void;
 	configDir: string;
+	dndActive?: boolean;
 }
 
 type GroupMode = "status" | "location";
@@ -248,12 +250,28 @@ export function Sidebar({
 	activeProfile,
 	onSwitchProfile,
 	configDir,
+	dndActive,
 }: Props) {
 	const [sidebarSearch, setSidebarSearch] = useState<string>("");
 	const searchRef = useRef<HTMLInputElement>(null);
-	const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+	const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+		const saved = localStorage.getItem("sidebar-collapsed");
+		if (saved) {
+			try {
+				return JSON.parse(saved);
+			} catch {}
+		}
+		return { OFFLINE: true };
+	});
+	const toggleCollapsed = useCallback((key: string) => {
+		setCollapsed((c) => {
+			const next = { ...c, [key]: !c[key] };
+			localStorage.setItem("sidebar-collapsed", JSON.stringify(next));
+			return next;
+		});
+	}, []);
 	const [groupsCollapsed, setGroupsCollapsed] = useState<boolean>(false);
-	const [focusActiveGroup, setFocusActiveGroup] = useState<boolean>(true);
+	const [focusActiveGroup, setFocusActiveGroup] = useState<boolean>(false);
 	const [groupMode, setGroupMode] = useState<GroupMode>(
 		() => (localStorage.getItem("sidebar-group-mode") as GroupMode | null) ?? "status",
 	);
@@ -440,7 +458,11 @@ export function Sidebar({
 
 	async function commitRename(sessionId: string) {
 		try {
-			const trimmed = renameValue.trim();
+			const trimmed = renameValue
+				.trim()
+				.split("")
+				.filter((c) => c.charCodeAt(0) >= 32 && c.charCodeAt(0) !== 127)
+				.join("");
 			await invoke("rename_session", { sessionId, name: trimmed });
 			if (trimmed && activityMap.get(sessionId) === "waiting") {
 				await invoke("pty_write", {
@@ -469,16 +491,6 @@ export function Sidebar({
 		setRenamingGroupId(null);
 	}
 
-	async function archiveSession(sessionId: string) {
-		setContextMenu(null);
-		try {
-			await invoke("archive_session", { sessionId });
-			onRefresh();
-		} catch (e) {
-			console.error(e);
-		}
-	}
-
 	async function deleteSession(sessionId: string) {
 		setContextMenu(null);
 		const { ask } = await import("@tauri-apps/plugin-dialog");
@@ -498,7 +510,7 @@ export function Sidebar({
 	}
 
 	function sessionActions(session: ClaudeSession, onDone: () => void) {
-		return (["Rename", "Archive", "Delete"] as const).map((action) => (
+		return (["Rename", "Delete"] as const).map((action) => (
 			<button
 				type="button"
 				key={action}
@@ -506,8 +518,6 @@ export function Sidebar({
 				onClick={() => {
 					if (action === "Rename") {
 						startRename(session);
-					} else if (action === "Archive") {
-						archiveSession(session.session_id);
 					} else if (action === "Delete") {
 						deleteSession(session.session_id);
 					}
@@ -563,28 +573,67 @@ export function Sidebar({
 	return (
 		<div
 			className="flex flex-col h-full overflow-hidden"
-			style={{ background: "var(--bg-sidebar)", width, flexShrink: 0 }}
+			style={{
+				background: "var(--bg-sidebar)",
+				width,
+				flexShrink: 0,
+				userSelect: "none",
+				WebkitUserSelect: "none",
+			}}
 		>
 			{/* Header */}
 			<div
 				data-tauri-drag-region
 				className="flex items-center justify-between px-4"
-				style={{ height: 52, paddingTop: 24, flexShrink: 0 }}
+				style={{ paddingTop: 32, paddingBottom: 16, flexShrink: 0 }}
 			>
-				<span
+				<div
 					style={{
-						fontSize: 13,
-						fontWeight: 600,
-						color: "var(--text-primary)",
-						letterSpacing: "-0.01em",
+						display: "inline-flex",
+						alignItems: "center",
+						gap: 8,
 						overflow: "hidden",
-						textOverflow: "ellipsis",
-						whiteSpace: "nowrap",
 						minWidth: 0,
+						userSelect: "none",
+						WebkitUserSelect: "none",
 					}}
 				>
-					Claude Manager
-				</span>
+					<svg
+						width={22}
+						height={22}
+						viewBox="0 0 64 64"
+						style={{ display: "block", flexShrink: 0 }}
+					>
+						<rect x={0} y={0} width={29.44} height={29.44} rx={8.24} fill="#D97757" />
+						<rect x={34.56} y={0} width={29.44} height={29.44} rx={8.24} fill="#6B8E5A" />
+						<rect x={0} y={34.56} width={29.44} height={29.44} rx={8.24} fill="#4A3526" />
+						<rect
+							x={34.56}
+							y={34.56}
+							width={29.44}
+							height={29.44}
+							rx={8.24}
+							fill="#D97757"
+							opacity={0.55}
+						/>
+					</svg>
+					<span
+						style={{
+							fontSize: 16,
+							lineHeight: 1.2,
+							fontFamily:
+								'-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif',
+							letterSpacing: "-0.3px",
+							color: "var(--text-primary)",
+							overflow: "hidden",
+							textOverflow: "ellipsis",
+							whiteSpace: "nowrap",
+						}}
+					>
+						<span style={{ fontWeight: 600 }}>Claude</span>{" "}
+						<span style={{ fontWeight: 400, color: "var(--text-muted)" }}>Manager</span>
+					</span>
+				</div>
 				<div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
 					<button
 						type="button"
@@ -651,7 +700,7 @@ export function Sidebar({
 									boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
 									zIndex: 1000,
 									minWidth: 160,
-									padding: "6px 0",
+									padding: "4px 0",
 								}}
 							>
 								<div style={{ padding: "4px 12px 2px", ...sectionLabel }}>SORT</div>
@@ -843,9 +892,6 @@ export function Sidebar({
 							searchRef.current?.blur();
 						}
 					}}
-					autoCorrect="off"
-					autoCapitalize="off"
-					spellCheck={false}
 					style={{
 						width: "100%",
 						background: sidebarSearch ? "var(--bg-main)" : "transparent",
@@ -861,7 +907,7 @@ export function Sidebar({
 			</div>
 
 			{/* Scrollable content */}
-			<div className="flex-1 overflow-y-auto" style={{ paddingTop: 4 }}>
+			<div className="flex-1 overflow-y-auto flex flex-col" style={{ paddingTop: 4 }}>
 				{/* ── GROUPS SECTION ── */}
 				<div style={{ padding: "0 4px 8px" }}>
 					<div
@@ -933,6 +979,9 @@ export function Sidebar({
 										tabIndex={0}
 										data-drop="group-header"
 										data-group-id={group.id}
+										data-drag="group"
+										data-drag-id={group.id}
+										data-drag-label={group.name}
 										style={{
 											display: "flex",
 											alignItems: "center",
@@ -988,10 +1037,7 @@ export function Sidebar({
 											aria-expanded={!isCollapsedGroup}
 											onClick={(e) => {
 												e.stopPropagation();
-												setCollapsed((c) => ({
-													...c,
-													[group.id]: !c[group.id],
-												}));
+												toggleCollapsed(group.id);
 											}}
 											style={{
 												background: "none",
@@ -1102,7 +1148,7 @@ export function Sidebar({
 														borderRadius: 6,
 														boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
 														zIndex: 100,
-														padding: "6px",
+														padding: "4px",
 														display: "flex",
 														gap: 4,
 														maxWidth: "calc(100vw - 40px)",
@@ -1306,17 +1352,19 @@ export function Sidebar({
 																		pointerEvents: "none",
 																	}}
 																>
-																	{session.display_name ||
-																		`${session.project_name}-${session.session_id.slice(0, 5)}`}
+																	{sessionDisplayName(session)}
 																</span>
 															</>
 														) : (
 															<span
+																aria-hidden="true"
 																style={{
 																	fontSize: 11,
 																	color: "var(--text-very-muted)",
 																	fontStyle: "italic",
 																	pointerEvents: "none",
+																	userSelect: "none",
+																	WebkitUserSelect: "none",
 																}}
 															>
 																empty
@@ -1346,281 +1394,280 @@ export function Sidebar({
 					)}
 				</div>
 
-				{/* Ungroup drop zone */}
-				<div
-					data-drop="ungroup"
-					style={{
-						margin: "0 8px 8px",
-						borderRadius: 4,
-						height: 20,
-						background: "transparent",
-						border: "1px solid var(--border)",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-					}}
-				>
-					<span
+				{/* ── SESSIONS SECTION ── */}
+				{dndActive &&
+				(() => {
+					const p = getDragPayload();
+					return p?.type === "session" && sessionsInGroups.has(p.sessionId);
+				})() ? (
+					<div
+						data-drop="ungroup"
 						style={{
-							fontSize: 10,
-							color: "var(--text-very-muted)",
-							fontWeight: 600,
-							letterSpacing: "0.04em",
-							pointerEvents: "none",
+							flex: 1,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							border: "2px dashed var(--accent)",
+							borderRadius: 8,
+							margin: "0 8px 8px",
 						}}
 					>
-						DROP TO UNGROUP
-					</span>
-				</div>
-
-				{/* ── SESSIONS SECTION ── */}
-				<div>
-					{sessionGroups.map((group) => {
-						const isCollapsed = collapsed[group.label];
-						return (
-							<div key={group.label}>
-								<button
-									type="button"
-									aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${group.label} sessions`}
-									aria-expanded={!isCollapsed}
-									onClick={() =>
-										setCollapsed((c) => ({
-											...c,
-											[group.label]: !c[group.label],
-										}))
-									}
-									className="flex items-center gap-1 w-full px-4 py-1"
-									style={{
-										background: "none",
-										border: "none",
-										cursor: "pointer",
-										color: "var(--text-muted)",
-										fontSize: 10,
-										fontWeight: 600,
-										letterSpacing: "0.06em",
-										textAlign: "left",
-									}}
-									onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
-									onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
-								>
-									<span
-										style={{
-											display: "inline-block",
-											transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
-											transition: "transform 0.1s",
-											fontSize: 10,
-											marginRight: 2,
-										}}
-									>
-										▾
-									</span>
-									<span
-										style={{
-											overflow: "hidden",
-											textOverflow: "ellipsis",
-											whiteSpace: "nowrap",
-											maxWidth: 160,
-										}}
-									>
-										{group.label}
-									</span>
-									<span
-										style={{
-											marginLeft: "auto",
-											fontVariantNumeric: "tabular-nums",
-											flexShrink: 0,
-										}}
-									>
-										{group.sessions.length}
-									</span>
-								</button>
-
-								{!isCollapsed &&
-									group.sessions.map((session) => {
-										const isSelected = session.session_id === selectedId;
-										const isRenaming = renamingId === session.session_id;
-										const name = sessionDisplayName(session);
-										const activity = activityMap.get(session.session_id);
-										const isUnread = unreadSessions.has(session.session_id);
-										const rowTint =
-											activity === "computing"
-												? "color-mix(in srgb, var(--status-computing, #f59e0b) 7%, transparent)"
-												: isUnread
-													? "color-mix(in srgb, var(--status-unread, #3b82f6) 7%, transparent)"
-													: activity === "waiting"
-														? "color-mix(in srgb, var(--status-waiting, #22c55e) 7%, transparent)"
-														: undefined;
-
-										return (
-											<div
-												key={session.session_id}
-												role="button"
-												tabIndex={0}
-												ref={(el) => {
-													if (el) {
-														itemRefs.current.set(session.session_id, el);
-													} else {
-														itemRefs.current.delete(session.session_id);
-													}
-												}}
-												data-drop="session"
-												data-session-id={session.session_id}
-												{...(!isRenaming
-													? {
-															"data-drag": "session",
-															"data-drag-id": session.session_id,
-															"data-drag-label": name,
-														}
-													: {})}
-												style={{
-													display: "flex",
-													alignItems: "center",
-													gap: 8,
-													height: 32,
-													background: isSelected
-														? "color-mix(in srgb, var(--item-selected) 50%, transparent)"
-														: (rowTint ?? "none"),
-													borderRadius: 4,
-													margin: "0 4px",
-													padding: "0 12px",
-													cursor: "grab",
-													userSelect: "none",
-													transition: "background 0.1s",
-												}}
-												onMouseEnter={(e) => {
-													if (!isSelected)
-														e.currentTarget.style.background = rowTint ?? "var(--item-hover)";
-												}}
-												onMouseLeave={(e) => {
-													if (!isSelected && !(e.buttons & 1))
-														e.currentTarget.style.background = rowTint ?? "none";
-												}}
-												onClick={() => {
-													if (!isRenaming) {
-														onSelect(session);
-													}
-												}}
-												onKeyDown={(e) => {
-													if ((e.key === "Enter" || e.key === " ") && !isRenaming) {
-														e.preventDefault();
-														onSelect(session);
-													}
-												}}
-												onDoubleClick={() => {
-													if (!isRenaming) {
-														startRename(session);
-													}
-												}}
-												onContextMenu={(e) => {
-													e.preventDefault();
-													e.stopPropagation();
-													setContextMenu({
-														sessionId: session.session_id,
-														x: e.clientX,
-														y: e.clientY,
-													});
-												}}
-											>
-												<StatusDot
-													status={session.status}
-													activity={activity}
-													unread={unreadSessions.has(session.session_id)}
-													size={7}
-												/>
-												{isRenaming ? (
-													<input
-														aria-label="Session name"
-														ref={renameInputRef}
-														value={renameValue}
-														{...noAutocorrect}
-														onChange={(e) => setRenameValue(e.target.value)}
-														onKeyDown={(e) => {
-															if (e.key === "Enter") {
-																e.preventDefault();
-																commitRename(session.session_id);
-															}
-															if (e.key === "Escape") {
-																e.preventDefault();
-																setRenamingId(null);
-															}
-														}}
-														onBlur={() => commitRename(session.session_id)}
-														onClick={(e) => e.stopPropagation()}
-														style={{
-															flex: 1,
-															background: "var(--bg-main)",
-															border: "1px solid var(--accent)",
-															borderRadius: 4,
-															color: "var(--text-primary)",
-															fontSize: 13,
-															padding: "2px 4px",
-															outline: "none",
-															fontFamily: "inherit",
-														}}
-													/>
-												) : (
-													<span
-														style={{
-															flex: 1,
-															overflow: "hidden",
-															textOverflow: "ellipsis",
-															whiteSpace: "nowrap",
-															fontWeight: isSelected ? 500 : 400,
-															color: isSelected ? "var(--text-primary)" : "var(--text-secondary)",
-															fontSize: 13,
-														}}
-													>
-														{name}
-													</span>
-												)}
-												{!isRenaming && session.git_branch && (
-													<span
-														style={{
-															color: "var(--text-very-muted)",
-															fontSize: 10,
-															flexShrink: 0,
-															maxWidth: 80,
-															overflow: "hidden",
-															textOverflow: "ellipsis",
-															whiteSpace: "nowrap",
-														}}
-													>
-														{session.project_name}/{session.git_branch}
-													</span>
-												)}
-												{!isRenaming && (
-													<span
-														style={{
-															color: "var(--text-very-muted)",
-															fontSize: 11,
-															flexShrink: 0,
-														}}
-													>
-														{timeAgo(session.last_modified || session.started_at)}
-													</span>
-												)}
-											</div>
-										);
-									})}
-							</div>
-						);
-					})}
-
-					{sessions.length === 0 && (
-						<div
-							className="px-4 py-8 text-center"
-							style={{ color: "var(--text-muted)", fontSize: 12 }}
+						<span
+							style={{
+								fontSize: 12,
+								fontWeight: 600,
+								color: "var(--text-muted)",
+								letterSpacing: "0.04em",
+							}}
 						>
-							No Claude Code sessions found.
-							<br />
-							<span style={{ fontSize: 11, marginTop: 4, display: "block" }}>
-								Start one in your terminal.
-							</span>
-						</div>
-					)}
-				</div>
-				{/* end sessions wrapper */}
+							DROP TO UNGROUP
+						</span>
+					</div>
+				) : (
+					<div>
+						{sessionGroups.map((group) => {
+							const isCollapsed = collapsed[group.label];
+							return (
+								<div key={group.label}>
+									<button
+										type="button"
+										aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${group.label} sessions`}
+										aria-expanded={!isCollapsed}
+										onClick={() => toggleCollapsed(group.label)}
+										className="flex items-center gap-1 w-full px-4 py-1"
+										style={{
+											background: "none",
+											border: "none",
+											cursor: "pointer",
+											color: "var(--text-muted)",
+											fontSize: 10,
+											fontWeight: 600,
+											letterSpacing: "0.06em",
+											textAlign: "left",
+										}}
+										onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
+										onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
+									>
+										<span
+											style={{
+												display: "inline-block",
+												transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
+												transition: "transform 0.1s",
+												fontSize: 10,
+												marginRight: 2,
+											}}
+										>
+											▾
+										</span>
+										<span
+											style={{
+												overflow: "hidden",
+												textOverflow: "ellipsis",
+												whiteSpace: "nowrap",
+												maxWidth: 160,
+											}}
+										>
+											{group.label}
+										</span>
+										<span
+											style={{
+												marginLeft: "auto",
+												fontVariantNumeric: "tabular-nums",
+												flexShrink: 0,
+											}}
+										>
+											{group.sessions.length}
+										</span>
+									</button>
+
+									{!isCollapsed &&
+										group.sessions.map((session) => {
+											const isSelected = session.session_id === selectedId;
+											const isRenaming = renamingId === session.session_id;
+											const name = sessionDisplayName(session);
+											const activity = activityMap.get(session.session_id);
+											const isUnread = unreadSessions.has(session.session_id);
+											const rowTint =
+												activity === "computing"
+													? "color-mix(in srgb, var(--status-computing, #f59e0b) 7%, transparent)"
+													: isUnread
+														? "color-mix(in srgb, var(--status-unread, #3b82f6) 7%, transparent)"
+														: activity === "waiting"
+															? "color-mix(in srgb, var(--status-waiting, #22c55e) 7%, transparent)"
+															: undefined;
+
+											return (
+												<div
+													key={session.session_id}
+													role="button"
+													tabIndex={0}
+													ref={(el) => {
+														if (el) {
+															itemRefs.current.set(session.session_id, el);
+														} else {
+															itemRefs.current.delete(session.session_id);
+														}
+													}}
+													data-drop="session"
+													data-session-id={session.session_id}
+													{...(!isRenaming
+														? {
+																"data-drag": "session",
+																"data-drag-id": session.session_id,
+																"data-drag-label": name,
+															}
+														: {})}
+													style={{
+														display: "flex",
+														alignItems: "center",
+														gap: 8,
+														height: 32,
+														background: isSelected
+															? "color-mix(in srgb, var(--item-selected) 50%, transparent)"
+															: (rowTint ?? "none"),
+														borderRadius: 4,
+														margin: "0 4px",
+														padding: "0 12px",
+														cursor: "grab",
+														userSelect: "none",
+														transition: "background 0.1s",
+													}}
+													onMouseEnter={(e) => {
+														if (!isSelected)
+															e.currentTarget.style.background = rowTint ?? "var(--item-hover)";
+													}}
+													onMouseLeave={(e) => {
+														if (!isSelected && !(e.buttons & 1))
+															e.currentTarget.style.background = rowTint ?? "none";
+													}}
+													onClick={() => {
+														if (!isRenaming) {
+															onSelect(session);
+														}
+													}}
+													onKeyDown={(e) => {
+														if ((e.key === "Enter" || e.key === " ") && !isRenaming) {
+															e.preventDefault();
+															onSelect(session);
+														}
+													}}
+													onDoubleClick={() => {
+														if (!isRenaming) {
+															startRename(session);
+														}
+													}}
+													onContextMenu={(e) => {
+														e.preventDefault();
+														e.stopPropagation();
+														setContextMenu({
+															sessionId: session.session_id,
+															x: e.clientX,
+															y: e.clientY,
+														});
+													}}
+												>
+													<StatusDot
+														status={session.status}
+														activity={activity}
+														unread={unreadSessions.has(session.session_id)}
+														size={7}
+													/>
+													{isRenaming ? (
+														<input
+															aria-label="Session name"
+															ref={renameInputRef}
+															value={renameValue}
+															{...noAutocorrect}
+															onChange={(e) => setRenameValue(e.target.value)}
+															onKeyDown={(e) => {
+																if (e.key === "Enter") {
+																	e.preventDefault();
+																	commitRename(session.session_id);
+																}
+																if (e.key === "Escape") {
+																	e.preventDefault();
+																	setRenamingId(null);
+																}
+															}}
+															onBlur={() => commitRename(session.session_id)}
+															onClick={(e) => e.stopPropagation()}
+															style={{
+																flex: 1,
+																background: "var(--bg-main)",
+																border: "1px solid var(--accent)",
+																borderRadius: 4,
+																color: "var(--text-primary)",
+																fontSize: 13,
+																padding: "2px 4px",
+																outline: "none",
+																fontFamily: "inherit",
+															}}
+														/>
+													) : (
+														<span
+															style={{
+																flex: 1,
+																overflow: "hidden",
+																textOverflow: "ellipsis",
+																whiteSpace: "nowrap",
+																fontWeight: isSelected ? 500 : 400,
+																color: isSelected ? "var(--text-primary)" : "var(--text-secondary)",
+																fontSize: 13,
+															}}
+														>
+															{name}
+														</span>
+													)}
+													{!isRenaming && session.git_branch && (
+														<span
+															style={{
+																color: "var(--text-very-muted)",
+																fontSize: 10,
+																flexShrink: 0,
+																maxWidth: 80,
+																overflow: "hidden",
+																textOverflow: "ellipsis",
+																whiteSpace: "nowrap",
+															}}
+														>
+															{session.project_name}/{session.git_branch}
+														</span>
+													)}
+													{!isRenaming && (
+														<span
+															style={{
+																color: "var(--text-very-muted)",
+																fontSize: 11,
+																flexShrink: 0,
+															}}
+														>
+															{timeAgo(session.last_modified || session.started_at)}
+														</span>
+													)}
+												</div>
+											);
+										})}
+								</div>
+							);
+						})}
+
+						{sessions.length === 0 && (
+							<div
+								className="px-4 py-8 text-center"
+								style={{ color: "var(--text-muted)", fontSize: 12 }}
+							>
+								No Claude Code sessions found.
+								<br />
+								<span style={{ fontSize: 11, marginTop: 4, display: "block" }}>
+									Start one in your terminal.
+								</span>
+							</div>
+						)}
+						{/* end sessions wrapper */}
+					</div>
+				)}
 			</div>
+			{/* end scrollable content */}
 
 			{/* Footer */}
 			<div

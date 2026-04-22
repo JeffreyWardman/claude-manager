@@ -8,15 +8,12 @@ const POLL_INTERVAL = 3000;
 export function useSessions(configDir: string) {
 	const [sessions, setSessions] = useState<ClaudeSession[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
 
 	const refresh = useCallback(async () => {
 		try {
 			const result = await invoke<ClaudeSession[]>("get_sessions", { configDir });
 			setSessions(result);
-			setError(null);
-		} catch (e) {
-			setError(String(e));
+		} catch {
 		} finally {
 			setLoading(false);
 		}
@@ -34,5 +31,5 @@ export function useSessions(configDir: string) {
 		};
 	}, [refresh]);
 
-	return { sessions, loading, error, refresh };
+	return { sessions, loading, refresh };
 }

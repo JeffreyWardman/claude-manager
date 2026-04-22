@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { ActivityState } from "../hooks/usePtyActivity";
 import type { ClaudeSession } from "../types";
 import { defaultShell, formatCwd, sessionDisplayName } from "../utils";
@@ -28,10 +28,6 @@ export function MainPane({
 }: Props) {
 	const [view, setView] = useState<View>("claude");
 
-	useEffect(() => {
-		setView("claude");
-	}, []);
-
 	if (!session) {
 		return (
 			<div
@@ -51,7 +47,7 @@ export function MainPane({
 						pointerEvents: "none",
 					}}
 				>
-					or press N to start a new one
+					⌘T to start a new session
 				</div>
 			</div>
 		);

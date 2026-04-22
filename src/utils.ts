@@ -1,18 +1,17 @@
 import type { ClaudeSession } from "./types";
 
 export const isWindows = navigator.platform?.toLowerCase().includes("win") ?? false;
-const sep = isWindows ? "\\" : "/";
 
 export function formatCwd(cwd: string): string {
 	if (isWindows) {
-		return cwd.replace(/^C:\\Users\\[^\\]+/, "~");
+		return cwd.replace(/^[A-Z]:\\Users\\[^\\]+/i, "~");
 	}
-	return cwd.replace(/^\/[Uu]sers\/[^/]+/, "~");
+	return cwd.replace(/^\/([Uu]sers|home)\/[^/]+/, "~");
 }
 
 export function pathBasename(filepath: string): string {
-	const trimmed = isWindows ? filepath.replace(/\\+$/, "") : filepath.replace(/\/+$/, "");
-	return trimmed.split(sep).pop() ?? "";
+	const trimmed = filepath.replace(/[\\/]+$/, "");
+	return trimmed.split(/[\\/]/).pop() ?? "";
 }
 
 export function sessionDisplayName(session: ClaudeSession): string {
@@ -27,7 +26,7 @@ export const modalBackdropStyle = {
 	justifyContent: "center" as const,
 	paddingTop: 120,
 	background: "rgba(0,0,0,0.6)",
-	zIndex: 50,
+	zIndex: 1000,
 	backdropFilter: "blur(4px)",
 };
 

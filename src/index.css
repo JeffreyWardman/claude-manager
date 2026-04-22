@@ -9,59 +9,48 @@
 }
 
 @keyframes border-snake {
-  0%   { --border-angle: 0deg; }
-  100% { --border-angle: 360deg; }
+  0%   { --cm-angle: 0deg; }
+  100% { --cm-angle: 360deg; }
 }
 
-@property --border-angle {
+@property --cm-angle {
   syntax: "<angle>";
   initial-value: 0deg;
   inherits: false;
 }
 
-.pane-computing {
-  position: relative;
-}
-
-.pane-computing::before {
-  content: "";
+.computing-border {
   position: absolute;
-  inset: 0;
-  border-radius: 6px;
-  padding: 4px;
+  inset: -4px;
+  border-radius: 8px;
   background: conic-gradient(
-    from var(--border-angle),
+    from var(--cm-angle),
     transparent 60%,
     var(--status-computing, #f59e0b) 80%,
     transparent 100%
   );
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
   animation: border-snake 2.5s linear infinite;
-  z-index: 6;
   pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .pty-computing { animation: none; }
-  .pane-computing::before { animation: none; opacity: 0.5; }
+  .computing-border { animation: none; opacity: 0.5; }
   * { transition-duration: 0s !important; }
 }
 
-/* Default theme CSS variables (Void) — overridden by ThemeContext at runtime */
+/* Default theme CSS variables (Claude Light) — overridden by ThemeContext at runtime */
 :root {
-  --bg-sidebar: #111111;
-  --bg-main: #0f0f0f;
-  --border: #1e1e1e;
-  --text-primary: #ededef;
-  --text-secondary: #9ca3af;
-  --text-muted: #808080;
-  --text-very-muted: #525252;
-  --item-selected: rgba(255, 255, 255, 0.07);
-  --item-hover: rgba(255, 255, 255, 0.04);
-  --accent: #8a8fa0;
+  --bg-sidebar: #F0EBE1;
+  --bg-main: #F5EFE4;
+  --border: #E0D8CA;
+  --text-primary: #2C1E14;
+  --text-secondary: #4A3526;
+  --text-muted: #7A6B5D;
+  --text-very-muted: #A89D8C;
+  --item-selected: rgba(44, 30, 20, 0.08);
+  --item-hover: rgba(44, 30, 20, 0.04);
+  --accent: #D97757;
   --danger: #f87171;
 }
 
@@ -96,8 +85,8 @@
 }
 
 /* Pointer-event DnD (replaces HTML5 DnD which is broken in WKWebView) */
-body.dragging * {
-  overflow: hidden !important;
+body.dragging {
+  overflow: hidden;
 }
 
 .drag-ghost {
