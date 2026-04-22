@@ -29,45 +29,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - id: bump
-        run: |
-          CURRENT=$(python3 -c "
-          import tomllib
-          with open('.cz.toml', 'rb') as f:
-              print(tomllib.load(f)['tool']['commitizen']['version'])
-          ")
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          LATEST_VERSION=${LATEST_TAG#v}
-
-          if [ -z "$LATEST_TAG" ]; then
-            # First release — no existing tags
-            if [ "$CURRENT" != "0.0.0" ]; then
-              echo "First release: $CURRENT (pre-bumped, no existing tags)"
-              echo "bumped=true" >> "$GITHUB_OUTPUT"
-              echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
-              echo "pre_bumped=true" >> "$GITHUB_OUTPUT"
-            else
-              cz bump --yes --increment MINOR
-              VERSION=$(cz version --project)
-              echo "First release: $VERSION"
-              echo "bumped=true" >> "$GITHUB_OUTPUT"
-              echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-              echo "pre_bumped=false" >> "$GITHUB_OUTPUT"
-            fi
-          elif [ "$CURRENT" != "$LATEST_VERSION" ]; then
-            echo "Version already bumped to $CURRENT (latest tag: $LATEST_TAG)"
-            echo "bumped=true" >> "$GITHUB_OUTPUT"
-            echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
-            echo "pre_bumped=true" >> "$GITHUB_OUTPUT"
-          elif cz bump --yes --dry-run 2>/dev/null; then
-            cz bump --yes
-            VERSION=$(cz version --project)
-            echo "bumped=true" >> "$GITHUB_OUTPUT"
-            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-            echo "pre_bumped=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "No version bump needed"
-            echo "bumped=false" >> "$GITHUB_OUTPUT"
-          fi
+        run: python3 scripts/bump.py
 
       - if: steps.bump.outputs.bumped == 'true'
         run: |
