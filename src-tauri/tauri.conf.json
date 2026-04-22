@@ -12,7 +12,7 @@
 	"app": {
 		"windows": [
 			{
-				"title": "claude-manager",
+				"title": "ClaudeManager",
 				"width": 1200,
 				"height": 800,
 				"minWidth": 800,

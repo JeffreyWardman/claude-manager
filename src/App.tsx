@@ -264,9 +264,9 @@ function AppInner() {
 				if (prevActive !== id) {
 					return prevActive;
 				}
+				localStorage.removeItem(activeGroupKey(configDirRef.current));
 				return null;
 			});
-			localStorage.removeItem(activeGroupKey(configDirRef.current));
 		},
 		[persistGroups],
 	);

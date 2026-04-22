@@ -34,6 +34,7 @@ pub fn start(app: AppHandle) {
 }
 
 fn handle(stream: std::net::TcpStream, app: AppHandle) {
+    let _ = stream.set_read_timeout(Some(std::time::Duration::from_secs(5)));
     if stream
         .peer_addr()
         .map(|a| !a.ip().is_loopback())

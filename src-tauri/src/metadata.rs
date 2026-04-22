@@ -104,8 +104,10 @@ pub fn delete_session(config_dir: String, session_id: String) -> Result<(), Stri
     if !crate::utils::is_valid_session_id(&session_id) {
         return Err("Invalid session ID".to_string());
     }
-    let projects_dir = PathBuf::from(&config_dir).join("projects");
+    let config_path = PathBuf::from(&config_dir);
 
+    // Delete the JSONL conversation file
+    let projects_dir = config_path.join("projects");
     if let Ok(canonical_projects) = projects_dir.canonicalize() {
         if let Ok(project_entries) = fs::read_dir(&projects_dir) {
             for entry in project_entries.flatten() {
@@ -113,10 +115,29 @@ pub fn delete_session(config_dir: String, session_id: String) -> Result<(), Stri
                 if jsonl_path.exists() {
                     if let Ok(canonical_target) = jsonl_path.canonicalize() {
                         if canonical_target.starts_with(&canonical_projects) {
-                            fs::remove_file(&canonical_target).map_err(|e| e.to_string())?;
+                            let _ = fs::remove_file(&canonical_target);
                         }
                     }
                     break;
+                }
+            }
+        }
+    }
+
+    // Delete the pid file (sessions/{pid}.json) that references this session_id
+    let sessions_dir = config_path.join("sessions");
+    if let Ok(entries) = fs::read_dir(&sessions_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("json") {
+                continue;
+            }
+            if let Ok(content) = fs::read_to_string(&path) {
+                if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
+                    if val.get("sessionId").and_then(|v| v.as_str()) == Some(&session_id) {
+                        let _ = fs::remove_file(&path);
+                        break;
+                    }
                 }
             }
         }

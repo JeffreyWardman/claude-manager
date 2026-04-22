@@ -1,6 +1,6 @@
 # Code Audit Report
 
-**Last audit:** 2026-04-22 (round 10-11, converged, dual-reviewer process)
+**Last audit:** 2026-04-22 (round 13, converged, dual-reviewer process)
 **Standard:** DRY, SOLID, clean code, correctness, safety
 **Status: PASS** -- all confirmed issues resolved
 
@@ -304,3 +304,30 @@ Both auditors reported **zero issues**. Converged.
 ## Round 11 — 2026-04-22 (convergence round 2)
 
 Both auditors reported **zero issues**. Converged.
+
+---
+
+## Round 12 — 2026-04-22
+
+### Fixed (2)
+
+| # | File | Issue | Fix |
+|---|------|-------|-----|
+| 1 | `MainPane.tsx:50` | Empty state hint says "press N" but binding is ⌘T | Updated to "⌘T to start a new session" |
+| 2 | `hook_server.rs:36` | No read timeout on TCP stream — slow client holds thread | Added 5s read timeout |
+
+### Converged — zero remaining actionable issues.
+
+---
+
+## Round 13 — 2026-04-22
+
+### Fixed (3)
+
+| # | File | Issue | Fix |
+|---|------|-------|-----|
+| 1 | `App.tsx:269` | handleDeleteGroup unconditionally removes active group from localStorage | Moved inside setActiveGroupId callback, gated on `prevActive === id` |
+| 2 | `tauri.conf.json:15` | Window title "claude-manager" mismatches "ClaudeManager" in new_window | Changed to "ClaudeManager" |
+| 3 | `pty_manager.rs:296` | Dead `pty-input-{id}` emit on every keystroke, never listened to | Removed emit and unused `app` parameter from `pty_write` |
+
+### Converged.

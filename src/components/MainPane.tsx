@@ -47,7 +47,7 @@ export function MainPane({
 						pointerEvents: "none",
 					}}
 				>
-					or press N to start a new one
+					⌘T to start a new session
 				</div>
 			</div>
 		);
