@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=ClaudeManager
+Exec=claude-manager %F
+Icon=claude-manager
+Type=Application
+Categories=Development;Utility;
+Comment=Claude Code session manager
+StartupWMClass=ClaudeManager
+StartupNotify=true
+Terminal=false

@@ -172,7 +172,7 @@ export const themes: Theme[] = [
 		},
 	},
 	{
-		id: "catppuccin",
+		id: "catppuccin-mocha",
 		name: "Catppuccin Mocha",
 		bg: { sidebar: "#181825", main: "#1e1e2e" },
 		border: "#313244",
@@ -869,4 +869,4 @@ export const themes: Theme[] = [
 	},
 ];
 
-export const defaultTheme = themes[0];
+export const defaultTheme = themes.find((t) => t.id === "catppuccin-mocha") ?? themes[0];

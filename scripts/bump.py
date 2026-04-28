@@ -49,7 +49,19 @@ def main() -> None:
             output("pre_bumped", "false")
         return
 
-    # Case 2: Version in .cz.toml differs from latest tag (pre-bumped)
+    def parse_version(v: str) -> tuple[int, ...]:
+        return tuple(int(x) for x in v.split("."))
+
+    # Case 2: .cz.toml is behind the latest tag — sync it so cz bump works from the right baseline
+    if parse_version(current) < parse_version(latest_version):
+        print(f".cz.toml version {current} is behind latest tag {latest_tag}, syncing")
+        with open(".cz.toml", "rb") as f:
+            toml_text = f.read().decode()
+        with open(".cz.toml", "w") as f:
+            f.write(toml_text.replace(f'version = "{current}"', f'version = "{latest_version}"'))
+        current = latest_version
+
+    # Case 3: Version in .cz.toml is ahead of latest tag (pre-bumped manually)
     if current != latest_version:
         print(f"Version already bumped to {current} (latest tag: {latest_tag})")
         output("bumped", "true")
@@ -57,7 +69,7 @@ def main() -> None:
         output("pre_bumped", "true")
         return
 
-    # Case 3: Try commitizen bump
+    # Case 4: Try commitizen bump
     dry_run = run("cz bump --yes --dry-run", check=False)
     if dry_run.returncode == 0:
         run("cz bump --yes")
