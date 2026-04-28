@@ -176,3 +176,31 @@ jobs:
             git commit -m "Update claude-manager to v${VERSION}" || true
             git push || true
           fi
+
+  snap:
+    needs: [bump, release]
+    if: needs.bump.outputs.bumped == 'true'
+    runs-on: ubuntu-22.04
+    env:
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+    steps:
+      - if: env.SNAPCRAFT_STORE_CREDENTIALS != ''
+        uses: actions/checkout@v4
+
+      - name: Patch version in snapcraft.yaml
+        if: env.SNAPCRAFT_STORE_CREDENTIALS != ''
+        env:
+          VERSION: ${{ needs.bump.outputs.version }}
+        run: sed -i "s/SNAP_VERSION/${VERSION}/g" snap/snapcraft.yaml
+
+      - name: Build snap
+        if: env.SNAPCRAFT_STORE_CREDENTIALS != ''
+        uses: snapcore/action-build@v1
+        id: build
+
+      - name: Publish to Snap Store
+        if: env.SNAPCRAFT_STORE_CREDENTIALS != ''
+        uses: snapcore/action-publish@v1
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: stable

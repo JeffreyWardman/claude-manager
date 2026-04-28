@@ -57,6 +57,12 @@ brew tap JeffreyWardman/tap
 brew install --cask claude-manager
 ```
 
+### Snap (Linux)
+
+```sh
+sudo snap install claude-manager
+```
+
 ### Shell script (macOS / Linux)
 
 ```sh

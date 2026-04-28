@@ -67,7 +67,7 @@ elif [ "$PLATFORM" = "linux" ]; then
 
     # Prefer .deb on Debian/Ubuntu, fall back to AppImage
     if command -v dpkg >/dev/null 2>&1; then
-        DEB="${PKG_NAME}_${VERSION}_amd64.deb"
+        DEB="${APP_NAME}_${VERSION}_amd64.deb"
         URL="$BASE_URL/$DEB"
         TMPDIR=$(mktemp -d)
         DEB_PATH="$TMPDIR/$DEB"
@@ -83,7 +83,7 @@ elif [ "$PLATFORM" = "linux" ]; then
         echo "Installed $APP_NAME $VERSION"
         echo "CLI commands available: claude-manager, cmanager"
     else
-        APPIMAGE="${PKG_NAME}_${VERSION}_amd64.AppImage"
+        APPIMAGE="${APP_NAME}_${VERSION}_amd64.AppImage"
         URL="$BASE_URL/$APPIMAGE"
         INSTALL_DIR="${HOME}/.local/bin"
         mkdir -p "$INSTALL_DIR"
@@ -93,6 +93,31 @@ elif [ "$PLATFORM" = "linux" ]; then
         chmod +x "$INSTALL_DIR/$PKG_NAME"
 
         ln -sf "$INSTALL_DIR/$PKG_NAME" "$INSTALL_DIR/cmanager"
+
+        # Install icon
+        ICON_DIR="${HOME}/.local/share/icons/hicolor/128x128/apps"
+        mkdir -p "$ICON_DIR"
+        curl -fsSL "https://raw.githubusercontent.com/$REPO/main/src-tauri/icons/128x128.png" \
+            -o "$ICON_DIR/claude-manager.png"
+
+        # Install desktop entry for dock pinning
+        DESKTOP_DIR="${HOME}/.local/share/applications"
+        mkdir -p "$DESKTOP_DIR"
+        cat > "$DESKTOP_DIR/ClaudeManager.desktop" << EOF
+[Desktop Entry]
+Name=ClaudeManager
+Exec=$INSTALL_DIR/$PKG_NAME %F
+Icon=claude-manager
+Type=Application
+Categories=Development;Utility;
+Comment=Claude Code session manager
+StartupWMClass=ClaudeManager
+StartupNotify=true
+Terminal=false
+EOF
+        command -v update-desktop-database >/dev/null 2>&1 && \
+            update-desktop-database "$DESKTOP_DIR"
+
         echo "Installed $APP_NAME $VERSION to $INSTALL_DIR/$PKG_NAME"
         echo "CLI commands available: claude-manager, cmanager"
         echo "Make sure $INSTALL_DIR is in your PATH"
