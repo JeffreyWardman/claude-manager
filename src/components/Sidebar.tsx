@@ -864,13 +864,14 @@ export function Sidebar({
 							top: 0,
 							left: 8,
 							right: 8,
-							padding: "4px 8px",
+							bottom: 4,
+							display: "flex",
+							alignItems: "center",
+							padding: "0 8px",
 							fontSize: 11,
 							fontFamily: "inherit",
 							pointerEvents: "none",
-							lineHeight: "normal",
 							overflow: "hidden",
-							textOverflow: "ellipsis",
 							whiteSpace: "nowrap",
 						}}
 					>
@@ -893,13 +894,15 @@ export function Sidebar({
 						}
 					}}
 					style={{
+						position: "relative",
+						zIndex: 1,
 						width: "100%",
 						background: sidebarSearch ? "var(--bg-main)" : "transparent",
 						border: "1px solid var(--border)",
 						borderRadius: 6,
 						color: "var(--text-primary)",
 						fontSize: 11,
-						padding: "4px 8px",
+						padding: "5px 8px",
 						outline: "none",
 						fontFamily: "inherit",
 					}}
