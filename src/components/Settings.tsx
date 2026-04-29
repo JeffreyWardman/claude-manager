@@ -364,7 +364,7 @@ export function Settings({
 	);
 	const [customShell, setCustomShell] = useState(() => localStorage.getItem("default-shell") ?? "");
 	const [notifSound, setNotifSound] = useState(
-		() => localStorage.getItem("notif-sound-enabled") === "true",
+		() => localStorage.getItem("notif-sound-enabled") !== "false",
 	);
 	const [notifSoundPath, setNotifSoundPath] = useState(
 		() => localStorage.getItem("notif-sound-path") ?? "",

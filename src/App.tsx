@@ -166,7 +166,7 @@ function AppInner() {
 				}
 			}
 		} catch {}
-		return ["1x1", "2x1", "1x2", "2x2"];
+		return ["1x1", "2x1", "1x2", "2x2", "3x1", "3x2", "2+1", "1+2", "3+1", "1+3"];
 	});
 	const [sidebarWidth, setSidebarWidth] = useState(() =>
 		parseInt(localStorage.getItem("sidebar-width") ?? "240", 10),
@@ -460,7 +460,7 @@ function AppInner() {
 				(id !== selectedId || !windowFocusedRef.current)
 			) {
 				setUnreadSessions((s) => new Set(s).add(id));
-				if (localStorage.getItem("notif-sound-enabled") === "true") {
+				if (localStorage.getItem("notif-sound-enabled") !== "false") {
 					const soundPath = localStorage.getItem("notif-sound-path");
 					if (soundPath) {
 						invoke("play_sound", { path: soundPath }).catch(() => {});
