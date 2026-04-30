@@ -910,7 +910,7 @@ export function Sidebar({
 			</div>
 
 			{/* Scrollable content */}
-			<div className="flex-1 overflow-y-auto flex flex-col" style={{ paddingTop: 4 }}>
+			<div className="flex-1 overflow-y-scroll flex flex-col" style={{ paddingTop: 4 }}>
 				{/* ── GROUPS SECTION ── */}
 				<div style={{ padding: "0 4px 8px" }}>
 					<div
