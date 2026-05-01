@@ -3,66 +3,67 @@ import type { ActivityState } from "../hooks/usePtyActivity";
 import type { ClaudeSession, PaneGroup } from "../types";
 import { MainPane } from "./MainPane";
 
+const FR = "minmax(0, 1fr)";
 const GRID_TEMPLATES: Record<string, React.CSSProperties> = {
 	"1x1": {
-		gridTemplateColumns: "1fr",
-		gridTemplateRows: "1fr",
+		gridTemplateColumns: FR,
+		gridTemplateRows: FR,
 		gridTemplateAreas: '"a"',
 	},
 	"2x1": {
-		gridTemplateColumns: "1fr 1fr",
-		gridTemplateRows: "1fr",
+		gridTemplateColumns: `${FR} ${FR}`,
+		gridTemplateRows: FR,
 		gridTemplateAreas: '"a b"',
 	},
 	"1x2": {
-		gridTemplateColumns: "1fr",
-		gridTemplateRows: "1fr 1fr",
+		gridTemplateColumns: FR,
+		gridTemplateRows: `${FR} ${FR}`,
 		gridTemplateAreas: '"a" "b"',
 	},
 	"2x2": {
-		gridTemplateColumns: "1fr 1fr",
-		gridTemplateRows: "1fr 1fr",
+		gridTemplateColumns: `${FR} ${FR}`,
+		gridTemplateRows: `${FR} ${FR}`,
 		gridTemplateAreas: '"a b" "c d"',
 	},
 	"3x1": {
-		gridTemplateColumns: "1fr 1fr 1fr",
-		gridTemplateRows: "1fr",
+		gridTemplateColumns: `${FR} ${FR} ${FR}`,
+		gridTemplateRows: FR,
 		gridTemplateAreas: '"a b c"',
 	},
 	"1x3": {
-		gridTemplateColumns: "1fr",
-		gridTemplateRows: "1fr 1fr 1fr",
+		gridTemplateColumns: FR,
+		gridTemplateRows: `${FR} ${FR} ${FR}`,
 		gridTemplateAreas: '"a" "b" "c"',
 	},
 	"3x2": {
-		gridTemplateColumns: "1fr 1fr 1fr",
-		gridTemplateRows: "1fr 1fr",
+		gridTemplateColumns: `${FR} ${FR} ${FR}`,
+		gridTemplateRows: `${FR} ${FR}`,
 		gridTemplateAreas: '"a b c" "d e f"',
 	},
 	"2x3": {
-		gridTemplateColumns: "1fr 1fr",
-		gridTemplateRows: "1fr 1fr 1fr",
+		gridTemplateColumns: `${FR} ${FR}`,
+		gridTemplateRows: `${FR} ${FR} ${FR}`,
 		gridTemplateAreas: '"a b" "c d" "e f"',
 	},
 	// Asymmetric: wide spanning pane
 	"2+1": {
-		gridTemplateColumns: "1fr 1fr",
-		gridTemplateRows: "1fr 1fr",
+		gridTemplateColumns: `${FR} ${FR}`,
+		gridTemplateRows: `${FR} ${FR}`,
 		gridTemplateAreas: '"a b" "c c"',
 	},
 	"1+2": {
-		gridTemplateColumns: "1fr 1fr",
-		gridTemplateRows: "1fr 1fr",
+		gridTemplateColumns: `${FR} ${FR}`,
+		gridTemplateRows: `${FR} ${FR}`,
 		gridTemplateAreas: '"a a" "b c"',
 	},
 	"3+1": {
-		gridTemplateColumns: "1fr 1fr 1fr",
-		gridTemplateRows: "1fr 1fr",
+		gridTemplateColumns: `${FR} ${FR} ${FR}`,
+		gridTemplateRows: `${FR} ${FR}`,
 		gridTemplateAreas: '"a b c" "d d d"',
 	},
 	"1+3": {
-		gridTemplateColumns: "1fr 1fr 1fr",
-		gridTemplateRows: "1fr 1fr",
+		gridTemplateColumns: `${FR} ${FR} ${FR}`,
+		gridTemplateRows: `${FR} ${FR}`,
 		gridTemplateAreas: '"a a a" "b c d"',
 	},
 };
