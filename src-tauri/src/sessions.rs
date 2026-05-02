@@ -124,8 +124,12 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
     let config_path = PathBuf::from(config_dir);
     let metadata = crate::metadata::load();
 
-    // Step 1: Scan pid files for alive processes. Build cwd → pid map and
-    // collect pid-file-only sessions (alive processes with no JSONL yet).
+    // Step 1: Scan pid files for alive processes. Build session_id → pid map (so multiple
+    // running sessions in the same cwd are each marked Active) and a cwd → pid fallback
+    // for older Claude versions whose pid files have no sessionId. Also collect
+    // pid-file-only sessions (alive processes with no JSONL yet).
+    let mut alive_session_pids: std::collections::HashMap<String, u32> =
+        std::collections::HashMap::new();
     let mut alive_cwd_pids: std::collections::HashMap<String, u32> =
         std::collections::HashMap::new();
     let mut pid_only_sessions: Vec<(String, String, u32, i64)> = Vec::new(); // (session_id, cwd, pid, started_at)
@@ -141,6 +145,7 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
                     if crate::utils::is_pid_alive(session_file.pid) {
                         alive_cwd_pids.insert(session_file.cwd.clone(), session_file.pid);
                         if let Some(ref sid) = session_file.session_id {
+                            alive_session_pids.insert(sid.clone(), session_file.pid);
                             pid_only_sessions.push((
                                 sid.clone(),
                                 session_file.cwd,
@@ -249,8 +254,9 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
         }
     }
 
-    // Step 3: Sort by recency. For each cwd with a live process, mark the most
-    // recent JSONL session in that directory as Active (and attach the pid).
+    // Step 3: Sort by recency. Mark a session Active if its session_id has a live pid,
+    // or (fallback for older Claude versions) if its cwd has a live pid and no other
+    // session in that cwd has been marked Active yet.
     candidates.sort_by_key(|c| std::cmp::Reverse(c.0));
 
     let mut active_cwds_marked: std::collections::HashSet<String> =
@@ -259,6 +265,13 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
     let mut offline_count = 0usize;
 
     for (_, mut session) in candidates {
+        if let Some(&pid) = alive_session_pids.get(&session.session_id) {
+            session.status = SessionStatus::Active;
+            session.pid = pid;
+            active_cwds_marked.insert(session.cwd.clone());
+            sessions.push(session);
+            continue;
+        }
         if let Some(&pid) = alive_cwd_pids.get(&session.cwd) {
             if !active_cwds_marked.contains(&session.cwd) {
                 session.status = SessionStatus::Active;
