@@ -4,6 +4,7 @@ mod journal;
 mod metadata;
 mod profiles;
 mod pty_manager;
+mod search;
 mod sessions;
 mod utils;
 
@@ -38,6 +39,9 @@ pub fn run() {
             }
 
             app.manage(pty_manager::PtyState::new());
+            app.manage::<search::SearchIndexState>(std::sync::Mutex::new(
+                std::collections::HashMap::new(),
+            ));
 
             let config_dirs: Vec<std::path::PathBuf> = profiles::discover_profiles()
                 .into_iter()
@@ -71,6 +75,7 @@ pub fn run() {
             profiles::save_profile_config,
             profiles::create_profile,
             profiles::remove_profile,
+            search::search_conversations,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

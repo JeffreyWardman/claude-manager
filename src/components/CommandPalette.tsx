@@ -19,6 +19,7 @@ interface Props {
 	onSelect: (session: ClaudeSession) => void;
 	onClearEmptyGroups: () => void;
 	onDeleteAllGroups: () => void;
+	onOpenConversationSearch: () => void;
 	onClose: () => void;
 }
 
@@ -28,6 +29,7 @@ export function CommandPalette({
 	onSelect,
 	onClearEmptyGroups,
 	onDeleteAllGroups,
+	onOpenConversationSearch,
 	onClose,
 }: Props) {
 	const inputRef = useRef<HTMLInputElement>(null);
@@ -46,6 +48,14 @@ export function CommandPalette({
 	const emptyGroupCount = groups.filter((g) => g.slots.every((s) => s === null)).length;
 
 	const actions: { label: string; detail: string; onSelect: () => void }[] = [];
+	actions.push({
+		label: "Find in conversations",
+		detail: "Search across all session content (⌘⇧F)",
+		onSelect: () => {
+			onOpenConversationSearch();
+			onClose();
+		},
+	});
 	if (emptyGroupCount > 0) {
 		actions.push({
 			label: "Clear empty groups",

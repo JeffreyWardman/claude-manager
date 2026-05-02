@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CommandPalette } from "./components/CommandPalette";
+import { ConversationSearch } from "./components/ConversationSearch";
 import { GridLayout } from "./components/GridLayout";
 import { MainPane } from "./components/MainPane";
 import { NewSessionModal } from "./components/NewSessionModal";
@@ -142,12 +143,14 @@ function AppInner() {
 	const [hideOldEnabled, setHideOldEnabled] = useState(
 		() => localStorage.getItem("hide-old-enabled") === "true",
 	);
+	const [forceShowSessionIds, setForceShowSessionIds] = useState<Set<string>>(new Set());
 	const [hideOldDays, setHideOldDays] = useState(() => {
 		const raw = Number(localStorage.getItem("hide-old-days"));
 		return Number.isFinite(raw) && raw > 0 ? raw : 7;
 	});
 
 	// Override session status based on local PTY state and filter ignored sessions.
+	// Sessions opened via conversation search bypass all filters via forceShowSessionIds.
 	const liveSessions = useMemo(() => {
 		const discovered = sessions
 			.map((s) =>
@@ -155,9 +158,19 @@ function AppInner() {
 					? { ...s, status: "active" as const }
 					: s,
 			)
-			.filter((s) => !isSessionIgnored(s, ignorePatterns))
-			.filter((s) => !(hideStaleEnabled && isSessionStale(s, hideStaleMin)))
-			.filter((s) => !(hideOldEnabled && isSessionOlderThan(s, hideOldDays)));
+			.filter(
+				(s) => forceShowSessionIds.has(s.session_id) || !isSessionIgnored(s, ignorePatterns),
+			)
+			.filter(
+				(s) =>
+					forceShowSessionIds.has(s.session_id) ||
+					!(hideStaleEnabled && isSessionStale(s, hideStaleMin)),
+			)
+			.filter(
+				(s) =>
+					forceShowSessionIds.has(s.session_id) ||
+					!(hideOldEnabled && isSessionOlderThan(s, hideOldDays)),
+			);
 		return discovered;
 	}, [
 		sessions,
@@ -168,6 +181,7 @@ function AppInner() {
 		hideStaleMin,
 		hideOldEnabled,
 		hideOldDays,
+		forceShowSessionIds,
 	]);
 
 	const [groups, setGroups] = useState<PaneGroup[]>(() => loadGroups(configDir));
@@ -186,6 +200,7 @@ function AppInner() {
 	const [hoveredSlotIdx, setHoveredSlotIdx] = useState<number | null>(null);
 	const [standaloneSelectedId, setStandaloneSelectedId] = useState<string | null>(null);
 	const [paletteOpen, setPaletteOpen] = useState(false);
+	const [conversationSearchOpen, setConversationSearchOpen] = useState(false);
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [newSessionOpen, setNewSessionOpen] = useState(false);
 	const [sidebarVisible, setSidebarVisible] = useState(
@@ -640,6 +655,11 @@ function AppInner() {
 				setPaletteOpen((o) => !o);
 				return;
 			}
+			if (mod && e.shiftKey && (e.key === "f" || e.key === "F")) {
+				e.preventDefault();
+				setConversationSearchOpen(true);
+				return;
+			}
 			if (mod && e.key === "p") {
 				e.preventDefault();
 				setSettingsOpen((o) => !o);
@@ -905,6 +925,25 @@ function AppInner() {
 				/>
 			)}
 
+			{conversationSearchOpen && (
+				<ConversationSearch
+					configDir={configDir}
+					onClose={() => setConversationSearchOpen(false)}
+					onSelect={(sessionId) => {
+						setForceShowSessionIds((prev) => {
+							const next = new Set(prev);
+							next.add(sessionId);
+							return next;
+						});
+						const found = sessions.find((s) => s.session_id === sessionId);
+						if (found) {
+							selectSession(found);
+						}
+						setConversationSearchOpen(false);
+					}}
+				/>
+			)}
+
 			{paletteOpen && (
 				<CommandPalette
 					sessions={liveSessions}
@@ -915,6 +954,7 @@ function AppInner() {
 						persistGroups(next);
 					}}
 					onDeleteAllGroups={() => persistGroups([])}
+					onOpenConversationSearch={() => setConversationSearchOpen(true)}
 					onClose={() => setPaletteOpen(false)}
 				/>
 			)}

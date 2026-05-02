@@ -202,6 +202,7 @@ function fuzzyMatch(text: string, query: string): boolean {
 
 const HOTKEYS = [
 	{ keys: "⌘K", desc: "Command palette" },
+	{ keys: "⌘⇧F", desc: "Find in conversations" },
 	{ keys: "⌘P", desc: "Settings" },
 	{ keys: "⌘N", desc: "New window" },
 	{ keys: "⌘⇧N / ⌘T", desc: "New session" },

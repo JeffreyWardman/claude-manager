@@ -92,6 +92,18 @@ fn strip_system_tags(text: &str) -> String {
     result.trim().to_string()
 }
 
+/// Public helper for the search index: extract user/assistant text from a JSONL
+/// `message.content` value, then strip command/system tags. Returns None if empty.
+pub fn extract_text_for_search(content: &serde_json::Value) -> Option<String> {
+    let raw = extract_text(content)?;
+    let cleaned = strip_system_tags(&raw);
+    if cleaned.is_empty() {
+        None
+    } else {
+        Some(cleaned)
+    }
+}
+
 fn encode_path_for_claude(path: &str) -> String {
     let stripped = if path.len() >= 2
         && path.as_bytes()[0].is_ascii_alphabetic()
