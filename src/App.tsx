@@ -20,7 +20,12 @@ import { useProfiles } from "./hooks/useProfiles";
 import type { ActivityState } from "./hooks/usePtyActivity";
 import { usePtyActivity } from "./hooks/usePtyActivity";
 import { useSessions } from "./hooks/useSessions";
-import { isSessionIgnored, parseIgnorePatterns } from "./sidebarUtils";
+import {
+	isSessionIgnored,
+	isSessionOlderThan,
+	isSessionStale,
+	parseIgnorePatterns,
+} from "./sidebarUtils";
 import { ThemeProvider } from "./ThemeContext";
 import type { ClaudeSession, PaneGroup, PaneLayout } from "./types";
 import { useDragDrop } from "./useDragDrop";
@@ -69,7 +74,13 @@ function AppInner() {
 		visibleProfiles.find((p) => p.id === activeProfileId) ?? visibleProfiles[0] ?? null;
 	const configDir = activeProfile?.path ?? "";
 
-	const { sessions, loading, refresh } = useSessions(configDir);
+	const [maxSessions, setMaxSessions] = useState(() => {
+		const raw = Number(
+			localStorage.getItem("max-sessions") ?? localStorage.getItem("max-offline-sessions"),
+		);
+		return Number.isFinite(raw) && raw > 0 ? raw : 50;
+	});
+	const { sessions, loading, refresh } = useSessions(configDir, maxSessions);
 	const [unreadSessions, setUnreadSessions] = useState<Set<string>>(new Set());
 	const clearUnread = useCallback((id: string) => {
 		setUnreadSessions((s) => {
@@ -121,6 +132,21 @@ function AppInner() {
 	);
 	const ignorePatterns = useMemo(() => parseIgnorePatterns(ignorePatternsRaw), [ignorePatternsRaw]);
 
+	const [hideStaleEnabled, setHideStaleEnabled] = useState(
+		() => localStorage.getItem("hide-stale-enabled") === "true",
+	);
+	const [hideStaleMin, setHideStaleMin] = useState(() => {
+		const raw = Number(localStorage.getItem("hide-stale-min-messages"));
+		return Number.isFinite(raw) && raw > 0 ? raw : 3;
+	});
+	const [hideOldEnabled, setHideOldEnabled] = useState(
+		() => localStorage.getItem("hide-old-enabled") === "true",
+	);
+	const [hideOldDays, setHideOldDays] = useState(() => {
+		const raw = Number(localStorage.getItem("hide-old-days"));
+		return Number.isFinite(raw) && raw > 0 ? raw : 7;
+	});
+
 	// Override session status based on local PTY state and filter ignored sessions.
 	const liveSessions = useMemo(() => {
 		const discovered = sessions
@@ -129,9 +155,20 @@ function AppInner() {
 					? { ...s, status: "active" as const }
 					: s,
 			)
-			.filter((s) => !isSessionIgnored(s, ignorePatterns));
+			.filter((s) => !isSessionIgnored(s, ignorePatterns))
+			.filter((s) => !(hideStaleEnabled && isSessionStale(s, hideStaleMin)))
+			.filter((s) => !(hideOldEnabled && isSessionOlderThan(s, hideOldDays)));
 		return discovered;
-	}, [sessions, activityMap, alivePtys, ignorePatterns]);
+	}, [
+		sessions,
+		activityMap,
+		alivePtys,
+		ignorePatterns,
+		hideStaleEnabled,
+		hideStaleMin,
+		hideOldEnabled,
+		hideOldDays,
+	]);
 
 	const [groups, setGroups] = useState<PaneGroup[]>(() => loadGroups(configDir));
 	const [activeGroupId, setActiveGroupId] = useState<string | null>(
@@ -899,6 +936,27 @@ function AppInner() {
 					profiles={profiles}
 					onSaveProfiles={saveProfiles}
 					onRefreshProfiles={refreshProfiles}
+					hideStaleEnabled={hideStaleEnabled}
+					hideStaleMin={hideStaleMin}
+					onChangeHideStale={(enabled, min) => {
+						setHideStaleEnabled(enabled);
+						setHideStaleMin(min);
+						localStorage.setItem("hide-stale-enabled", String(enabled));
+						localStorage.setItem("hide-stale-min-messages", String(min));
+					}}
+					hideOldEnabled={hideOldEnabled}
+					hideOldDays={hideOldDays}
+					onChangeHideOld={(enabled, days) => {
+						setHideOldEnabled(enabled);
+						setHideOldDays(days);
+						localStorage.setItem("hide-old-enabled", String(enabled));
+						localStorage.setItem("hide-old-days", String(days));
+					}}
+					maxSessions={maxSessions}
+					onChangeMaxSessions={(n) => {
+						setMaxSessions(n);
+						localStorage.setItem("max-sessions", String(n));
+					}}
 				/>
 			)}
 		</div>

@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getDragPayload } from "../dragState";
 import { SLOT_COUNTS } from "../groupOps";
 import type { ActivityState } from "../hooks/usePtyActivity";
@@ -1843,14 +1843,13 @@ export function Sidebar({
 
 			{/* Group context menu */}
 			{groupContextMenu && (
-				<div
+				<PositionedMenu
+					x={groupContextMenu.x}
+					y={groupContextMenu.y}
 					role="menu"
 					aria-label="Group actions"
 					onMouseDown={(e) => e.stopPropagation()}
 					style={{
-						position: "fixed",
-						left: groupContextMenu.x,
-						top: groupContextMenu.y,
 						background: "var(--bg-sidebar)",
 						border: "1px solid var(--border)",
 						borderRadius: 6,
@@ -1890,19 +1889,18 @@ export function Sidebar({
 					>
 						Delete group
 					</button>
-				</div>
+				</PositionedMenu>
 			)}
 
 			{/* Group slot context menu */}
 			{groupSlotContextMenu && (
-				<div
+				<PositionedMenu
+					x={groupSlotContextMenu.x}
+					y={groupSlotContextMenu.y}
 					role="menu"
 					aria-label="Slot actions"
 					onMouseDown={(e) => e.stopPropagation()}
 					style={{
-						position: "fixed",
-						left: groupSlotContextMenu.x,
-						top: groupSlotContextMenu.y,
 						background: "var(--bg-sidebar)",
 						border: "1px solid var(--border)",
 						borderRadius: 6,
@@ -1946,7 +1944,7 @@ export function Sidebar({
 						const session = sessions.find((s) => s.session_id === groupSlotContextMenu.sessionId);
 						return session ? sessionActions(session, () => setGroupSlotContextMenu(null)) : null;
 					})()}
-				</div>
+				</PositionedMenu>
 			)}
 
 			{/* Context menu */}
@@ -1957,14 +1955,13 @@ export function Sidebar({
 						return null;
 					}
 					return (
-						<div
+						<PositionedMenu
+							x={contextMenu.x}
+							y={contextMenu.y}
 							role="menu"
 							aria-label="Session actions"
 							onMouseDown={(e) => e.stopPropagation()}
 							style={{
-								position: "fixed",
-								left: contextMenu.x,
-								top: contextMenu.y,
 								background: "var(--bg-sidebar)",
 								border: "1px solid var(--border)",
 								borderRadius: 6,
@@ -2019,9 +2016,62 @@ export function Sidebar({
 								</>
 							)}
 							{sessionActions(session, () => setContextMenu(null))}
-						</div>
+						</PositionedMenu>
 					);
 				})()}
+		</div>
+	);
+}
+
+/**
+ * Renders a fixed-position container at (x, y), measures it after mount, and
+ * flips it above the cursor (or shifts it left) when it would overflow the viewport.
+ */
+function PositionedMenu({
+	x,
+	y,
+	style,
+	children,
+	...rest
+}: { x: number; y: number; children: React.ReactNode } & Omit<
+	React.HTMLAttributes<HTMLDivElement>,
+	"ref"
+>) {
+	const ref = useRef<HTMLDivElement>(null);
+	const [coords, setCoords] = useState<{ left: number; top: number } | null>(null);
+
+	useLayoutEffect(() => {
+		const node = ref.current;
+		if (!node) {
+			return;
+		}
+		// Reset to origin so measurement reflects the requested position, not the
+		// previously-adjusted one (the same instance is reused across right-clicks).
+		node.style.left = `${x}px`;
+		node.style.top = `${y}px`;
+		const rect = node.getBoundingClientRect();
+		const margin = 4;
+		const left =
+			x + rect.width > window.innerWidth - margin
+				? Math.max(margin, window.innerWidth - rect.width - margin)
+				: x;
+		const top =
+			y + rect.height > window.innerHeight - margin ? Math.max(margin, y - rect.height) : y;
+		setCoords({ left, top });
+	}, [x, y]);
+
+	return (
+		<div
+			ref={ref}
+			{...rest}
+			style={{
+				...(style ?? {}),
+				position: "fixed",
+				left: coords?.left ?? x,
+				top: coords?.top ?? y,
+			}}
+		>
+			{children}
 		</div>
 	);
 }

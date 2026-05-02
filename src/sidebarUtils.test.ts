@@ -26,6 +26,7 @@ function makeSession(overrides: Partial<ClaudeSession> & { session_id: string })
 		display_name: null,
 		git_branch: null,
 		pending_rename: null,
+		message_count: 0,
 		...overrides,
 	};
 }

@@ -21,8 +21,8 @@ pub fn get_custom_themes() -> Vec<serde_json::Value> {
 }
 
 #[tauri::command]
-pub fn get_sessions(config_dir: String) -> Vec<ClaudeSession> {
-    get_all_sessions(&config_dir)
+pub fn get_sessions(config_dir: String, max_sessions: Option<usize>) -> Vec<ClaudeSession> {
+    get_all_sessions(&config_dir, max_sessions)
 }
 
 #[tauri::command]

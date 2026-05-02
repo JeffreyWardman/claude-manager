@@ -31,6 +31,7 @@ export interface ClaudeSession {
 	display_name: string | null;
 	git_branch: string | null;
 	pending_rename: string | null;
+	message_count: number;
 }
 
 export interface Profile {

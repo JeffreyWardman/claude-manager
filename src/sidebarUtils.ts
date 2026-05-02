@@ -181,6 +181,38 @@ export function isSessionIgnored(
 	return !included;
 }
 
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+export function isSessionStale(
+	session: ClaudeSession,
+	minMessages: number,
+	now: number = Date.now(),
+): boolean {
+	if (session.status === "active") {
+		return false;
+	}
+	const ts = session.last_modified || session.started_at;
+	if (!ts || now - ts <= ONE_DAY_MS) {
+		return false;
+	}
+	return session.message_count < minMessages;
+}
+
+export function isSessionOlderThan(
+	session: ClaudeSession,
+	days: number,
+	now: number = Date.now(),
+): boolean {
+	if (session.status === "active") {
+		return false;
+	}
+	const ts = session.last_modified || session.started_at;
+	if (!ts) {
+		return false;
+	}
+	return now - ts > days * ONE_DAY_MS;
+}
+
 export function containsMatch(text: string, query: string): boolean {
 	return text.toLowerCase().includes(query);
 }

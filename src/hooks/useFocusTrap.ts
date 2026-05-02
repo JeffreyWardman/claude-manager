@@ -1,15 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export function useFocusTrap(
 	dialogRef: React.RefObject<HTMLDivElement | null>,
 	onEscape?: () => void,
 ) {
-	// biome-ignore lint/correctness/useExhaustiveDependencies: dialogRef is a stable ref
+	const onEscapeRef = useRef(onEscape);
+	onEscapeRef.current = onEscape;
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: dialogRef is a stable ref; onEscape is read from ref to avoid resubscribing on every render
 	useEffect(() => {
 		const previouslyFocused = document.activeElement as HTMLElement | null;
 		const handleKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape" && onEscape) {
-				onEscape();
+			if (e.key === "Escape" && onEscapeRef.current) {
+				onEscapeRef.current();
 			}
 			if (e.key === "Tab" && dialogRef.current) {
 				const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
@@ -34,5 +37,5 @@ export function useFocusTrap(
 			window.removeEventListener("keydown", handleKey);
 			previouslyFocused?.focus();
 		};
-	}, [onEscape]);
+	}, []);
 }

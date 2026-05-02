@@ -15,6 +15,7 @@ pub struct ClaudeSession {
     pub display_name: Option<String>,
     pub git_branch: Option<String>,
     pub pending_rename: Option<String>,
+    pub message_count: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -103,24 +104,46 @@ fn parse_timestamp(ts: &str) -> i64 {
         + time_parts[2] * 1_000
 }
 
-/// Read cwd, sessionId, timestamp from the first valid line of a JSONL file
-fn read_jsonl_header(path: &Path) -> Option<JournalFirstLine> {
+/// Cap message counting once we're well above any plausible "stale" threshold.
+/// This keeps polling fast on multi-MB JSONL files; the filter only checks
+/// `count < minMessages`, so any value above the cap is equivalent.
+const MESSAGE_COUNT_CAP: u32 = 50;
+
+/// Read cwd, sessionId, timestamp from the first valid line of a JSONL file,
+/// and count real user messages (excluding meta entries) in the same pass.
+/// Stops reading once both the header is found and the count reaches the cap.
+fn read_jsonl_header_and_count(path: &Path) -> Option<(JournalFirstLine, u32)> {
     let file = fs::File::open(path).ok()?;
     let reader = BufReader::new(file);
-    for line in reader.lines().take(10) {
-        let Ok(line) = line else { continue };
-        if let Ok(entry) = serde_json::from_str::<JournalFirstLine>(&line) {
-            if entry.cwd.is_some() && entry.session_id.is_some() {
-                return Some(entry);
+    let mut header: Option<JournalFirstLine> = None;
+    let mut count: u32 = 0;
+    let mut header_search_remaining = 10usize;
+    for line in reader.lines().map_while(Result::ok) {
+        if count < MESSAGE_COUNT_CAP
+            && line.contains("\"type\":\"user\"")
+            && !line.contains("\"isMeta\":true")
+        {
+            count += 1;
+        }
+        if header.is_none() && header_search_remaining > 0 {
+            header_search_remaining -= 1;
+            if let Ok(entry) = serde_json::from_str::<JournalFirstLine>(&line) {
+                if entry.cwd.is_some() && entry.session_id.is_some() {
+                    header = Some(entry);
+                }
             }
         }
+        if header.is_some() && count >= MESSAGE_COUNT_CAP {
+            break;
+        }
     }
-    None
+    header.map(|h| (h, count))
 }
 
-const MAX_OFFLINE_SESSIONS: usize = 50;
+pub const DEFAULT_MAX_SESSIONS: usize = 50;
 
-pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
+pub fn get_all_sessions(config_dir: &str, max_sessions: Option<usize>) -> Vec<ClaudeSession> {
+    let max_total_sessions = max_sessions.unwrap_or(DEFAULT_MAX_SESSIONS);
     let config_path = PathBuf::from(config_dir);
     let metadata = crate::metadata::load();
 
@@ -183,7 +206,9 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
                     if filename_id.len() != 36 {
                         continue;
                     }
-                    if let Some(header) = read_jsonl_header(&session_path) {
+                    if let Some((header, message_count)) =
+                        read_jsonl_header_and_count(&session_path)
+                    {
                         let cwd = header.cwd.unwrap_or_default();
                         let session_id = filename_id;
                         let started_at = header
@@ -212,6 +237,7 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
                                 display_name,
                                 git_branch: header.git_branch,
                                 pending_rename,
+                                message_count,
                             },
                         ));
                     }
@@ -248,6 +274,7 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
                         display_name,
                         git_branch: None,
                         pending_rename,
+                        message_count: 0,
                     },
                 ));
             }
@@ -261,15 +288,15 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
 
     let mut active_cwds_marked: std::collections::HashSet<String> =
         std::collections::HashSet::new();
-    let mut sessions: Vec<ClaudeSession> = Vec::new();
-    let mut offline_count = 0usize;
+    let mut active_sessions: Vec<ClaudeSession> = Vec::new();
+    let mut offline_sessions: Vec<ClaudeSession> = Vec::new();
 
     for (_, mut session) in candidates {
         if let Some(&pid) = alive_session_pids.get(&session.session_id) {
             session.status = SessionStatus::Active;
             session.pid = pid;
             active_cwds_marked.insert(session.cwd.clone());
-            sessions.push(session);
+            active_sessions.push(session);
             continue;
         }
         if let Some(&pid) = alive_cwd_pids.get(&session.cwd) {
@@ -277,15 +304,19 @@ pub fn get_all_sessions(config_dir: &str) -> Vec<ClaudeSession> {
                 session.status = SessionStatus::Active;
                 session.pid = pid;
                 active_cwds_marked.insert(session.cwd.clone());
-                sessions.push(session);
+                active_sessions.push(session);
                 continue;
             }
         }
-        if offline_count < MAX_OFFLINE_SESSIONS {
-            sessions.push(session);
-            offline_count += 1;
-        }
+        offline_sessions.push(session);
     }
+
+    // Cap total sessions (active + offline). Active sessions are always retained;
+    // offline sessions fill remaining slots up to the cap.
+    let offline_budget = max_total_sessions.saturating_sub(active_sessions.len());
+    offline_sessions.truncate(offline_budget);
+    let mut sessions = active_sessions;
+    sessions.extend(offline_sessions);
 
     // Final sort: active first, then offline, newest first within each group
     sessions.sort_by(|a, b| {

@@ -98,6 +98,14 @@ interface Props {
 	profiles: Profile[];
 	onSaveProfiles: (profiles: Profile[]) => void;
 	onRefreshProfiles: () => void;
+	hideStaleEnabled: boolean;
+	hideStaleMin: number;
+	onChangeHideStale: (enabled: boolean, min: number) => void;
+	hideOldEnabled: boolean;
+	hideOldDays: number;
+	onChangeHideOld: (enabled: boolean, days: number) => void;
+	maxSessions: number;
+	onChangeMaxSessions: (n: number) => void;
 }
 
 type Tab = "preferences" | "theme" | "hotkeys" | "guide" | "about";
@@ -344,6 +352,187 @@ function SectionNav<T extends string>({
 	);
 }
 
+function InfoBadge({ label, tooltip }: { label: string; tooltip: string }) {
+	const triggerRef = useRef<HTMLSpanElement>(null);
+	const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+	const show = () => {
+		const node = triggerRef.current;
+		if (!node) {
+			return;
+		}
+		const rect = node.getBoundingClientRect();
+		const margin = 8;
+		const tooltipWidth = 240;
+		const center = rect.left + rect.width / 2;
+		let left = center - tooltipWidth / 2;
+		left = Math.max(margin, Math.min(left, window.innerWidth - tooltipWidth - margin));
+		// Place above the badge by default; flip below if there's no room.
+		const placedTop = rect.top - margin;
+		setPos({ left, top: placedTop });
+	};
+	const hide = () => setPos(null);
+	return (
+		<>
+			<span
+				ref={triggerRef}
+				aria-label={`${label} info`}
+				tabIndex={0}
+				onMouseEnter={show}
+				onMouseLeave={hide}
+				onFocus={show}
+				onBlur={hide}
+				style={{
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					width: 14,
+					height: 14,
+					borderRadius: "50%",
+					border: "1px solid var(--border)",
+					color: "var(--text-muted)",
+					fontSize: 9,
+					fontWeight: 600,
+					cursor: "help",
+					userSelect: "none",
+				}}
+			>
+				?
+			</span>
+			{pos && (
+				<span
+					role="tooltip"
+					style={{
+						position: "fixed",
+						left: pos.left,
+						top: pos.top,
+						transform: "translateY(-100%)",
+						background: "var(--bg-main)",
+						color: "var(--text-primary)",
+						border: "1px solid var(--border)",
+						borderRadius: 4,
+						padding: "6px 8px",
+						fontSize: 10,
+						fontWeight: 400,
+						lineHeight: 1.4,
+						width: 240,
+						boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+						zIndex: 2000,
+						pointerEvents: "none",
+						whiteSpace: "normal",
+					}}
+				>
+					{tooltip}
+				</span>
+			)}
+		</>
+	);
+}
+
+function FilterRow({
+	label,
+	tooltip,
+	children,
+}: {
+	label: string;
+	tooltip: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<div
+			style={{
+				display: "flex",
+				alignItems: "center",
+				gap: 8,
+				fontSize: 11,
+				color: "var(--text-primary)",
+				marginBottom: 8,
+			}}
+		>
+			<div
+				style={{
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "space-between",
+					gap: 4,
+					width: 130,
+					flexShrink: 0,
+				}}
+			>
+				<span>{label}</span>
+				<InfoBadge label={label} tooltip={tooltip} />
+			</div>
+			{children}
+		</div>
+	);
+}
+
+function NumberField({
+	value,
+	onChange,
+	onCommit,
+	onRevert,
+	ariaLabel,
+	width = 72,
+	prefix,
+}: {
+	value: string;
+	onChange: (v: string) => void;
+	onCommit: (n: number) => void;
+	onRevert: () => void;
+	ariaLabel: string;
+	width?: number;
+	prefix?: string;
+}) {
+	const [focused, setFocused] = useState(false);
+	return (
+		<div
+			style={{
+				display: "inline-flex",
+				alignItems: "center",
+				gap: 4,
+				width,
+				background: "var(--bg-main)",
+				border: `1px solid ${focused ? "var(--accent)" : "var(--border)"}`,
+				borderRadius: 4,
+				padding: "4px 6px",
+				boxSizing: "border-box",
+			}}
+		>
+			{prefix && <span style={{ color: "var(--text-muted)", fontSize: 11 }}>{prefix}</span>}
+			<input
+				type="text"
+				className="nf-input"
+				inputMode="numeric"
+				pattern="[0-9]*"
+				aria-label={ariaLabel}
+				value={value}
+				onChange={(e) => onChange(e.target.value.replace(/[^0-9]/g, ""))}
+				onFocus={() => setFocused(true)}
+				onBlur={() => {
+					setFocused(false);
+					const n = Number(value);
+					if (Number.isFinite(n) && n >= 1) {
+						onCommit(Math.floor(n));
+					} else {
+						onRevert();
+					}
+				}}
+				style={{
+					flex: 1,
+					width: "100%",
+					background: "transparent",
+					border: "none",
+					color: "var(--text-primary)",
+					fontSize: 11,
+					padding: 0,
+					outline: "none",
+					minWidth: 0,
+				}}
+			/>
+		</div>
+	);
+}
+
 export function Settings({
 	onClose,
 	enabledLayouts,
@@ -351,7 +540,27 @@ export function Settings({
 	profiles,
 	onSaveProfiles,
 	onRefreshProfiles,
+	hideStaleEnabled,
+	hideStaleMin,
+	onChangeHideStale,
+	hideOldEnabled,
+	hideOldDays,
+	onChangeHideOld,
+	maxSessions,
+	onChangeMaxSessions,
 }: Props) {
+	const [hideStaleMinDraft, setHideStaleMinDraft] = useState(String(hideStaleMin));
+	const [hideOldDaysDraft, setHideOldDaysDraft] = useState(String(hideOldDays));
+	const [maxSessionsDraft, setMaxSessionsDraft] = useState(String(maxSessions));
+	useEffect(() => {
+		setHideStaleMinDraft(String(hideStaleMin));
+	}, [hideStaleMin]);
+	useEffect(() => {
+		setHideOldDaysDraft(String(hideOldDays));
+	}, [hideOldDays]);
+	useEffect(() => {
+		setMaxSessionsDraft(String(maxSessions));
+	}, [maxSessions]);
 	const { theme, allThemes, setThemeId, previewTheme, clearPreview } = useTheme();
 	const [tab, setTab] = useState<Tab>("preferences");
 	const [prefSection, setPrefSection] = useState<PrefSection>("general");
@@ -558,7 +767,7 @@ export function Settings({
 									{ key: "general" as PrefSection, label: "General" },
 									{ key: "layouts" as PrefSection, label: "Layouts" },
 									{ key: "sound" as PrefSection, label: "Sound" },
-									{ key: "ignore" as PrefSection, label: "Folders" },
+									{ key: "ignore" as PrefSection, label: "Filters" },
 									{
 										key: "profiles" as PrefSection,
 										label: "Profiles",
@@ -938,22 +1147,87 @@ export function Settings({
 												fontWeight: 600,
 												letterSpacing: "0.06em",
 												color: "var(--text-muted)",
-												marginBottom: 6,
+												marginBottom: 10,
 											}}
 										>
-											IGNORE PATTERNS
+											FILTERS
 										</div>
+
+										<FilterRow
+											label="Hide stale"
+											tooltip="Hide offline sessions that are at least 1 day old and have fewer than the threshold of user messages."
+										>
+											<input
+												type="checkbox"
+												aria-label="Hide stale enabled"
+												checked={hideStaleEnabled}
+												onChange={(e) => onChangeHideStale(e.target.checked, hideStaleMin)}
+											/>
+											<NumberField
+												value={hideStaleMinDraft}
+												onChange={setHideStaleMinDraft}
+												onCommit={(n) => onChangeHideStale(hideStaleEnabled, n)}
+												onRevert={() => setHideStaleMinDraft(String(hideStaleMin))}
+												ariaLabel="Min messages"
+												prefix="<"
+											/>
+											<span style={{ color: "var(--text-muted)" }}>messages</span>
+										</FilterRow>
+
+										<FilterRow
+											label="Hide old"
+											tooltip="Hide offline sessions older than the threshold of days."
+										>
+											<input
+												type="checkbox"
+												aria-label="Hide old enabled"
+												checked={hideOldEnabled}
+												onChange={(e) => onChangeHideOld(e.target.checked, hideOldDays)}
+											/>
+											<NumberField
+												value={hideOldDaysDraft}
+												onChange={setHideOldDaysDraft}
+												onCommit={(n) => onChangeHideOld(hideOldEnabled, n)}
+												onRevert={() => setHideOldDaysDraft(String(hideOldDays))}
+												ariaLabel="Days"
+											/>
+											<span style={{ color: "var(--text-muted)" }}>days</span>
+										</FilterRow>
+
+										<FilterRow
+											label="Max sessions"
+											tooltip="Cap the total number of sessions shown. Active sessions are always retained; offline sessions fill the remaining slots, newest first. Default 50."
+										>
+											<span style={{ visibility: "hidden" }}>
+												<input type="checkbox" aria-hidden="true" tabIndex={-1} />
+											</span>
+											<NumberField
+												value={maxSessionsDraft}
+												onChange={setMaxSessionsDraft}
+												onCommit={(n) => onChangeMaxSessions(n)}
+												onRevert={() => setMaxSessionsDraft(String(maxSessions))}
+												ariaLabel="Max sessions"
+											/>
+										</FilterRow>
+
 										<div
 											style={{
-												fontSize: 10,
-												color: "var(--text-muted)",
-												marginBottom: 6,
+												display: "flex",
+												alignItems: "center",
+												justifyContent: "space-between",
+												gap: 4,
+												fontSize: 11,
+												color: "var(--text-primary)",
+												marginTop: 12,
+												marginBottom: 4,
+												width: 130,
 											}}
 										>
-											One pattern per line. Matches against session name and path (relative to home
-											directory). Supports globs (<Code>*</Code>, <Code>**</Code>, <Code>?</Code>).
-											Prefix with <Code>!</Code> to un-ignore. Lines starting with <Code>#</Code>{" "}
-											are comments.
+											<span>Ignore patterns</span>
+											<InfoBadge
+												label="Ignore patterns"
+												tooltip="One pattern per line. Matches session name and path (relative to home). Supports globs (*, **, ?). Prefix with ! to un-ignore. Lines starting with # are comments."
+											/>
 										</div>
 										<textarea
 											aria-label="Ignore patterns"
@@ -975,6 +1249,7 @@ export function Settings({
 											style={{
 												width: "100%",
 												minHeight: 80,
+												marginTop: 4,
 												overflow: "hidden",
 												background: "var(--bg-main)",
 												border: "1px solid var(--border)",
@@ -1314,7 +1589,7 @@ export function Settings({
 									{ key: "filtering" as GuideSection, label: "Search & Filter" },
 									{ key: "activity" as GuideSection, label: "Activity" },
 									{ key: "actions" as GuideSection, label: "Actions" },
-									{ key: "ignore" as GuideSection, label: "Folders" },
+									{ key: "ignore" as GuideSection, label: "Filters" },
 									{ key: "groups" as GuideSection, label: "Groups" },
 									{ key: "multiwindow" as GuideSection, label: "Multi-window" },
 									{ key: "multiprofile" as GuideSection, label: "Multi-profile" },

@@ -5,19 +5,22 @@ import type { ClaudeSession } from "../types";
 
 const POLL_INTERVAL = 3000;
 
-export function useSessions(configDir: string) {
+export function useSessions(configDir: string, maxSessions: number) {
 	const [sessions, setSessions] = useState<ClaudeSession[]>([]);
 	const [loading, setLoading] = useState(true);
 
 	const refresh = useCallback(async () => {
 		try {
-			const result = await invoke<ClaudeSession[]>("get_sessions", { configDir });
+			const result = await invoke<ClaudeSession[]>("get_sessions", {
+				configDir,
+				maxSessions,
+			});
 			setSessions(result);
 		} catch {
 		} finally {
 			setLoading(false);
 		}
-	}, [configDir]);
+	}, [configDir, maxSessions]);
 
 	useEffect(() => {
 		refresh();

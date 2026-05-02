@@ -150,6 +150,11 @@ body.dragging {
     border-radius: 4px;
   }
 
+  /* Inputs whose visual focus state is on the wrapping element. */
+  .nf-input:focus-visible {
+    outline: none !important;
+  }
+
   ::-webkit-scrollbar { width: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
