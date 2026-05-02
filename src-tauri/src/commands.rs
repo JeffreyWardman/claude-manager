@@ -1,6 +1,32 @@
 use crate::sessions::{get_all_sessions, ClaudeSession};
 use crate::utils::manager_config_dir;
-use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder};
+use std::collections::HashSet;
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+
+/// Window numbers are stable: each new window claims the lowest unused integer
+/// across currently-open windows. Number 1 is reserved for the original app
+/// window (label "main"); subsequent windows are labelled "main-N-{timestamp}".
+fn parse_window_number(label: &str) -> Option<usize> {
+    if label == "main" {
+        return Some(1);
+    }
+    let rest = label.strip_prefix("main-")?;
+    let n_str = rest.split('-').next()?;
+    n_str.parse::<usize>().ok()
+}
+
+fn lowest_unused_window_number(app: &AppHandle) -> usize {
+    let used: HashSet<usize> = app
+        .webview_windows()
+        .keys()
+        .filter_map(|label| parse_window_number(label))
+        .collect();
+    let mut n = 1;
+    while used.contains(&n) {
+        n += 1;
+    }
+    n
+}
 
 #[tauri::command]
 pub fn get_custom_themes() -> Vec<serde_json::Value> {
@@ -58,8 +84,10 @@ pub fn play_sound(path: String) {
 
 #[tauri::command]
 pub fn new_window(app: AppHandle, profile: Option<String>) -> Result<(), String> {
+    let n = lowest_unused_window_number(&app);
     let label = format!(
-        "main-{}",
+        "main-{}-{}",
+        n,
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()

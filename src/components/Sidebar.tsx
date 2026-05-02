@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { getDragPayload } from "../dragState";
 import { SLOT_COUNTS } from "../groupOps";
 import type { ActivityState } from "../hooks/usePtyActivity";
@@ -59,6 +60,14 @@ interface ContextMenu {
 	sessionId: string;
 	x: number;
 	y: number;
+}
+
+function parseWindowNumber(label: string): number {
+	if (label === "main") {
+		return 1;
+	}
+	const match = label.match(/^main-(\d+)-/);
+	return match ? Number.parseInt(match[1], 10) : 1;
 }
 
 function timeAgo(ms: number): string {
@@ -300,6 +309,7 @@ export function Sidebar({
 	} | null>(null);
 	const [filterDropdownOpen, setFilterDropdownOpen] = useState<boolean>(false);
 	const [profileDropdownOpen, setProfileDropdownOpen] = useState<boolean>(false);
+	const windowNumber = useMemo(() => parseWindowNumber(getCurrentWebviewWindow().label), []);
 
 	const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 	const renameInputRef = useRef<HTMLInputElement>(null);
@@ -632,6 +642,11 @@ export function Sidebar({
 					>
 						<span style={{ fontWeight: 600 }}>Claude</span>{" "}
 						<span style={{ fontWeight: 400, color: "var(--text-muted)" }}>Manager</span>
+						{windowNumber > 1 && (
+							<span style={{ fontWeight: 400, color: "var(--text-very-muted)", marginLeft: 6 }}>
+								({windowNumber})
+							</span>
+						)}
 					</span>
 				</div>
 				<div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
