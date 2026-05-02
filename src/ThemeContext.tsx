@@ -38,6 +38,12 @@ export function applyTheme(t: Theme) {
 	r.style.setProperty("--item-selected", t.item.selected);
 	r.style.setProperty("--item-hover", t.item.hover);
 	r.style.setProperty("--accent", t.accent);
+	// Cache bg colors so the next window can paint immediately via the inline
+	// script in index.html, avoiding a flash of the Tauri window's background.
+	try {
+		localStorage.setItem("cm-bg-main", t.bg.main);
+		localStorage.setItem("cm-bg-sidebar", t.bg.sidebar);
+	} catch {}
 }
 
 function isValidTheme(v: unknown): v is Theme {

@@ -5,6 +5,23 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ClaudeManager</title>
+    <script>
+      // Apply cached theme bg colors before paint so windows don't flash the
+      // Tauri-default background. Mirrored by ThemeContext.applyTheme on save.
+      (function () {
+        try {
+          var bgMain = localStorage.getItem("cm-bg-main");
+          var bgSidebar = localStorage.getItem("cm-bg-sidebar");
+          if (bgMain) {
+            document.documentElement.style.setProperty("--bg-main", bgMain);
+            document.documentElement.style.background = bgMain;
+          }
+          if (bgSidebar) {
+            document.documentElement.style.setProperty("--bg-sidebar", bgSidebar);
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
 
   <body>
