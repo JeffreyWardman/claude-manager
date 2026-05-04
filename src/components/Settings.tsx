@@ -5,7 +5,7 @@ import { applyTheme, useTheme } from "../ThemeContext";
 import type { PaneLayout, Profile } from "../types";
 import { defaultShell, formatCwd, noAutocorrect, pathBasename } from "../utils";
 
-const APP_VERSION = "0.1.1";
+const APP_VERSION = "0.2.0";
 
 import { LAYOUT_ORDER as TILING_OPTIONS } from "../groupOps";
 
