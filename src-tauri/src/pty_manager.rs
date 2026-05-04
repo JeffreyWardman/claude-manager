@@ -92,6 +92,12 @@ pub fn pty_spawn(
         cwd
     };
 
+    // Create the directory if it doesn't exist so users can spawn sessions in
+    // new project folders without leaving the app first.
+    if !std::path::Path::new(&cwd).exists() {
+        std::fs::create_dir_all(&cwd).map_err(|e| format!("Failed to create {cwd}: {e}"))?;
+    }
+
     // Lock this session so no other instance can resume it
     if cmd.is_none() {
         acquire_lock(&id)?;

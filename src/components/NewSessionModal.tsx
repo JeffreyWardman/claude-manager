@@ -159,24 +159,33 @@ export function NewSessionModal({ cwds, onConfirm, onClose }: Props) {
 
 				{/* Empty state when typing a custom path */}
 				{filtered.length === 0 && value.trim() && (
-					<div
+					<button
+						type="button"
+						onClick={() => confirm(value.trim())}
 						style={{
 							display: "flex",
 							alignItems: "center",
 							gap: 8,
+							width: "100%",
 							padding: "8px 12px",
 							fontSize: 13,
-							color: "var(--text-muted)",
+							color: "var(--text-secondary)",
+							background: "var(--item-selected)",
+							border: "none",
+							textAlign: "left",
+							fontFamily: "inherit",
+							cursor: "pointer",
 						}}
 					>
-						<span>Open in</span>
-						<span style={{ color: "var(--text-secondary)", fontFamily: "monospace" }}>
+						<span style={{ fontSize: 11, color: "var(--text-muted)" }}>+</span>
+						<span>Open or create</span>
+						<span style={{ color: "var(--text-primary)", fontFamily: "monospace" }}>
 							{value.trim()}
 						</span>
 						<span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)" }}>
 							↵ enter
 						</span>
-					</div>
+					</button>
 				)}
 			</div>
 		</div>
