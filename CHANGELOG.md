@@ -1,3 +1,9 @@
+## v0.3.0 (2026-05-04)
+
+### Feat
+
+- create folder of session if it does not exist yet
+
 ## v0.2.0 (2026-05-04)
 
 ### Feat
