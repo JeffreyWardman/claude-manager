@@ -70,6 +70,12 @@ export function useDragDrop(handlers: DragDropHandlers) {
 				return;
 			}
 
+			// Suppress drag detection while the user is resizing the sidebar splitter,
+			// otherwise pointermove events over session rows pick up a drag source.
+			if (document.body.classList.contains("resizing-sidebar")) {
+				return;
+			}
+
 			// First move with button held — try to identify a drag source
 			if (!startPos.current) {
 				const source = findDragSource(e.target as Element);

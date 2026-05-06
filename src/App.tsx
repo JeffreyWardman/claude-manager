@@ -158,9 +158,7 @@ function AppInner() {
 					? { ...s, status: "active" as const }
 					: s,
 			)
-			.filter(
-				(s) => forceShowSessionIds.has(s.session_id) || !isSessionIgnored(s, ignorePatterns),
-			)
+			.filter((s) => forceShowSessionIds.has(s.session_id) || !isSessionIgnored(s, ignorePatterns))
 			.filter(
 				(s) =>
 					forceShowSessionIds.has(s.session_id) ||
@@ -771,6 +769,7 @@ function AppInner() {
 		e.preventDefault();
 		const startX = e.clientX;
 		const startWidth = sidebarWidth;
+		document.body.classList.add("resizing-sidebar");
 		function onMove(e: MouseEvent) {
 			const w = Math.max(
 				MIN_SIDEBAR_WIDTH,
@@ -780,6 +779,7 @@ function AppInner() {
 			localStorage.setItem("sidebar-width", String(w));
 		}
 		function onUp() {
+			document.body.classList.remove("resizing-sidebar");
 			window.removeEventListener("mousemove", onMove);
 			window.removeEventListener("mouseup", onUp);
 		}
