@@ -1,3 +1,9 @@
+## v0.3.1 (2026-05-11)
+
+### Fix
+
+- drag and drop hover not shown when resizing sidebar
+
 ## v0.3.0 (2026-05-04)
 
 ### Feat
