@@ -102,6 +102,15 @@ jobs:
 
       - run: bunx tauri build --target ${{ matrix.target }}
 
+      - name: Standardize Linux artifact names (Debian convention)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          set -e
+          cd src-tauri/target/${{ matrix.target }}/release/bundle
+          for f in deb/ClaudeManager_*.deb rpm/ClaudeManager-*.rpm; do
+            [ -e "$f" ] && mv "$f" "${f//ClaudeManager/claude-manager}"
+          done
+
       - uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.target }}

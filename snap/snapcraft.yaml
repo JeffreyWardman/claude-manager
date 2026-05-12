@@ -27,7 +27,7 @@ apps:
 parts:
   claude-manager:
     plugin: dump
-    source: https://github.com/JeffreyWardman/claude-manager/releases/download/vSNAP_VERSION/ClaudeManager_SNAP_VERSION_amd64.deb
+    source: https://github.com/JeffreyWardman/claude-manager/releases/download/vSNAP_VERSION/claude-manager_SNAP_VERSION_amd64.deb
     source-type: deb
     stage-packages:
       - libwebkit2gtk-4.1-0
