@@ -67,6 +67,7 @@ pub fn run() {
             metadata::clear_pending_rename,
             pty_manager::pty_spawn,
             pty_manager::pty_get_scrollback,
+            pty_manager::pty_skip_permissions,
             pty_manager::pty_write,
             pty_manager::pty_resize,
             pty_manager::pty_rekey,

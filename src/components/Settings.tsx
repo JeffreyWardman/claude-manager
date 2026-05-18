@@ -106,6 +106,8 @@ interface Props {
 	onChangeHideOld: (enabled: boolean, days: number) => void;
 	maxSessions: number;
 	onChangeMaxSessions: (n: number) => void;
+	aliveSessionCount: number;
+	onReloadActiveSessions: () => void;
 }
 
 type Tab = "preferences" | "theme" | "hotkeys" | "guide" | "about";
@@ -549,6 +551,8 @@ export function Settings({
 	onChangeHideOld,
 	maxSessions,
 	onChangeMaxSessions,
+	aliveSessionCount,
+	onReloadActiveSessions,
 }: Props) {
 	const [hideStaleMinDraft, setHideStaleMinDraft] = useState(String(hideStaleMin));
 	const [hideOldDaysDraft, setHideOldDaysDraft] = useState(String(hideOldDays));
@@ -569,6 +573,7 @@ export function Settings({
 	const [skipPermissions, setSkipPermissions] = useState(
 		() => localStorage.getItem("skip-permissions") === "true",
 	);
+	const [pendingReload, setPendingReload] = useState(false);
 	const [ignorePatterns, setIgnorePatterns] = useState(
 		() => localStorage.getItem("ignore-patterns") ?? "",
 	);
@@ -900,6 +905,9 @@ export function Settings({
 													const val = e.target.checked;
 													setSkipPermissions(val);
 													localStorage.setItem("skip-permissions", String(val));
+													if (aliveSessionCount > 0) {
+														setPendingReload(true);
+													}
 												}}
 												style={{ accentColor: "var(--accent)" }}
 											/>
@@ -913,8 +921,43 @@ export function Settings({
 												marginLeft: 24,
 											}}
 										>
-											Applies to newly spawned sessions only
+											Applies immediately to new sessions. Reload active sessions to apply
+											retroactively.
 										</div>
+										{pendingReload && aliveSessionCount > 0 && (
+											<div
+												style={{
+													marginTop: 8,
+													marginLeft: 24,
+													display: "flex",
+													alignItems: "center",
+													gap: 8,
+												}}
+											>
+												<button
+													type="button"
+													onClick={() => {
+														onReloadActiveSessions();
+														setPendingReload(false);
+													}}
+													style={{
+														fontSize: 11,
+														padding: "4px 10px",
+														background: "var(--accent)",
+														color: "var(--bg-main)",
+														border: "none",
+														borderRadius: 4,
+														cursor: "pointer",
+													}}
+												>
+													Reload {aliveSessionCount} active session
+													{aliveSessionCount === 1 ? "" : "s"}
+												</button>
+												<span style={{ fontSize: 10, color: "var(--text-muted)" }}>
+													In-progress work will be interrupted
+												</span>
+											</div>
+										)}
 										<div
 											style={{
 												fontSize: 10,

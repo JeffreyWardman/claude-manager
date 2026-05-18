@@ -49,6 +49,7 @@ struct PtyEntry {
     master: Box<dyn portable_pty::MasterPty + Send>,
     scrollback: Arc<Mutex<Vec<u8>>>,
     event_id: Arc<Mutex<String>>,
+    skip_permissions: bool,
 }
 
 pub struct PtyState(Arc<Mutex<HashMap<String, PtyEntry>>>);
@@ -266,6 +267,7 @@ pub fn pty_spawn(
             master,
             scrollback,
             event_id,
+            skip_permissions: skip_permissions.unwrap_or(false),
         },
     );
     Ok(())
@@ -273,6 +275,12 @@ pub fn pty_spawn(
 
 /// Returns base64-encoded scrollback buffer if a PTY with this id exists, else null.
 /// Used by the frontend to replay history when reattaching to a running PTY.
+#[tauri::command]
+pub fn pty_skip_permissions(id: String, state: State<'_, PtyState>) -> Option<bool> {
+    let map = state.0.lock().unwrap();
+    map.get(&id).map(|e| e.skip_permissions)
+}
+
 #[tauri::command]
 pub fn pty_get_scrollback(id: String, state: State<'_, PtyState>) -> Option<String> {
     let map = state.0.lock().unwrap();

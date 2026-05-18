@@ -94,13 +94,24 @@ export function TerminalPane({ ptyId, cwd, cmd, configDir }: Props) {
 			const scrollback = await invoke<string | null>("pty_get_scrollback", {
 				id: ptyId,
 			});
-			if (scrollback !== null) {
+			const currentSkipPermissions = localStorage.getItem("skip-permissions") === "true";
+			let needsSpawn = scrollback === null;
+			if (scrollback !== null && !cmd) {
+				const ptySkip = await invoke<boolean | null>("pty_skip_permissions", {
+					id: ptyId,
+				});
+				if (ptySkip !== null && ptySkip !== currentSkipPermissions) {
+					await invoke("pty_kill", { id: ptyId }).catch(() => {});
+					term.clear();
+					needsSpawn = true;
+				}
+			}
+			if (!needsSpawn && scrollback !== null) {
 				if (scrollback.length > 0) {
 					term.write(b64ToBytes(scrollback));
 				}
 				invoke("pty_resize", { id: ptyId, rows, cols }).catch(() => {});
 			} else {
-				const skipPermissions = localStorage.getItem("skip-permissions") === "true";
 				invoke("pty_spawn", {
 					id: ptyId,
 					cwd,
@@ -108,7 +119,7 @@ export function TerminalPane({ ptyId, cwd, cmd, configDir }: Props) {
 					cols,
 					resume: !cmd,
 					cmd: cmd ?? null,
-					skipPermissions,
+					skipPermissions: currentSkipPermissions,
 					configDir: configDir ?? null,
 				}).catch((err: unknown) => {
 					term.writeln(`\r\n\x1b[31mFailed to start terminal: ${err}\x1b[0m`);

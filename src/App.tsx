@@ -204,6 +204,27 @@ function AppInner() {
 	const [sidebarVisible, setSidebarVisible] = useState(
 		() => localStorage.getItem("sidebar-visible") !== "false",
 	);
+	const [reloadVersions, setReloadVersions] = useState<Record<string, number>>({});
+	const reloadActiveSessions = useCallback(() => {
+		const skipId = pendingPty?.tmpId;
+		const ids = Array.from(alivePtys).filter((id) => id !== skipId);
+		if (ids.length === 0) {
+			return;
+		}
+		Promise.all(ids.map((id) => invoke("pty_kill", { id }).catch(console.error))).then(() => {
+			setReloadVersions((prev) => {
+				const next = { ...prev };
+				for (const id of ids) {
+					next[id] = (next[id] ?? 0) + 1;
+				}
+				return next;
+			});
+		});
+	}, [alivePtys, pendingPty]);
+	const aliveSessionCount = useMemo(
+		() => Array.from(alivePtys).filter((id) => id !== pendingPty?.tmpId).length,
+		[alivePtys, pendingPty],
+	);
 	const [enabledLayouts, setEnabledLayouts] = useState<PaneLayout[]>(() => {
 		try {
 			const saved = localStorage.getItem("enabled-layouts");
@@ -907,6 +928,7 @@ function AppInner() {
 							unreadSessions={unreadSessions}
 							focused
 							configDir={configDir}
+							reloadVersion={reloadVersions[standaloneSelectedId ?? ""] ?? 0}
 						/>
 					)}
 				</div>
@@ -922,6 +944,7 @@ function AppInner() {
 					activityMap={activityMap}
 					unreadSessions={unreadSessions}
 					configDir={configDir}
+					reloadVersions={reloadVersions}
 				/>
 			)}
 
@@ -997,6 +1020,8 @@ function AppInner() {
 						setMaxSessions(n);
 						localStorage.setItem("max-sessions", String(n));
 					}}
+					aliveSessionCount={aliveSessionCount}
+					onReloadActiveSessions={reloadActiveSessions}
 				/>
 			)}
 		</div>

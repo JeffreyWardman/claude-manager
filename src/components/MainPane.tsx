@@ -13,6 +13,7 @@ interface Props {
 	unreadSessions?: Set<string>;
 	focused?: boolean;
 	configDir?: string;
+	reloadVersion?: number;
 }
 
 type View = "claude" | "terminal" | "split";
@@ -25,6 +26,7 @@ export function MainPane({
 	unreadSessions,
 	focused,
 	configDir,
+	reloadVersion = 0,
 }: Props) {
 	const [view, setView] = useState<View>("claude");
 
@@ -262,7 +264,12 @@ export function MainPane({
 							borderRight: showShell ? "1px solid var(--border)" : undefined,
 						}}
 					>
-						<TerminalPane ptyId={session.session_id} cwd={session.cwd} configDir={configDir} />
+						<TerminalPane
+							key={`${session.session_id}-${reloadVersion}`}
+							ptyId={session.session_id}
+							cwd={session.cwd}
+							configDir={configDir}
+						/>
 					</div>
 				)}
 				{showShell && (

@@ -80,6 +80,7 @@ interface Props {
 	activityMap: Map<string, ActivityState>;
 	unreadSessions: Set<string>;
 	configDir?: string;
+	reloadVersions?: Record<string, number>;
 }
 
 export function GridLayout({
@@ -93,6 +94,7 @@ export function GridLayout({
 	activityMap,
 	unreadSessions,
 	configDir,
+	reloadVersions,
 }: Props) {
 	const lastKnown = useRef<Map<string, ClaudeSession>>(new Map());
 
@@ -252,6 +254,7 @@ export function GridLayout({
 								unreadSessions={unreadSessions}
 								focused={idx === focusedIdx}
 								configDir={configDir}
+								reloadVersion={session ? (reloadVersions?.[session.session_id] ?? 0) : 0}
 							/>
 							{/* Overlay: sits above xterm canvas so pointer-based DnD can detect grid slots.
                 Only rendered while a drag is in progress to avoid blocking terminal interaction. */}
